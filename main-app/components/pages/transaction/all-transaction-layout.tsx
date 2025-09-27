@@ -1,11 +1,12 @@
 'use client'
 
-import { ArrowUpRightIcon, SearchIcon } from '@/components/ui/icons'
+import { ArrowUpRight03Icon, Search01Icon } from '@hugeicons/core-free-icons'
 import InputWithIcon from '@/components/ui/input-with-icon'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React from 'react'
+import { HugeiconsIcon } from '@hugeicons/react'
 
 const TransactionLayout = ({children}:{children: React.ReactNode}) => {
   const pathname = usePathname();
@@ -31,14 +32,14 @@ const TransactionLayout = ({children}:{children: React.ReactNode}) => {
           <div className="w-full md:w-[60%] xl:w-[40%] flex gap-1 mb-6">
             <InputWithIcon 
               type='text' 
-              icon={SearchIcon}
+              icon={Search01Icon}
               iconClassName='text-black/60 dark:text-white/70'
               className=' dark:border-white/70 rounded-r-none'
               placeholder='search transaction history'
               inputClassName='placeholder:text-black/70 border dark:border-white/70 rounded-lg rounded-r-none dark:placeholder:text-white'
             />
             <button type="button" className='lg:h-12 h-10 aspect-square rounded-lg flex items-center justify-center border dark:border-white/70 rounded-l-none'>
-              <ArrowUpRightIcon className='rotate-45 text-black/60 dark:text-white/70'/>
+              <HugeiconsIcon icon={ArrowUpRight03Icon} className='rotate-45 text-black/60 dark:text-white/70'/>
             </button>
           </div>
         }

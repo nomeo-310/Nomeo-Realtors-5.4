@@ -21,7 +21,11 @@ const Apartments = async () => {
   }
     
   if (current_user.role !== 'agent') {
-    redirect(`/${current_user.role}-dashboard`)
+    if (current_user.role === 'user') {
+      redirect('/user-dashboard');
+    } else {
+      redirect('/');
+    }
   };
 
   let status;

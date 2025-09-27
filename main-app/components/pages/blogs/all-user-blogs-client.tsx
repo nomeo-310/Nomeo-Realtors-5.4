@@ -4,7 +4,7 @@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import EmptyState from '@/components/ui/empty-state';
 import ErrorState from '@/components/ui/error-state';
-import { ArrowUpRight03Icon, Bookmark01Icon, Comment01Icon, FavouriteIcon, Link05Icon, Menu02Icon, ViewIcon, Edit04Icon, Delete01Icon, Search01Icon } from '@hugeicons/core-free-icons';
+import { ArrowUpRight03Icon, Bookmark01Icon, Comment01Icon, FavouriteIcon, Link05Icon, Menu02Icon, ViewIcon, LicenseDraftIcon, Delete01Icon, Search01Icon } from '@hugeicons/core-free-icons';
 import InputWithIcon from '@/components/ui/input-with-icon';
 import { apiRequestHandler } from '@/lib/apiRequestHandler';
 import { Blog, userBlogData, userProps } from '@/lib/types';
@@ -135,7 +135,7 @@ const AllUserBlogsClient = ({user}:{user:userProps}) => {
                     <HugeiconsIcon icon={Link05Icon} className='size-4'/> View
                   </DropdownMenuItem>
                   <DropdownMenuItem className='cursor-pointer text-sm py-1 flex items-center gap-4' onClick={() => router.push(`/${user.role === 'superAdmin' ? 'admin' : user.role === 'creator' ? 'admin': user.role}-dashboard/create-blog/${blog._id}`)}>
-                    <HugeiconsIcon icon={Edit04Icon}/> Edit
+                    <HugeiconsIcon icon={LicenseDraftIcon}/> Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem className='cursor-pointer text-sm py-1'onClick={() => deleteBlog(blog._id)}>
                     <HugeiconsIcon icon={Delete01Icon} /> Delete

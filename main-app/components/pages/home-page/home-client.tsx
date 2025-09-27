@@ -5,7 +5,7 @@ import { useAgentOnboardingModal, useOpenMobileMenu, useUserOnboardingModal } fr
 import HeroSection from "./hero-section";
 import WhyUs from "./why-us";
 import FeaturedProperties from "./featured-properties";
-import LatestBlogs from "./latest-blogs";
+import FeaturedBlogs from "./featured-blogs";
 import TestimonialSection from "./testimonial-section";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ const HomeClient = ({user}:{user:any}) => {
       <HeroSection/>
       <WhyUs/>
       <FeaturedProperties/>
-      <LatestBlogs/>
+      <FeaturedBlogs/>
       <TestimonialSection/>
     </div>
   );

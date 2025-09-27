@@ -140,7 +140,7 @@ const BlogsClient = ({latestBlogs,user }:Props) => {
     )
   };
 
-  const MobileLatesBlog = () => {
+  const MobileLatestBlog = () => {
     return (
       <div className="w-full my-5 h-full flex flex-col gap-10 md:hidden">
         {latestBlogs && latestBlogs.length > 0 && latestBlogs.map((blog:latestBlogProps) => {
@@ -189,7 +189,7 @@ const BlogsClient = ({latestBlogs,user }:Props) => {
         </div>
         <h2 className='text-xl md:text-2xl lg:text-3xl font-bold font-quicksand mt-6'>Latest Blogs</h2>
         <DesktopLatesBlog />
-        <MobileLatesBlog />
+        <MobileLatestBlog />
       </React.Fragment>
     )
   };

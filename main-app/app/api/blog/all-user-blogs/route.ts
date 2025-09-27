@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/app/action/user-actions";
+import { getCurrentUser } from "@/actions/user-actions";
 import { connectToMongoDB } from "@/lib/connectToMongoDB";
 import Blog from "@/models/blog";
 import User from "@/models/user";
@@ -33,12 +33,12 @@ export const GET = async (req: Request) => {
       .populate({
         path: "author",
         model: User,
-        select: "firstName lastName username profilePicture email placeholderColor role _id",}
+        select: "surName lastName username profilePicture email placeholderColor role _id",}
       )
       .populate({
         path: "collaborators",
         model: User,
-        select: "firstName lastName username profilePicture email placeholderColor role _id",}
+        select: "surName lastName username profilePicture email placeholderColor role _id",}
       )
       .sort({ createdAt: -1 })
       .skip(skip)

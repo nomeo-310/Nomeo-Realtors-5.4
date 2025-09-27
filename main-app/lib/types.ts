@@ -229,7 +229,7 @@ export interface latestBlogProps {
   title: string;
   description: string;
   author: {
-    firstName?: string; 
+    surName?: string; 
     lastName?: string; 
     profilePicture?: string; 
     email: string; 
@@ -284,7 +284,7 @@ export interface Blog {
   saves: string[];
   read_time: number;
   created_at: string;
-}
+};
 
 interface userDetailsProps {
   _id: string;

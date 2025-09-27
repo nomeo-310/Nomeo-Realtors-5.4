@@ -1,4 +1,4 @@
-import { Notification02Icon, AddInvoiceIcon, PlazaIcon, FavouriteIcon, BookmarkCheck01Icon, FileIcon, UserMultiple02Icon, Settings01Icon, User03Icon, DashboardCircleEditIcon } from '@hugeicons/core-free-icons';
+import { Notification02Icon, AddInvoiceIcon, PlazaIcon, FavouriteIcon, BookmarkCheck01Icon, FileIcon, UserMultiple02Icon, Settings01Icon, User03Icon, DashboardCircleEditIcon, QuillWrite02Icon, LicenseIcon} from '@hugeicons/core-free-icons';
 
 const user_nav_links = [
   {
@@ -30,6 +30,18 @@ const user_nav_links = [
     icon: BookmarkCheck01Icon,
     path: '/user-dashboard/saved-apartments',
     page: 'saved apartments' 
+  },
+  {
+    text: 'Create Blog',
+    icon: QuillWrite02Icon,
+    path: '/user-dashboard/create-blog',
+    page: 'create blog'
+  },
+  {
+    text: 'Blogs',
+    icon: LicenseIcon,
+    path: '/user-dashboard/created-blogs',
+    page: 'created blogs' 
   },
   {
     text: 'Saved Blogs',
@@ -82,6 +94,18 @@ const agent_nav_link = [
     icon: AddInvoiceIcon,
     path: '/agent-dashboard/transactions',
     page: 'transactions'
+  },
+  {
+    text: 'Create Blog',
+    icon: QuillWrite02Icon,
+    path: '/agent-dashboard/create-blog',
+    page: 'create blog'
+  },
+  {
+    text: 'Blogs',
+    icon: LicenseIcon,
+    path: '/agent-dashboard/created-blogs',
+    page: 'created blogs' 
   },
   {
     text: 'Saved Blogs',

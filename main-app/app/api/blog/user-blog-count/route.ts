@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/app/action/user-actions";
+import { getCurrentUser } from "@/actions/user-actions";
 import { connectToMongoDB } from "@/lib/connectToMongoDB";
 import Blog from "@/models/blog";
 

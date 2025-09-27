@@ -9,7 +9,7 @@ import ToolBar from './tool-bar';
 
 
 type tiptapProps = {
-  onChange: any
+  onChange: (content: string) => void;
   clearContent?: boolean
   edit?:boolean
   content?:string

@@ -16,7 +16,11 @@ const CreateBlogPage = async () => {
   };
 
   if (current_user.role !== 'agent') {
-    redirect('/agent-dashboard')
+    if (current_user.role === 'user') {
+      redirect('/user-dashboard');
+    } else {
+      redirect('/');
+    }
   };
 
   if (current_user && !current_user.blogCollaborator) {
