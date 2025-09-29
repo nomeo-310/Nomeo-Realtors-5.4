@@ -2,7 +2,7 @@
 
 import React from 'react'
 import FrequentlyAskedQuestions from './frequently-asked-questions';
-import { all_frequently_asked_questions } from '@/assets/constants/frequently-asked-question';
+import { all_faqs } from '@/assets/texts/faq';
 import FaqContactForm from './faq-contact-form';
 
 const FAQClient = () => {
@@ -31,10 +31,10 @@ const FAQClient = () => {
             <TabButton title="Requests" tab="requests" onClick={setActiveTab} />
           </div>
           <div className="h-full md:w-4/5 lg:flex-1 w-full">
-          {activeTab === 'general' && (<FrequentlyAskedQuestions  faqs={all_frequently_asked_questions.general}/>)}
-          {activeTab === 'rentals' && (<FrequentlyAskedQuestions  faqs={all_frequently_asked_questions.rentals}/>)}
-          {activeTab === 'sales' && (<FrequentlyAskedQuestions  faqs={all_frequently_asked_questions.sales}/>)}
-          {activeTab === 'others' && (<FrequentlyAskedQuestions  faqs={all_frequently_asked_questions.others}/>)}
+          {activeTab === 'general' && (<FrequentlyAskedQuestions  faqs={all_faqs.general}/>)}
+          {activeTab === 'rentals' && (<FrequentlyAskedQuestions  faqs={all_faqs.rentals}/>)}
+          {activeTab === 'sales' && (<FrequentlyAskedQuestions  faqs={all_faqs.sales}/>)}
+          {activeTab === 'others' && (<FrequentlyAskedQuestions  faqs={all_faqs.others}/>)}
           {activeTab === 'requests' && (<FaqContactForm/>)}
           </div>
         </div>

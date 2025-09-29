@@ -4,7 +4,7 @@ import React from 'react'
 import { HugeiconsIcon } from '@hugeicons/react';
 import { EntranceStairsIcon, Menu02Icon, Cancel01Icon, Notification02Icon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils'
-import { useOpenMobileMenu } from '@/hooks/general-store'
+import { togglePage, useOpenMobileMenu } from '@/hooks/general-store'
 import { ThemeToggler } from '../ui/theme-toggler'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -15,19 +15,17 @@ import axios from 'axios'
 
 const NavigationClient = ({ user }: { user: userProps }) => {
 
-  const pathname = usePathname()
-  
-  const adminRoles = ['admin', 'creator', 'superAdmin']
+  const pathname = usePathname();
+
+  const acceptableRoles = ['user', 'agent']
 
   const getDashboardPath = () => {
-    if (adminRoles.includes(user.role)) {
-      return '/admin-dashboard'
-    } else if (user.role === 'agent') {
+    if (user.role === 'agent') {
       return '/agent-dashboard'
     } else {
       return '/user-dashboard'
     }
-  }
+  };
 
   const fetchData = async () => {
     const response = await axios.get('/api/notification/counts')
@@ -38,7 +36,9 @@ const NavigationClient = ({ user }: { user: userProps }) => {
 
     const data = response.data as { count: number }
     return data
-  }
+  };
+
+  const { setPage } = togglePage();
 
   const { data } = useQuery({
     queryKey: ['unread-notification-count'],
@@ -49,12 +49,12 @@ const NavigationClient = ({ user }: { user: userProps }) => {
   const MobileNav = () => {
     const { isOpen, onClose, onOpen } = useOpenMobileMenu()
 
-    const MobileNavLink = ({ label, path }: { label: string; path: string }) => {
+    const MobileNavLink = ({ label, path, onClick }: { label: string; path: string, onClick?:() =>void }) => {
       return (
         <Link
           href={path}
           className={cn('text-black/60 dark:text-white relative group', pathname === path && 'font-semibold')}
-          onClick={() => onClose()}
+          onClick={() => {onClick && onClick(); onClose();}}
         >
           {label}
           <span className={cn('absolute -left-1 -bottom-[1px] w-full group-hover:opacity-100 lg:block h-[0.85px] bg-black dark:bg-white/80 hidden', pathname === path ? 'opacity-100' : 'opacity-0')} />
@@ -103,8 +103,8 @@ const NavigationClient = ({ user }: { user: userProps }) => {
                   <MobileNavLink label="Blogs" path="/blogs" />
                   <MobileNavLink label="For Sale" path="/for-sale" />
                   <MobileNavLink label="For Rent" path="/for-rent" />
-                  {user && <MobileNavLink label="Dashboard" path={getDashboardPath()} />}
-                  <MobileNavLink label="Contact Us" path="/contact-us" />
+                  {user && acceptableRoles.includes(user.role) && <MobileNavLink label="Dashboard" path={getDashboardPath()} />}
+                  <MobileNavLink label="Contact Us" path="/contact-us" onClick={() => setPage('contact')} />
                 </nav>
               </div>
             </div>
@@ -115,9 +115,9 @@ const NavigationClient = ({ user }: { user: userProps }) => {
   }
 
   const DesktopNav = () => {
-    const DesktopNavLink = ({ label, path }: { label: string; path: string }) => {
+    const DesktopNavLink = ({ label, path, onClick }: { label: string; path: string, onClick?:() =>void; }) => {
       return (
-        <Link href={path} className={cn('text-black/60 dark:text-white relative group hover:text-secondary-blue', pathname === path && 'font-semibold text-secondary-blue')}>
+        <Link href={path} className={cn('text-black/60 dark:text-white relative group hover:text-secondary-blue', pathname === path && 'font-semibold text-secondary-blue')} onClick={() => {onClick && onClick()}}>
           {label}
           <span className={cn('absolute -left-1 -bottom-[1px] w-full group-hover:opacity-100 lg:block h-[0.85px] bg-secondary-blue hidden dark:bg-white/80', pathname === path ? 'opacity-100' : 'opacity-0')} />
         </Link>
@@ -133,7 +133,7 @@ const NavigationClient = ({ user }: { user: userProps }) => {
           <DesktopNavLink label="Blogs" path="/blogs" />
           <DesktopNavLink label="For Sale" path="/for-sale" />
           <DesktopNavLink label="For Rent" path="/for-rent" />
-          {user && <DesktopNavLink label="Dashboard" path={getDashboardPath()} />}
+          {user && acceptableRoles.includes(user.role) && <DesktopNavLink label="Dashboard" path={getDashboardPath()} />}
         </nav>
         <div className="flex items-center gap-2 text-secondary-blue dark:text-white font-semibold">
           <HugeiconsIcon icon={EntranceStairsIcon} />
@@ -154,7 +154,7 @@ const NavigationClient = ({ user }: { user: userProps }) => {
               Log In
             </Link>
           )}
-          <DesktopNavLink label="Contact Us" path="/contact-us" />
+          <DesktopNavLink label="Contact Us" path="/contact-us" onClick={() => setPage('contact')}/>
         </nav>
       </div>
     )

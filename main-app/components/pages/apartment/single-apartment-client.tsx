@@ -1,17 +1,10 @@
 "use client";
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage,} from "@/components/ui/form";
-import { Bathtub01Icon, BedIcon, BookmarkAdd01Icon, Bookmark01Icon, Building03Icon, Calendar04Icon, Cancel01Icon, CenterFocusIcon, ArrowRight01Icon, ArrowLeft01Icon, HeartAddIcon, FavouriteIcon, MapsIcon, TelephoneIcon, Toilet01Icon, UserIcon, CancelIcon } from "@hugeicons/core-free-icons";
+import { Bathtub01Icon, BedIcon, Building03Icon, Calendar04Icon, Cancel01Icon, CenterFocusIcon, ArrowRight01Icon, ArrowLeft01Icon, MapsIcon, TelephoneIcon, Toilet01Icon, User03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  scheduleInspectionSchema,
-  scheduleInspectionValues,
-} from "@/lib/form-validations";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { scheduleInspectionSchema, scheduleInspectionValues } from "@/lib/form-validations";
 import { propertyProps, userProps } from "@/lib/types";
 import { cn, formatDateWithOrdinal, nairaSign } from "@/lib/utils";
 import { formatMoney } from "@/utils/formatMoney";
@@ -67,6 +60,8 @@ const SingleApartmentClient = ({ property, user }: Props) => {
 
   const [openSlider, setOpenSlider] = React.useState(false);
 
+  const userIsAuthor = user._id === property?.agent?.userId?._id;
+
   const Header = () => {
     return (
       <div className="flex flex-col gap-1">
@@ -80,10 +75,12 @@ const SingleApartmentClient = ({ property, user }: Props) => {
               {address}, {city}, {state}.
             </h3>
           </div>
-          <div className="flex items-center gap-4">
-            <LikeButton property={property} user={user} />
-            <BookmarkButton property={property} user={user} />
-          </div>
+          { !userIsAuthor &&
+            <div className="flex items-center gap-4">
+              <LikeButton property={property} user={user} />
+              <BookmarkButton property={property} user={user} />
+            </div>
+          }
         </div>
       </div>
     );
@@ -493,9 +490,9 @@ const SingleApartmentClient = ({ property, user }: Props) => {
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 lg:text-base text-sm">
-                    <HugeiconsIcon icon={UserIcon} className="lg:size-5 size-4 flex-none" />
+                    <HugeiconsIcon icon={User03Icon} className="lg:size-5 size-4 flex-none" />
                     <span className="text-black/60 dark:text-white/70">
-                      {agent?.userId.firstName} {agent?.userId.lastName}
+                      {agent?.userId.surName} {agent?.userId.lastName}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 lg:text-base text-sm">
@@ -523,144 +520,146 @@ const SingleApartmentClient = ({ property, user }: Props) => {
                 </div>
               </div>
             </div>
-            <div className="w-full">
-              <div className="flex items-center gap-4">
-                <h2 className="lg:text-sm text-xs font-semibold">
-                  INSPECTION SCHEDULE
-                </h2>
-                <hr className="flex-1 dark:border-white/70" />
-              </div>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmitForm)}>
-                  <div className="flex flex-col gap-3">
-                    <div className="flex mt-3 gap-3 flex-col md:flex-row">
-                      <div className="lg:w-3/5 md:w-3/4 w-full">
-                        <FormField
-                          control={form.control}
-                          name="date"
-                          render={({ field }) => (
-                            <FormItem>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <button
-                                      className={cn(
-                                        "p-2.5 w-full justify-start text-left font-normal rounded-lg bg-inherit lg:h-12 h-10 text-base text-black/60 dark:text-white border flex items-center dark:border-white/60",
-                                        !field.value && "text-black/60"
-                                      )}
-                                    >
-                                      <HugeiconsIcon icon={Calendar04Icon} className="mr-2 size-5" />
-                                      {field.value ? (
-                                        format(field.value, "PPP")
-                                      ) : (
-                                        <span className="text-base">
-                                          Select date
-                                        </span>
-                                      )}
-                                    </button>
-                                  </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 rounded lg:text-lg text-base">
-                                  <Calendar
-                                    mode="single"
-                                    selected={field.value}
-                                    onSelect={field.onChange}
-                                    initialFocus
-                                    className=""
+            { user.role === 'user' &&
+              <div className="w-full">
+                <div className="flex items-center gap-4">
+                  <h2 className="lg:text-sm text-xs font-semibold">
+                    INSPECTION SCHEDULE
+                  </h2>
+                  <hr className="flex-1 dark:border-white/70" />
+                </div>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmitForm)}>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex mt-3 gap-3 flex-col md:flex-row">
+                        <div className="lg:w-3/5 md:w-3/4 w-full">
+                          <FormField
+                            control={form.control}
+                            name="date"
+                            render={({ field }) => (
+                              <FormItem>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <FormControl>
+                                      <button
+                                        className={cn(
+                                          "p-2.5 w-full justify-start text-left font-normal rounded-lg bg-inherit lg:h-12 h-10 text-base text-black/60 dark:text-white border flex items-center dark:border-white/60",
+                                          !field.value && "text-black/60"
+                                        )}
+                                      >
+                                        <HugeiconsIcon icon={Calendar04Icon} className="mr-2 size-5" />
+                                        {field.value ? (
+                                          format(field.value, "PPP")
+                                        ) : (
+                                          <span className="text-base">
+                                            Select date
+                                          </span>
+                                        )}
+                                      </button>
+                                    </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={field.value}
+                                      onSelect={field.onChange}
+                                      className="rounded-md border shadow-sm"
+                                      captionLayout="dropdown"
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="rounded lg:w-2/5 md:w-1/4 w-full">
+                          <FormField
+                            control={form.control}
+                            name="time"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <CustomSelect
+                                    data={timeList}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Select time"
+                                    height="lg:h-12 h-10 data-[placeholder]:text-black/60 shadow-none"
                                   />
-                                </PopoverContent>
-                              </Popover>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
-                      <div className="rounded lg:w-2/5 md:w-1/4 w-full">
-                        <FormField
-                          control={form.control}
-                          name="time"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <CustomSelect
-                                  data={timeList}
-                                  value={field.value}
-                                  onChange={field.onChange}
-                                  placeholder="Select time"
-                                  height="lg:h-12 h-10 data-[placeholder]:text-black/60 shadow-none"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="additionalPhoneNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <InputWithIcon
-                              iconClassName="text-black/60 dark:text-white"
-                              placeholder="Additional phone number"
-                              icon={TelephoneIcon}
-                              inputClassName="rounded-lg dark:placeholder:text-white placeholder:text-black/60"
-                              className="rounded-lg border dark:border-white/60 "
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="agreement"
-                      render={({ field }) => (
-                        <div className="flex flex-col">
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 -mt-1">
+                      <FormField
+                        control={form.control}
+                        name="additionalPhoneNumber"
+                        render={({ field }) => (
+                          <FormItem>
                             <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
+                              <InputWithIcon
+                                iconClassName="text-black/60 dark:text-white"
+                                placeholder="Additional phone number"
+                                icon={TelephoneIcon}
+                                inputClassName="rounded-lg dark:placeholder:text-white placeholder:text-black/60"
+                                className="rounded-lg border dark:border-white/60 "
+                                {...field}
                               />
                             </FormControl>
-                            <div className="space-y-1 leading-none">
-                              <FormLabel className="text-black/60 cursor-pointer">
-                                By creating a schedule, you have agreed to our{" "}
-                                <span
-                                  className="underline text-black font-medium capitalize cur"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    onOpen();
-                                  }}
-                                >
-                                  inspection terms and policy
-                                </span>
-                                .
-                              </FormLabel>
-                            </div>
+                            <FormMessage />
                           </FormItem>
-                          <FormMessage className="inline-block mt-1" />
-                        </div>
-                      )}
-                    />
-                  </div>
-                  <div className="mt-5 flex items-end justify-end">
-                    <LoadingButton
-                      label="Schedule Inspection"
-                      loadingLabel="Scheduling Inspection"
-                      className="lg:text-base text-sm py-2 px-6 bg-black dark:bg-[#424242] rounded-lg text-white"
-                      type="submit"
-                      isLoading={isLoading}
-                    />
-                  </div>
-                </form>
-              </Form>
-            </div>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="agreement"
+                        render={({ field }) => (
+                          <div className="flex flex-col">
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 -mt-1">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel className="text-black/60 cursor-pointer">
+                                  By creating a schedule, you have agreed to our{" "}
+                                  <span
+                                    className="underline text-black font-medium capitalize cur"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      onOpen();
+                                    }}
+                                  >
+                                    inspection terms and policy
+                                  </span>
+                                  .
+                                </FormLabel>
+                              </div>
+                            </FormItem>
+                            <FormMessage className="inline-block mt-1" />
+                          </div>
+                        )}
+                      />
+                    </div>
+                    <div className="mt-5 flex items-end justify-end">
+                      <LoadingButton
+                        label="Schedule Inspection"
+                        loadingLabel="Scheduling Inspection"
+                        className="lg:text-base text-sm py-2 px-6 bg-black dark:bg-[#424242] rounded-lg text-white"
+                        type="submit"
+                        isLoading={isLoading}
+                      />
+                    </div>
+                  </form>
+                </Form>
+              </div>
+            }
           </div>
         </div>
       </div>

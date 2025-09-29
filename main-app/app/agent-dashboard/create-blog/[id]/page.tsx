@@ -1,5 +1,5 @@
-import { getEditBlog } from '@/app/action/blog-actions';
-import { getCurrentUser } from '@/app/action/user-actions';
+import { getEditBlog } from '@/actions/blog-actions';
+import { getCurrentUser } from '@/actions/user-actions';
 import EditBlogClient, { BlogPost } from '@/components/pages/create-blog/edit-blog-client';
 import { userProps } from '@/lib/types';
 import { Metadata } from 'next';

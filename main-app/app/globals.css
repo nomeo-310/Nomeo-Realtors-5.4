@@ -158,15 +158,19 @@ html body[data-scroll-locked] {
 }
 
 .ProseMirror p {
-  @apply lg:text-lg md:text-base text-[14.8px] text-black/50 dark:text-white;
+  @apply xl:text-lg md:text-base text-sm;
 }
 
 .ProseMirror h2 {
-  @apply lg:text-xl xl:text-2xl text-lg;
+  @apply lg:text-lg xl:text-xl text-base;
 }
 
 .ProseMirror h3 {
-  @apply xl:text-xl lg:text-lg text-base;
+  @apply xl:text-lg md:text-base text-sm;
+}
+
+.ProseMirror h4 {
+  @apply xl:text-lg md:text-base text-sm;
 }
 
 

@@ -1,15 +1,13 @@
 import Agent from "@/models/agent";
-import User from "@/models/user";
 import Apartment from "@/models/apartment";
 import Attachment from "@/models/attachment";
 import { getCurrentUser } from "@/actions/user-actions";
 
-export const POST = async (request:Request) => {
+export const GET = async (req:Request) => {
 
-  const { page } = await request.json();
-  const value = page || undefined;
-  const pageNumber = parseInt(value as string);
-  const pageSize = 6;
+  const { searchParams } = new URL(req.url);
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = 6;
 
   const current_user = await getCurrentUser();
 
@@ -22,8 +20,10 @@ export const POST = async (request:Request) => {
   };
 
   try {
+    const skip = (page - 1) * limit;
+
     const properties = await Apartment.find({agent: current_user.agentId})
-    .select('-bookmarks -reviews -likes')
+    .select('_id propertyTag propertyIdTag city state bedrooms bathrooms squareFootage annualRent propertyPrice facilityStatus hideProperty')
     .populate({
       path: 'apartmentImages',
       model: Attachment,
@@ -32,22 +32,23 @@ export const POST = async (request:Request) => {
     .populate({
       path: 'agent',
       model: Agent,
-      select: 'licenseNumber coverPicture officeNumber officeAddress agencyName agentRatings agentVerified verificationStatus inspectionFeePerHour apartments clients createdAt userId',
-      populate: {
-        path: 'userId',
-        model: User,
-        select: 'username email firstName lastName profilePicture bio address city state phoneNumber additionalPhoneNumber role'
-      }
-    }).skip((pageNumber - 1) * pageSize)
-    .limit(pageSize + 1)
+      select: '_id userId',
+    }).skip(skip)
+    .limit(limit)
     .sort({created_at: -1})
     .exec();
 
-    const nextPage = properties.length > pageSize ? pageNumber + 1 : undefined;
+    const totalProperties = await Apartment.countDocuments({agent: current_user.agentId});
 
     const data = {
-      properties: properties.slice(0, pageSize),
-      nextPage: nextPage
+      properties,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalProperties / limit),
+        totalProperties,
+        hasNextPage: page < Math.ceil(totalProperties / limit),
+        hasPrevPage: page > 1,
+      },
     };
      
     return Response.json(data);

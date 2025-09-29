@@ -6,6 +6,11 @@ type modalControProps = {
   onClose: () => void
 };
 
+type togglePageProps ={
+  page: "newsletter" | "contact";
+  setPage: (page: "newsletter" | "contact") => void
+}
+
 type breadcrumbsProps = {
   currentPage: string;
   setCurrentPage: (page:string) => void;
@@ -112,6 +117,11 @@ export const useRejectAgentModal = create<modalControProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
+}));
+
+export const togglePage = create<togglePageProps>((set) => ({
+  page: "contact",
+  setPage: (page: "newsletter" | "contact") => set({ page }),
 }));
 
 

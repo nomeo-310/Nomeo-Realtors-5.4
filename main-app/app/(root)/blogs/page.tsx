@@ -10,8 +10,10 @@ export const metadata: Metadata = {
 };
 
 const BlogsPage = async () => {
-  const latestBlogs = await getLatestBlogs();
-  const current_user = await getCurrentUser();
+  const [latestBlogs, current_user] = await Promise.all([
+    getLatestBlogs(), 
+    getCurrentUser()
+  ])
 
   return <BlogsClient latestBlogs={latestBlogs} user={current_user || undefined} />
 

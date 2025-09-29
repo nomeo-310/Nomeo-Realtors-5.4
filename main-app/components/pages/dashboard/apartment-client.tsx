@@ -1,38 +1,31 @@
 'use client'
 
+
 import PropertyCardWithAction from '@/components/cards/property-card-with-action';
 import PropertySkeletons from '@/components/skeletons/property-skeleton'
 import EmptyState from '@/components/ui/empty-state';
 import ErrorState from '@/components/ui/error-state';
-import InfiniteScrollClient from '@/components/ui/infinite-scroll-client';
-import { propertyProps } from '@/lib/types';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import Pagination from '@/components/ui/pagination';
+import { apiRequestHandler } from '@/lib/apiRequestHandler';
+import { PropertiesResponse, Property } from '@/lib/types';
+import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { Loader2 } from 'lucide-react';
 import React from 'react'
 
 const ApartmentClient = ({userId, agentId}:{userId: string; agentId: string;}) => {
-  
+  const [currentPage, setCurrentPage] = React.useState(1);
 
-  const fetchProperties = async ({pageParam}:{pageParam: number}) => {
-    const response = await axios.post('/api/property/added-properties', { page: pageParam })
+  const requestProperties = () => axios.get(`/api/property/added-properties?page=${currentPage}`)
 
-    if (response.status !== 200 ) {
-      throw new Error('Something went wrong, try again later');
-    }
+  const { data, status} = useQuery({
+    queryKey: ['added-properties', currentPage],
+    queryFn: () => apiRequestHandler(requestProperties),
+    refetchOnWindowFocus: false,
+  })
 
-    const data = response.data;
-    return data
-  };
-
-  const {data, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, status } = useInfiniteQuery({
-    queryKey: ['all-added-properties'],
-    queryFn: fetchProperties,
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => lastPage.nextPage
-  });
-
-  const properties:propertyProps[] = data?.pages.flatMap(page => page.properties) || [];
+  const responseData = data?.data as PropertiesResponse;
+  const properties = responseData?.properties || [];
+  const pagination = responseData?.pagination || {};
 
   const PropertyList = () => {
 
@@ -40,33 +33,28 @@ const ApartmentClient = ({userId, agentId}:{userId: string; agentId: string;}) =
       return <PropertySkeletons/>
     };
   
-    if (status === 'success' && !properties.length && !hasNextPage) {
-      return <EmptyState message='You have not created properties yet' className='w-fit'/>;  
+    if (status === 'success' && !properties.length) {
+      return <EmptyState message='You have not created properties yet' className='w-full'/>;  
     };
   
     if (status === 'error') {
-      return <ErrorState message='An error occur while loading your added properties.' className='w-fit'/>;
+      return <ErrorState message='An error occur while loading your added properties.' className='w-full'/>;
     };
 
     return (
       <React.Fragment>
-        <InfiniteScrollClient onBottomReached={() => hasNextPage && !isFetching && fetchNextPage()}>
-          <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-3">
-            { properties.map((item:propertyProps) => (
-              <PropertyCardWithAction 
-                {...item} 
-                key={item._id} 
-                mainImage={item.apartmentImages.images[0]}
-                userId={userId}
-                agentId={agentId}
-              />
-            ))}
-          </div>
-        </InfiniteScrollClient>
-        { isFetchingNextPage && 
-          <div className="w-full">
-            <Loader2 className='mx-auto animate-spin my-3 size-5 lg:size-6'/>
-          </div> }
+        <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 gap-3">
+          { properties.map((item:Property) => (
+            <PropertyCardWithAction 
+              {...item} 
+              key={item._id} 
+              mainImage={item.apartmentImages.images[0]}
+              userId={userId}
+              agentId={agentId}
+            />
+          ))}
+        </div>
+        <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={setCurrentPage}/>
       </React.Fragment>
     )
   };

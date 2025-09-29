@@ -18,31 +18,47 @@ import React from 'react'
 import { toast } from 'sonner';
 import { deletePost } from '@/actions/blog-actions';
 import { HugeiconsIcon } from '@hugeicons/react';
+import Pagination from '@/components/ui/pagination';
 
 const AllUserBlogsClient = ({user}:{user:userProps}) => {
+
   const params = useSearchParams();
-  const page = params.get('page') || 1;
+  const router = useRouter();
+
+  const initialPage = Number(params.get('page')) || 1;
   const query = params.get('queryText') || '';
 
-  let url;
+  const [currentPage, setCurrentPage] = React.useState(initialPage);
+  const [searchText, setSearchText] = React.useState<string>('');
 
-  if (query) {
-    url = `/api/blog/all-user-blogs?page=${page}&query=${query}`;
-  } else {
-    url = `/api/blog/all-user-blogs?page=${page}`;
-  }
+  const updateParams = (page: number, queryText?: string) => {
+    const searchParams = new URLSearchParams();
+    if (page > 1) searchParams.set('page', String(page));
+    if (queryText) searchParams.set('queryText', queryText);
+
+    router.push(
+      `/${user.role === 'user' ? 'user' : 'agent'
+      }-dashboard/created-blogs${searchParams.toString() ? `?${searchParams}` : ''}`
+    );
+  };
+
+  React.useEffect(() => {
+    const urlPage = Number(params.get('page')) || 1;
+    if (urlPage !== currentPage) {
+      setCurrentPage(urlPage);
+    }
+  }, [params, currentPage]);
+
+  const url = `/api/blog/all-user-blogs?page=${currentPage}${query ? `&query=${query}` : ''}`;
 
   const request = () => axios.get(url);
 
   const { data, status } = useQuery({
-    queryKey: ['all-user-blogs', page, query],
+    queryKey: ['all-user-blogs', currentPage, query],
     queryFn: () => apiRequestHandler(request)
   });
 
-  const router = useRouter();
   const queryClient = useQueryClient();
-
-  const [searchText, setSearchText] = React.useState<string>('');
 
   React.useEffect(() => {
     if (!searchText) {
@@ -50,19 +66,13 @@ const AllUserBlogsClient = ({user}:{user:userProps}) => {
     }
   }, [searchText, router]);
 
-  const createSearchParam = (searchText:string) => {
-    if (searchText) {
-      const params = new URLSearchParams();
-      params.set('queryText', searchText);
-      router.push(`/${user.role === 'superAdmin' ? 'admin': user.role === 'creator' ? 'admin': user.role}-dashboard/created-blogs?${params.toString()}`);
-    } else {
-      router.push(`/${user.role === 'superAdmin' ? 'admin': user.role === 'creator' ? 'admin': user.role}-dashboard/created-blogs`);
-    }  
+  const createSearchParam = (searchText: string) => {
+    updateParams(1, searchText);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      createSearchParam(searchText);
+      updateParams(1, searchText);
     }
   };
 
@@ -200,11 +210,14 @@ const AllUserBlogsClient = ({user}:{user:userProps}) => {
     };
 
     return (
-      <div className='lg:mt-3 grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 lg:gap-5 gap-4'>
-        {allUserBlogs?.blogs && allUserBlogs.blogs.length > 0 && allUserBlogs.blogs.map((blog) => (
-          <BlogCard blog={blog} key={blog._id}/>
-        ))}
-      </div>
+      <React.Fragment>
+        <div className='lg:mt-3 grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 lg:gap-5 gap-4'>
+          {allUserBlogs?.blogs && allUserBlogs.blogs.length > 0 && allUserBlogs.blogs.map((blog) => (
+            <BlogCard blog={blog} key={blog._id}/>
+          ))}
+        </div>
+        <Pagination currentPage={currentPage} totalPages={allUserBlogs.pagination.totalPages} onPageChange={setCurrentPage}/>
+      </React.Fragment>
     )
   };
 

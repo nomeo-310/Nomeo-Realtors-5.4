@@ -182,7 +182,7 @@ export interface propertyProps {
       _id: string;
       username: string; 
       email: string; 
-      firstName: string; 
+      surName: string; 
       lastName: string; 
       profilePicture: string; 
       bio: string; 
@@ -260,7 +260,7 @@ export interface latestBlogProps {
 
 export interface userBlogData {
   blogs: Blog[];
-  pagination: Pagination;
+  pagination: BlogPagination;
 };
 
 export interface Blog {
@@ -283,6 +283,7 @@ export interface Blog {
   likes: string[];
   saves: string[];
   read_time: number;
+  last_reads?: Record<string, string>;
   created_at: string;
 };
 
@@ -297,11 +298,103 @@ interface userDetailsProps {
   profilePicture?: string;
 }
 
-interface Pagination {
+interface BlogPagination {
   currentPage: number;
   totalPages: number;
   totalBlogs: number;
   hasNextPage: boolean;
   hasPrevPage: boolean;
 };
+
+export interface ApartmentImage {
+  _id: string;
+  images: string[];
+}
+
+export interface Agent {
+  _id: string;
+  userId: string;
+}
+
+export interface Property {
+  _id: string;
+  propertyTag: string;
+  propertyIdTag: string;
+  city: string;
+  state: string;
+  propertyPrice: number;
+  annualRent: number;
+  bedrooms: number;
+  bathrooms: number;
+  squareFootage: number;
+  hideProperty: boolean;
+  apartmentImages: ApartmentImage;
+  agent: Agent;
+  facilityStatus: string;
+}
+
+export interface PropertyPagination {
+  currentPage: number;
+  totalPages: number;
+  totalProperties: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface PropertiesResponse {
+  properties: Property[];
+  pagination: PropertyPagination;
+}
+
+
+export type SingleBlog = {
+  _id: string;
+  title: string;
+  description: string;
+  content: string;
+  banner: {
+    secure_url: string;
+    public_id: string;
+  };
+  author: {
+    _id: string;
+    username: string;
+    role: "user" | "agent" | "admin" | "creator" | "superAdmin";
+    lastName: string;
+    profilePicture: string;
+    surName: string;
+    placeholderColor: string;
+    email: string;
+  };
+  collaboration: boolean;
+  collaborators: {
+    _id: string;
+    username: string;
+    role: "user" | "agent" | "admin" | "creator" | "superAdmin";
+    lastName: string;
+    profilePicture: string;
+    surName: string;
+    placeholderColor: string;
+    email: string;
+  }[];
+  total_likes: number;
+  total_comments: number;
+  total_saves: number;
+  total_reads: number;
+  likes: string[];
+  reads: string[]; 
+  comments: string[]; 
+  saves: string[]; 
+  is_draft: boolean;
+  is_published: boolean;
+  is_deleted: boolean;
+  read_time: number;
+  blog_approval: "pending" | "approved" | "rejected";
+  created_at: string; 
+  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+};
+
 

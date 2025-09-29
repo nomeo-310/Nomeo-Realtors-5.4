@@ -1,7 +1,7 @@
 import { getCurrentUser } from '@/actions/user-actions';
 import CreateBlogClient from '@/components/pages/create-blog/create-blog-client'
 import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import React from 'react'
 
 export const metadata: Metadata = {
@@ -15,16 +15,12 @@ const CreateBlogPage = async () => {
     redirect('/')
   };
 
-  if (current_user.role !== 'agent') {
-    if (current_user.role === 'user') {
-      redirect('/user-dashboard');
-    } else {
-      redirect('/');
-    }
+  if (current_user && !current_user.blogCollaborator) {
+    return notFound();
   };
 
-  if (current_user && !current_user.blogCollaborator) {
-    redirect('/agent-dashboard')
+  if (current_user.role !== 'agent') {
+    return notFound();
   };
   
   return <CreateBlogClient user={current_user}/>

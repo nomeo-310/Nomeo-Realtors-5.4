@@ -6,7 +6,7 @@ import { Bathtub01Icon, BedIcon, CenterFocusIcon, Location06Icon } from '@hugeic
 import { formatMoney } from '@/utils/formatMoney';
 
 type propertyCardProps = {
-  propertyTag: 'for-rent' | 'for-sale';
+  propertyTag: string;
   propertyIdTag: string;
   city: string;
   state: string;
@@ -16,13 +16,13 @@ type propertyCardProps = {
   mainImage: string;
   annualRent?: number;
   propertyPrice?: number;
-  furnitureStatus: 'furnished' | 'non furnished';
+  furnitureStatus: string;
 }
 
 const PropertyCard = (props:propertyCardProps) => {
   const {propertyIdTag, propertyTag, city, state, bedrooms, bathrooms, squareFootage, mainImage, furnitureStatus, propertyPrice, annualRent } = props;
   return (
-    <Link href={`/property/${propertyIdTag}`} className='flex flex-col shadow-md rounded-xl overflow-hidden'>
+    <Link href={`/apartment/${propertyIdTag}`} className='flex flex-col shadow-md rounded-xl overflow-hidden'>
       <div className='relative w-full h-[220px] overflow-hidden'>
         <span className='absolute top-3 left-3 rounded-lg bg-secondary-blue text-white px-3 py-2 text-sm z-[400]'>
           {propertyTag === 'for-rent' ? 'For Rent' : 'For Sale'}

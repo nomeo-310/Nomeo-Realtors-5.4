@@ -1,7 +1,7 @@
 import React from 'react'
 import AddApartmentClient from '@/components/pages/dashboard/add-apartment-client'
 import { Metadata } from 'next'
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/actions/user-actions'
 import { getAgentVerificationStatus } from '@/actions/agent-action'
 
@@ -10,30 +10,26 @@ export const metadata: Metadata = {
 }
 
 const AddApartments = async () => {
-    const current_user = await getCurrentUser();
-  
-    if (!current_user) {
-      redirect('/')
-    };
-  
-    if (current_user.role !== 'agent') {
-      if (current_user.role === 'user') {
-        redirect('/user-dashboard');
-      } else {
-        redirect('/');
-      }
-    };
+  const current_user = await getCurrentUser();
 
-    let status;
-    if (current_user.agentId) {
-      status = await getAgentVerificationStatus(current_user.agentId);
-    }
+  if (!current_user) {
+    redirect('/')
+  };
 
-    const isPending = status?.isPending ? true : false;
+  if (current_user.role !== 'agent') {
+    redirect('/user-dashboard');
+  };
 
-    if (isPending) {
-      redirect('/agent-dashboard')
-    }
+  let status;
+  if (current_user.agentId) {
+    status = await getAgentVerificationStatus(current_user.agentId);
+  }
+
+  const isPending = status?.isPending ? true : false;
+
+  if (isPending) {
+    return notFound();
+  }
 
   return (
     <AddApartmentClient/>

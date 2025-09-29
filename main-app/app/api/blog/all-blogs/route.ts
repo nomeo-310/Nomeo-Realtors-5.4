@@ -11,7 +11,7 @@ export const GET = async (req: Request) => {
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1");
   const query = searchParams.get("query") || "";
-  const limit = 10;
+  const limit = 6;
 
   if (!current_user) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
@@ -45,13 +45,13 @@ export const GET = async (req: Request) => {
         path: "author",
         model: User,
         select:
-          "firstName lastName username profilePicture email placeholderColor role _id",
+          "surName lastName username profilePicture email placeholderColor role _id",
       })
       .populate({
         path: "collaborators",
         model: User,
         select:
-          "firstName lastName username profilePicture email placeholderColor role _id",
+          "surName lastName username profilePicture email placeholderColor role _id",
       })
       .sort({ createdAt: -1 })
       .skip(skip)

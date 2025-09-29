@@ -116,7 +116,7 @@ export const getSingleProperty = async (id:string) => {
       populate: {
         path: 'userId',
         model: User,
-        select: ('_id firstName lastName city state profilePicture')
+        select: ('_id surName lastName city state profilePicture')
       }
     })
     .populate({

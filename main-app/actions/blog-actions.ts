@@ -11,6 +11,7 @@ import { sendEmail } from "@/lib/send-email";
 import { CollaborationEmailTemplate } from "@/components/email-templates/collaboration-email-template";
 import Notification from "@/models/notification";
 import { deleteCloudinaryImages } from "./delete-cloudinary-image";
+import mongoose from 'mongoose'
 
 interface blogData {
   read_time: number;
@@ -100,6 +101,7 @@ export const createNewBlog = async (blogData: blogData) => {
     collaboration: collaboratorPresent ? true : false,
     is_published: true,
     is_draft: false,
+    blog_approval: current_user.role === 'superAdmin' ? 'approved' : 'pending',
   };
 
   try {
@@ -657,7 +659,7 @@ export const updateDraft = async (blogData: updateBlogData) => {
     };
   };
 
-  const newCollaboratorAdded = (blogData.collaborators?.length || 0) > (currentBlog.collaborators?.length || 0);
+  const newCollaboratorAdded = (collaborators?.length || 0) > (currentBlog.collaborators?.length || 0);
   console.log(newCollaboratorAdded)
 
   let newCollaborators = [];
@@ -873,6 +875,7 @@ export const publishDraft = async (blogData: updateBlogData) => {
         collaborators: collaborators ?? currentBlog.collaborators,
         is_draft: false,
         is_published: true,
+        blog_approval: current_user.role === 'superAdmin' ? 'approved' : 'pending',
       }
     );
 
@@ -989,3 +992,152 @@ export const fullPostDelete = async (blogId: string) => {
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
+
+export const likeBlog = async ({ blogId, path }: { blogId: string; path: string }) => {
+  await connectToMongoDB();
+  const current_user = await getCurrentUser();
+
+  if (!current_user) {
+    return { success: false, message: "You are not logged in", status: 403 };
+  }
+
+  const current_blog = await Blog.findById(blogId);
+
+  if (!current_blog) {
+    return { success: false, message: "Blog does not exist", status: 404 };
+  }
+
+  const userId = new mongoose.Types.ObjectId(current_user._id);
+  const hasLiked = current_blog.likes.some(
+    (id: mongoose.Types.ObjectId) => id.toString() === userId.toString()
+  );
+
+  if (hasLiked) {
+    await Blog.findByIdAndUpdate(blogId, {
+      $pull: { likes: userId },
+      $inc: { total_likes: -1 },
+    });
+
+    await User.findByIdAndUpdate(current_user._id, {
+      $pull: {likedBlogs: current_blog._id}
+    })
+
+    revalidatePath(path)
+    return { success: true, message: "Blog unliked successfully", status: 200 };
+  } else {
+    await Blog.findByIdAndUpdate(blogId, {
+      $push: { likes: userId },
+      $inc: { total_likes: 1 },
+    });
+
+    await User.findByIdAndUpdate(current_user._id, {
+      $push: {likedBlogs: current_blog._id}
+    })
+
+    revalidatePath(path)
+    return { success: true, message: "Blog liked successfully", status: 200 };
+  }
+};
+
+export const saveBlog = async ({ blogId, path }: { blogId: string; path: string }) => {   
+  await connectToMongoDB();
+  const current_user = await getCurrentUser();
+
+  if (!current_user) {
+    return { success: false, message: "You are not logged in", status: 403 };
+  }
+
+  const current_blog = await Blog.findById(blogId);
+
+  if (!current_blog) {
+    return { success: false, message: "Blog does not exist", status: 404 };
+  }
+
+  const userId = new mongoose.Types.ObjectId(current_user._id);
+  const hasSaved = current_blog.saves.some(
+    (id: mongoose.Types.ObjectId) => id.toString() === userId.toString()
+  );
+
+  if (hasSaved) {
+    await Blog.findByIdAndUpdate(blogId, {
+      $pull: { saves: userId },
+      $inc: { total_saves: -1 },
+    });
+
+    await User.findByIdAndUpdate(current_user._id, {
+      $pull: {bookmarkedABlogs: current_blog._id}
+    });
+
+    revalidatePath(path)
+    return { success: true, message: "Blog unsaved successfully", status: 200 };
+  } else {
+    await Blog.findByIdAndUpdate(blogId, {
+      $push: { saves: userId },
+      $inc: { total_saves: 1 },
+    });
+
+    await User.findByIdAndUpdate(current_user._id, {
+      $push: {bookmarkedABlogs: current_blog._id}
+    });
+
+    revalidatePath(path)
+    return { success: true, message: "Blog saved successfully", status: 200 };
+  }
+}; 
+
+export const getSingleBlog = async (blogId:string) => {
+  await connectToMongoDB();
+
+  try {
+    const current_blog = await Blog.findById(blogId)
+    .populate(
+      { path: 'author', 
+        model: User,
+        select: '_id  surName lastName profilePicture username role placeholderColor email'
+      }
+    ).populate(
+      { path: 'collaborators',
+        model: User,
+        select: '_id  surName lastName profilePicture username role placeholderColor email'
+      }
+    ).exec()
+
+    const blogData = JSON.parse(JSON.stringify(current_blog));
+    return blogData;
+    
+  } catch (error) {
+    return {success: false, message: 'Internal server error', status: 500}
+  }
+
+};
+
+export const readBlog = async ({blog_id, path, session_key}: {blog_id: string; path: string; session_key: string }) => {
+  await connectToMongoDB();
+
+  const current_user = await getCurrentUser();
+  const blog = await Blog.findById(blog_id);
+
+  if (!blog) return;
+
+  try {
+    const readerId = current_user?._id?.toString() ?? session_key;
+    if (!readerId) return;
+  
+    if (blog.last_reads && blog.last_reads[readerId] === session_key) {
+      return;
+    }
+  
+    await Blog.findByIdAndUpdate(blog_id, {
+      $inc: { total_reads: 1 },
+      $set: { [`lastReads.${readerId}`]: session_key },
+      ...(current_user
+        ? { $addToSet: { reads: current_user._id } }
+        : {}),
+    });
+  
+    revalidatePath(path);
+  } catch (error) {
+    return {success: false, message: 'Internal server error', status: 500}
+  }
+};
+
