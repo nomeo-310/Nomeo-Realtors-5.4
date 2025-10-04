@@ -27,7 +27,19 @@ export interface Property {
   squareFootage: number;
   furnitureStatus: string;
   facilityStatus: string;
-  apartmentImages: ApartmentImage[];
+  apartmentImages: ApartmentImage;
+  agent: {
+    userId: {
+      surName: string;
+      lastName: string;
+      email: string;
+      profilePicture: string;
+      placeholderColor: string;
+    };
+    _id: string;
+    licenseNumber: string;
+  };
+  createdAt: string;
 }
 
 
@@ -65,6 +77,7 @@ const FeaturedProperties = () => {
         <div className="grid xl:grid-cols-4 xl:gap-3 md:grid-cols-2 md:gap-x-4 md:gap-y-6 lg:gap-y-4 grid-cols-1 gap-5">
           {featuredProperties.map((property: Property) => (
             <PropertyCard
+              useTag
               key={property._id}
               propertyTag={property.propertyTag}
               propertyIdTag={property.propertyIdTag}
@@ -72,11 +85,14 @@ const FeaturedProperties = () => {
               state={property.state}
               bedrooms={property.bedrooms}
               bathrooms={property.bathrooms}
-              mainImage={property.apartmentImages[0].images[0]}
+              mainImage={property.apartmentImages.images[0]}
               annualRent={property.annualRent}
               propertyPrice={property.propertyPrice}
               squareFootage={property.squareFootage}
               furnitureStatus={property.facilityStatus}
+              placeholderColor={property.agent.userId.placeholderColor}
+              email={property.agent.userId.email}
+              profileImage={property.agent.userId.profilePicture}
             />
           ))}
         </div>

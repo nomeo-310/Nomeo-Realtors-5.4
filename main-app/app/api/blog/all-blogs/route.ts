@@ -6,22 +6,16 @@ import User from "@/models/user";
 export const GET = async (req: Request) => {
   await connectToMongoDB();
 
-  const current_user = await getCurrentUser();
-
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1");
   const query = searchParams.get("query") || "";
   const limit = 6;
 
-  if (!current_user) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
   try {
     const skip = (page - 1) * limit;
 
     const visibilityConditions = {
-      $and: [ { author: current_user._id }, { is_published: true }, { is_deleted: false },],
+      $and: [ { blog_approval: 'pending' }, { is_published: true }, { is_deleted: false },],
     };
 
     let searchQuery: any = visibilityConditions;

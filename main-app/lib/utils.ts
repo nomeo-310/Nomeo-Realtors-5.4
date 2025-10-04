@@ -96,3 +96,22 @@ export const capitalizeName = (name: string): string  => {
   
   return firstLetter + restOfName;
 };
+
+export const parseRoomToiletCount = (label: string): number => {
+  if (!label || typeof label !== 'string') return 0;
+
+  const normalized = label.toLowerCase().trim();
+
+  const numberMap: Record<string, number> = {
+    'one': 1,
+    'two': 2,
+    'three': 3,
+    'four': 4,
+    'five': 5,
+  };
+
+  const parts = normalized.split(' ');
+  const numberWord = parts[0];
+
+  return numberMap[numberWord] || 0;
+};

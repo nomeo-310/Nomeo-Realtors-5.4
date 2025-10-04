@@ -28,6 +28,41 @@ const FeaturedBlogs = () => {
 
   const router = useRouter();
 
+  const isCollaboration = (blog: latestBlogProps): boolean => {
+    return blog?.collaboration;
+  };
+
+  const Avatar = ({profileImage, email, placeholderColor}: {profileImage?:string, email:string, placeholderColor: string}) => {
+    return (
+      <div className="flex items-center gap-2 z-[300]">
+        {(profileImage && profileImage !== "") ? 
+          <div className="lg:size-10 size-9 rounded-full overflow-hidden relative">
+            <Image src={profileImage} alt={'user_avatar'} fill className="object-cover object-center"/>
+          </div>
+        :
+          <div className="lg:size-10 size-9 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+            <div className="w-full h-full flex items-center justify-center uppercase text-white tracking-wider" style={{backgroundColor: placeholderColor}}>
+              {email?.substring(0, 2)}
+            </div>
+          </div>
+        }
+      </div>
+    )
+  };
+
+  const Collaboration = ({blog}:{blog:latestBlogProps}) => {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex -space-x-4">
+          <Avatar profileImage={blog.author.profilePicture} email={blog.author.email} placeholderColor={blog.author.placeholderColor}/>
+          {(blog.collaborators && blog.collaborators.length > 0) && blog.collaborators.map((user) => (
+            <Avatar key={user.firstName} profileImage={user.profilePicture} email={user.email} placeholderColor={user.placeholderColor}/>
+          ))}
+        </div>
+      </div>
+    )
+  };
+
   return (
     <div id='latestBlogs' className='w-full flex xl:gap-16 xl:p-16 md:p-10 p-6 flex-col gap-6 pt-[84px] md:pt-[84px] xl:pt-[84px]'>
       <div className='flex flex-col gap-3'>
@@ -52,6 +87,10 @@ const FeaturedBlogs = () => {
         <div className="w-full xl:h-[450px] lg:h-[420px] flex lg:gap-3 flex-col lg:flex-row gap-8">
           <div className="rounded-xl lg:w-1/4 flex flex-col overflow-hidden w-full h-[360px] md:h-[420px] lg:h-full">
             <div className="relative overflow-hidden rounded-xl flex-1">
+              <div className="w-full h-full absolute bg-black/30 rounded-lg z-[100] left-0 top-0"/>
+              <div className="absolute bottom-3 right-3 text-white z-[300]">
+                {isCollaboration(featuredBlogs[0]) ? <Collaboration blog={featuredBlogs[0]}/> : <Avatar profileImage={featuredBlogs[0]?.author.profilePicture} email={featuredBlogs[0]?.author.email} placeholderColor={featuredBlogs[0]?.author.placeholderColor}/>}
+              </div>
               <Image src={featuredBlogs[0].banner.secure_url} alt='blog_banner' fill className='object-cover object-center'/>
             </div>
             <div className="w-full h-[200px] md:h-[160px] lg:h-[200px] pt-2 justify-between flex flex-col">
@@ -79,8 +118,12 @@ const FeaturedBlogs = () => {
               </div>
             </div>
           </div>
-          <div className="rounded-xl flex flex-col overflow-hidden lg:w-1/2 w-full  h-[360px] md:h-[420px] lg:h-full">
+          <div className="rounded-xl flex flex-col overflow-hidden lg:w-1/2 w-full h-[360px] md:h-[420px] lg:h-full">
             <div className="relative overflow-hidden rounded-xl flex-1">
+              <div className="w-full h-full absolute bg-black/30 rounded-lg z-[100] left-0 top-0"/>
+              <div className="absolute bottom-3 right-3 text-white z-[300]">
+                {isCollaboration(featuredBlogs[1]) ? <Collaboration blog={featuredBlogs[1]}/> : <Avatar profileImage={featuredBlogs[1]?.author.profilePicture} email={featuredBlogs[1]?.author.email} placeholderColor={featuredBlogs[1]?.author.placeholderColor}/>}
+              </div>
               <Image src={featuredBlogs[1].banner.secure_url} alt='blog_banner' fill className='object-cover object-center'/>
             </div>
             <div className="w-full h-[200px] md:h-[160px] pt-2 flex flex-col justify-between">
@@ -110,6 +153,10 @@ const FeaturedBlogs = () => {
           </div>
           <div className="rounded-xl lg:w-1/4 flex flex-col overflow-hidden w-full h-[360px] md:h-[420px] lg:h-full">
             <div className="relative overflow-hidden rounded-xl flex-1">
+              <div className="w-full h-full absolute bg-black/30 rounded-lg z-[100] left-0 top-0"/>
+              <div className="absolute bottom-3 right-3 text-white z-[300]">
+                {isCollaboration(featuredBlogs[2]) ? <Collaboration blog={featuredBlogs[2]}/> : <Avatar profileImage={featuredBlogs[2]?.author.profilePicture} email={featuredBlogs[2]?.author.email} placeholderColor={featuredBlogs[2]?.author.placeholderColor}/>}
+              </div>
               <Image src={featuredBlogs[2].banner.secure_url} alt='blog_banner' fill className='object-cover object-center'/>
             </div>
             <div className="w-full h-[200px] md:h-[160px] lg:h-[200px] pt-2 justify-between flex flex-col">

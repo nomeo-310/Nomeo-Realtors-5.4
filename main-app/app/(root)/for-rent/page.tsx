@@ -1,9 +1,13 @@
+import ForRentClient from '@/components/pages/for-rent/for-rent-client';
+import { Metadata } from 'next';
 import React from 'react'
 
+export const metadata: Metadata = {
+  title: 'For Rent'
+};
+
 const ForRentPage = () => {
-  return (
-    <div>ForRentPage</div>
-  )
+  return <ForRentClient/>
 }
 
 export default ForRentPage

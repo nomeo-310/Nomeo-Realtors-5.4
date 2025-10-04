@@ -5,7 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { FavouriteIcon, HeartAddIcon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils'
 import { SingleBlog, userProps } from '@/lib/types';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { likeBlog } from '@/actions/blog-actions';
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
 
 const LikeBlog = ({blog, user}: Props) => {
   const pathname = usePathname();
+  const router = useRouter();
   const alreadyLiked = user && blog.likes?.includes(user?._id);
 
   const handleClick = async () => {
@@ -23,6 +24,11 @@ const LikeBlog = ({blog, user}: Props) => {
       path: pathname,
       blogId: blog._id ?? '',
     };
+
+    if (!user) {
+      localStorage.setItem('nextUrl', pathname);
+      router.push('/log-in');
+    }
 
     await likeBlog(values);
   };

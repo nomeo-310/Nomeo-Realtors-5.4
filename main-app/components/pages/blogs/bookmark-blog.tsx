@@ -6,7 +6,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Bookmark01Icon, BookmarkAdd01Icon } from '@hugeicons/core-free-icons';
 import { SingleBlog, userProps } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React from 'react'
 import { saveBlog } from '@/actions/blog-actions';
 
@@ -17,6 +17,8 @@ type Props = {
 
 const BookmarkBlog = ({blog, user}: Props) => {
   const pathname = usePathname();
+  const router = useRouter();
+  
   const alreadyBookmarked = user && blog.saves?.includes(user?._id);
 
   const handleClick = async () => {
@@ -25,6 +27,11 @@ const BookmarkBlog = ({blog, user}: Props) => {
       path: pathname,
       blogId: blog._id ?? '',
     };
+
+    if (!user) {
+      localStorage.setItem('nextUrl', pathname);
+      router.push('/log-in');
+    }
     await saveBlog(values)
   };
    

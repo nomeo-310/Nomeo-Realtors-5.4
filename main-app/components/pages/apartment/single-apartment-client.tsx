@@ -60,7 +60,7 @@ const SingleApartmentClient = ({ property, user }: Props) => {
 
   const [openSlider, setOpenSlider] = React.useState(false);
 
-  const userIsAuthor = user._id === property?.agent?.userId?._id;
+  const userIsAuthor = user?._id === property?.agent?.userId?._id;
 
   const Header = () => {
     return (
@@ -520,7 +520,7 @@ const SingleApartmentClient = ({ property, user }: Props) => {
                 </div>
               </div>
             </div>
-            { user.role === 'user' &&
+            { user?.role === 'user' &&
               <div className="w-full">
                 <div className="flex items-center gap-4">
                   <h2 className="lg:text-sm text-xs font-semibold">

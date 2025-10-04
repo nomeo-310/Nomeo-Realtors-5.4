@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { deletePost } from '@/actions/blog-actions';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Pagination from '@/components/ui/pagination';
+import BlogsSkeleton from '@/components/skeletons/blogs-skeleton';
 
 const AllUserBlogsClient = ({user}:{user:userProps}) => {
 
@@ -187,11 +188,11 @@ const AllUserBlogsClient = ({user}:{user:userProps}) => {
 
     if (status === 'pending') {
      return (
-      <div className='flex items-center justify-center py-24'>
-        <Loader2 className='animate-spin'/>
+      <div className='flex items-center justify-center w-full'>
+        <BlogsSkeleton/>
       </div>
      ) 
-    };
+    }; 
   
     if (status === 'error') {
       return (

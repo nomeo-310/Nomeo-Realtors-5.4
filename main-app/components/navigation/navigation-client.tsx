@@ -68,7 +68,7 @@ const NavigationClient = ({ user }: { user: userProps }) => {
           <button onClick={() => onOpen()}>
             <HugeiconsIcon icon={Menu02Icon} className="size-7" />
           </button>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm text-secondary-blue font-semibold">
             <HugeiconsIcon icon={EntranceStairsIcon} />
             Nomeo Realtors
           </div>

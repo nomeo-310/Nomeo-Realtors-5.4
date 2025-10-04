@@ -63,7 +63,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
   };
 
   return (
-    <div className="w-full h-10 mt-6 flex items-center md:justify-center justify gap-3">
+    <div className="w-full h-10 mt-6 flex items-center md:justify-center justify gap-3 justify-between">
       <button
         type="button"
         className='lg:text-sm uppercase text-xs font-medium h-full bg-secondary-blue text-white px-6 rounded-lg disabled:opacity-50'

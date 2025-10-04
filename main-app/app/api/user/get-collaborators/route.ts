@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/app/action/user-actions";
+import { getCurrentUser } from "@/actions/user-actions";
 import User from "@/models/user";
 import mongoose from "mongoose";
 import { NextRequest } from "next/server";

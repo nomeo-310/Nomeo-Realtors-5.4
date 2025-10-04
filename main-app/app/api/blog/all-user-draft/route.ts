@@ -11,7 +11,7 @@ export const GET = async (req: Request) => {
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1");
   const query = searchParams.get("query") || "";
-  const limit = 10;
+  const limit = 6;
 
   if (!current_user) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });

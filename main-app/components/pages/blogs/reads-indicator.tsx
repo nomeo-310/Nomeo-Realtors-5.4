@@ -13,7 +13,7 @@ import React from 'react'
     const alreadyRead = user && reads.includes(user?._id as string)
     return (
       <div className='flex items-center gap-2'>
-        <div className={cn('size-8 lg:size-9 text-gray-500 items-center justify-center rounded-full flex bg-gray-200', alreadyRead && 'text-secondary-blue')}>
+        <div className={cn('size-8 lg:size-9 text-gray-500 items-center justify-center rounded-full flex bg-gray-200', alreadyRead && 'text-secondary-blue bg-blue-200')}>
           <HugeiconsIcon icon={ViewIcon} className='lg:size-6 size-5'/>
         </div>
         <p className={cn('text-sm')}>{total_reads}</p>

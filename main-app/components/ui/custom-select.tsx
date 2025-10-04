@@ -22,7 +22,7 @@ const CustomSelect = ({height, data, placeholder, value, onChange, disabled, sty
         <SelectValue placeholder={placeholder} className={cn("capitalize text-sm lg:text-base text-black/60", placeholderStyle && placeholderStyle)}/>
       </SelectTrigger>
       <SelectContent className="rounded">
-        <SelectGroup>
+        <SelectGroup className="z-[800]">
           {data && data.length > 0 && data.map((item:string, index:number) => (
             <SelectItem value={item} className="text-sm lg:text-base rounded" key={index}>{item.split('-').join(' ')}</SelectItem>
           ))}

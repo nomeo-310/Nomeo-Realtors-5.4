@@ -5,7 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { FavouriteIcon, HeartAddIcon } from '@hugeicons/core-free-icons';
 import { cn } from '@/lib/utils'
 import { propertyProps, userProps } from '@/lib/types';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { likeProperty } from '@/actions/property-actions';
 
 type Props = {
@@ -16,6 +16,7 @@ type Props = {
 const LikeButton = ({property, user}: Props) => {
   const pathname = usePathname();
   const alreadyLiked = property.likes?.includes(user?._id);
+  const router = useRouter();
 
   const handleClick = async () => {
 
@@ -23,6 +24,12 @@ const LikeButton = ({property, user}: Props) => {
       path: pathname,
       propertyId: property._id ?? '',
     };
+
+    if (!user) {
+      localStorage.setItem('nextUrl', pathname);
+      router.push('/log-in');
+    };
+    
     await likeProperty(values);
   };
 

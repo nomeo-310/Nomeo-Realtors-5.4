@@ -13,7 +13,7 @@ export const GET = async (req: Request) => {
 
     if (!cachedFeatured.length || now - lastFetchTime > CACHE_DURATION) {
       cachedFeatured = await Blog.aggregate([
-        { $match: { is_published: true, blog_approval: 'pending' } },
+        { $match: { is_published: true, blog_approval: 'pending', is_deleted: false } },
         { $sample: { size: 3 } },
         {
           $project: {

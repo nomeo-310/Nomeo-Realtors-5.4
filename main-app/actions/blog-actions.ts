@@ -12,6 +12,7 @@ import { CollaborationEmailTemplate } from "@/components/email-templates/collabo
 import Notification from "@/models/notification";
 import { deleteCloudinaryImages } from "./delete-cloudinary-image";
 import mongoose from 'mongoose'
+import { ObjectId } from "mongodb";
 
 interface blogData {
   read_time: number;
@@ -529,41 +530,6 @@ export const rejectCollaboration = async (acceptData: acceptDataProps) => {
       message: "Collaboration rejected successfully",
       status: 200,
     };
-  } catch (error) {
-    console.log(error);
-    return { success: false, message: "Internal server error", status: 500 };
-  }
-};
-
-export const getLatestBlogs = async () => {
-  await connectToMongoDB();
-  try {
-    const latestBlogs = await Blog.find({
-      is_published: true,
-      is_deleted: false,
-    })
-      .limit(5)
-      .select(
-        "_id description banner created_at read_time title total_likes total_comments total_saves total_reads"
-      )
-      .populate({
-        path: "author",
-        model: User,
-        select:
-          "firstName lastName profilePicture email username placeholderColor role _id",
-      })
-      .populate({
-        path: "collaborators",
-        model: User,
-        select:
-          "firstName lastName profilePicture email username placeholderColor role _id",
-      })
-      .sort({ created_at: -1 })
-      .exec();
-
-    const blogs = JSON.parse(JSON.stringify(latestBlogs));
-
-    return blogs;
   } catch (error) {
     console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
@@ -1111,33 +1077,54 @@ export const getSingleBlog = async (blogId:string) => {
 
 };
 
-export const readBlog = async ({blog_id, path, session_key}: {blog_id: string; path: string; session_key: string }) => {
+export const readBlog = async ({blogId, path, sessionKey}: {blogId: string; path: string; sessionKey: string}) => {
   await connectToMongoDB();
-
   const current_user = await getCurrentUser();
-  const blog = await Blog.findById(blog_id);
-
-  if (!blog) return;
 
   try {
-    const readerId = current_user?._id?.toString() ?? session_key;
-    if (!readerId) return;
-  
-    if (blog.last_reads && blog.last_reads[readerId] === session_key) {
-      return;
+    if (!sessionKey) {
+      return { success: false, message: "Missing session identifier", status: 400 };
     }
-  
-    await Blog.findByIdAndUpdate(blog_id, {
-      $inc: { total_reads: 1 },
-      $set: { [`lastReads.${readerId}`]: session_key },
-      ...(current_user
-        ? { $addToSet: { reads: current_user._id } }
-        : {}),
-    });
-  
-    revalidatePath(path);
+
+    const blog = await Blog.findOne({ _id: new ObjectId(blogId) }).lean();
+
+    if (!blog) {
+      return { success: false, message: "Blog not found", status: 404 };
+    }
+
+    if (!current_user) {
+
+      if (!blog.guest_readers?.includes(sessionKey)) {
+        await Blog.updateOne(
+          { _id: new ObjectId(blogId) },
+          { $inc: { total_reads: 1 }, $addToSet: { guest_readers: sessionKey } }
+        );
+        revalidatePath(path);
+      }
+    } else {
+
+      const userId = current_user._id.toString();
+      const alreadyRead = blog.reads.some((id: any) => id.toString() === userId);
+
+      if (!alreadyRead) {
+        await Blog.updateOne(
+          { _id: new ObjectId(blogId) },
+          { $inc: { total_reads: 1 }, $addToSet: { reads: new ObjectId(userId) } }
+        );
+        await User.updateOne(
+          { _id: new ObjectId(userId) },
+          { $addToSet: { reads: new ObjectId(blogId) } }
+        );
+        revalidatePath(path);
+      }
+    }
+
+    return { success: true, message: "Read registered", status: 200 };
   } catch (error) {
-    return {success: false, message: 'Internal server error', status: 500}
+    console.error(error);
+    return { success: false, message: "Internal server error", status: 500 };
   }
 };
+
+
 

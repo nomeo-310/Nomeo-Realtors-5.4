@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/app/action/user-actions";
+import { getCurrentUser } from "@/actions/user-actions";
 import User from "@/models/user";
 
 export const POST = async (request:Request) => {

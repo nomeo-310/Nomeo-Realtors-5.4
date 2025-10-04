@@ -6,7 +6,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Bookmark01Icon, BookmarkAdd01Icon } from '@hugeicons/core-free-icons';
 import { propertyProps, userProps } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React from 'react'
 
 type Props = {
@@ -16,6 +16,7 @@ type Props = {
 
 const BookmarkButton = ({property, user}: Props) => {
   const pathname = usePathname();
+  const router = useRouter();
   const alreadyBookmarked = property.bookmarks?.includes(user?._id);
 
   const handleClick = async () => {
@@ -24,6 +25,11 @@ const BookmarkButton = ({property, user}: Props) => {
       path: pathname,
       propertyId: property._id ?? '',
     };
+
+    if (!user) {
+      localStorage.setItem('nextUrl', pathname);
+      router.push('/log-in');
+    }
     await bookmarkProperty(values)
   };
    

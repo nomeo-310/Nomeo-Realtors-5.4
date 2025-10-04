@@ -1,8 +1,3 @@
-import { ArrowUpRight03Icon } from '@hugeicons/core-free-icons'
-import { HugeiconsIcon } from '@hugeicons/react'
-import Image from 'next/image'
-import Link from 'next/link'
-import React from 'react'
 import { Skeleton } from '../ui/skeleton'
 
 const FeaturedBlogsSkeleton = () => {

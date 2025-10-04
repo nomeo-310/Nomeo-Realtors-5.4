@@ -16,6 +16,24 @@ export const GET = async (req: Request) => {
         { $match: { propertyApproval: "pending" } },
         { $sample: { size: 4 } },
         {
+          $lookup: {
+            from: "agents",
+            localField: "agent",
+            foreignField: "_id",
+            as: "agent",
+          },
+        },
+        { $unwind: { path: "$agent", preserveNullAndEmptyArrays: true } },
+        {
+          $lookup: {
+            from: "users",
+            localField: "agent.userId",
+            foreignField: "_id",
+            as: "userDetails",
+          },
+        },
+        { $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true } },
+        {
           $project: {
             _id: 1,
             propertyTag: 1,
@@ -28,14 +46,24 @@ export const GET = async (req: Request) => {
             squareFootage: 1,
             furnitureStatus: 1,
             facilityStatus: 1,
-            location: 1,
             bedrooms: 1,
             bathrooms: 1,
             createdAt: 1,
+            toilets: 1,
             apartmentImages: 1,
+            agent: {
+              _id: "$agent._id",
+              licenseNumber: "$agent.licenseNumber",
+              userId: { 
+                surName: "$userDetails.surName",
+                lastName: "$userDetails.lastName",
+                email: "$userDetails.email",
+                profilePicture: "$userDetails.profilePicture",
+                placeholderColor: "$userDetails.placeholderColor",
+              },
+            },
           },
         },
-
         {
           $lookup: {
             from: "attachments",
@@ -44,7 +72,8 @@ export const GET = async (req: Request) => {
             as: "apartmentImages",
             pipeline: [{ $project: { images: 1, _id: 1 } }],
           },
-        },        
+        },
+        { $unwind: { path: "$apartmentImages", preserveNullAndEmptyArrays: true } },      
       ]);
       lastFetchTime = now;
     }

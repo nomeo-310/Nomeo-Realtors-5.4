@@ -26,7 +26,7 @@ interface IBlog extends Document {
   is_deleted: boolean;
   read_time: number;
   blog_approval: 'approved' | 'pending' | 'unapproved';
-  last_reads: Record<string, string>; 
+  guest_readers: string[],
   created_at: Date;
   updated_at: Date;
 }
@@ -53,7 +53,7 @@ const blogSchema: Schema<IBlog> = new Schema(
     is_deleted: { type: Boolean, default: false },
     read_time: { type: Number, default: 0, required: true },
     blog_approval: { type: String, enum: ['approved', 'pending', 'unapproved'], default: 'unapproved' },
-    last_reads: { type: Map, of: String, default: {} },
+    guest_readers: [{ type: String }],
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now },
   },

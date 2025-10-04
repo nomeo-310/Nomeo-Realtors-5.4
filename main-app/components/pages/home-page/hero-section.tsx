@@ -9,7 +9,7 @@ const HeroSection = () => {
   const {isOpen } = useOpenMobileMenu();
 
   return (
-    <main className="pt-[61px] lg:pt-[71px] lg:px-8 px-4 xl:h-screen lg:h-[800px] md:h-[600px] h-[calc(100vh_+_100px)] w-full">
+    <main className="pt-[61px] lg:pt-[71px] lg:px-8 px-4 xl:h-screen lg:h-[800px] md:h-[700px] h-[calc(100vh_+_100px)] w-full">
       <div className="h-full lg:pt-0 lg:pb-16 md:py-14 py-10">
         <div className="h-full flex flex-col gap-8 lg:gap-0">
           <div className="h-[24%] lg:h-[37%] md:h-[35%] w-full flex lg:flex-row flex-col lg:justify-between pb-10 gap-5 lg:gap-0 xl:items-end lg:items-center">

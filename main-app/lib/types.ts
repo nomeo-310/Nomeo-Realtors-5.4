@@ -1,3 +1,5 @@
+import Pagination from "@/components/ui/pagination";
+
 export interface userProps {
   _id: string;
   username: string;
@@ -258,6 +260,11 @@ export interface latestBlogProps {
   created_at: string;
 };
 
+export interface AllBlogProps {
+  blogs: latestBlogProps[];
+  pagination: BlogPagination;
+}
+
 export interface userBlogData {
   blogs: Blog[];
   pagination: BlogPagination;
@@ -396,5 +403,7 @@ export type SingleBlog = {
   updatedAt: string;
   __v: number;
 };
+
+
 
 
