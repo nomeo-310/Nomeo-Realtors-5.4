@@ -1,6 +1,6 @@
 import { getCurrentUser } from '@/actions/user-actions';
-import AgentBlogLayout from '@/components/pages/blogs/agent-blog-layout';
 import AllUserBlogsClient from '@/components/pages/blogs/all-user-blogs-client';
+import BlogLayout from '@/components/pages/blogs/blog-layout';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
@@ -25,9 +25,9 @@ const AllBlogsPage = async () => {
   };
 
   return (
-    <AgentBlogLayout>
+    <BlogLayout user={current_user}>
       <AllUserBlogsClient user={current_user} />
-    </AgentBlogLayout>
+    </BlogLayout>
   )
 }
 

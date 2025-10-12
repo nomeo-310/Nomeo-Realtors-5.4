@@ -353,7 +353,6 @@ export interface PropertiesResponse {
   pagination: PropertyPagination;
 }
 
-
 export type SingleBlog = {
   _id: string;
   title: string;
@@ -403,6 +402,47 @@ export type SingleBlog = {
   updatedAt: string;
   __v: number;
 };
+
+export type ClientProps = {
+  _id: string;
+  user: {
+    _id: string;
+    username: string;
+    surName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    additionalPhoneNumber: string;
+    city: string;
+    state: string;
+    profilePicture: string;
+    role: string;
+  },
+  property: {
+    propertyTypeTag: string;
+    propertyIdTag: string;
+    address: string;
+    city: string;
+    state: string;
+    annualRent: number;
+    agent: {
+      officeNumber: string;
+      officeAddress: string;
+      agencyName: string;
+      userId: {
+        surName: string;
+        lastName: string;
+        email: string;
+        phoneNumber: string;
+        additionalPhoneNumber: string;
+      }
+    },
+  }
+  startDate: string;
+  nextDueDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 
 

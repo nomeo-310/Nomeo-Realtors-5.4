@@ -3,10 +3,10 @@ import { Skeleton } from '../ui/skeleton'
 const FeaturedBlogsSkeleton = () => {
   
   return (
-    <div className="w-full xl:h-[450px] lg:h-[420px] flex lg:gap-3 flex-col lg:flex-row gap-8">
+    <div className="w-full xl:h-[350px] lg:h-[300px] flex lg:gap-3 flex-col lg:flex-row gap-8">
       <div className="lg:w-1/4 flex flex-col overflow-hidden w-full h-[360px] md:h-[420px] lg:h-full">
         <div className="relative flex-1 w-full h-full">
-          <Skeleton className='w-full h-full bg-[#d4d4d4] dark:bg-[#424242]' />
+          <Skeleton className='w-full h-full bg-[#d4d4d4] dark:bg-[#424242]'/>
         </div>
         <div className="w-full gap-2 pt-2 justify-between flex flex-col">
           <div className='flex flex-col gap-1'>

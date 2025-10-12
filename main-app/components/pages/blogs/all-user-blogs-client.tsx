@@ -11,7 +11,6 @@ import { Blog, userBlogData, userProps } from '@/lib/types';
 import { cn, formatDate } from '@/lib/utils';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation'
 import React from 'react'

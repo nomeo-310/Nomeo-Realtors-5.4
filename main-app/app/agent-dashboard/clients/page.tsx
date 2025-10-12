@@ -27,7 +27,7 @@ const ClientsPage = async () => {
   };
 
   return (
-    <ClientsClient/>
+    <ClientsClient user={current_user}/>
   )
 }
 

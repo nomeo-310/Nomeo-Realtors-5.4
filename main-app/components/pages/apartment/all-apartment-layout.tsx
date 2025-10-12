@@ -1,6 +1,7 @@
-import { ArrowUpRightIcon, SearchIcon } from '@/components/ui/icons'
 import InputWithIcon from '@/components/ui/input-with-icon'
 import { cn } from '@/lib/utils'
+import { ArrowUpRight01Icon, Search01Icon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React from 'react'
@@ -30,14 +31,14 @@ const AllApartmentLayout = ({children}:{children: React.ReactNode}) => {
         <div className="w-full md:w-[60%] xl:w-[40%] flex gap-1 mb-6">
           <InputWithIcon 
             type='text' 
-            icon={SearchIcon}
+            icon={Search01Icon}
             iconClassName='text-black/60 dark:text-white/70'
             className=' dark:border-white/70 rounded-r-none'
             placeholder='search for apartments'
             inputClassName='placeholder:text-black/70 border dark:border-white/70 rounded-lg rounded-r-none dark:placeholder:text-white'
           />
           <button type="button" className='lg:h-12 h-10 aspect-square rounded-lg flex items-center justify-center border dark:border-white/70 rounded-l-none'>
-              <ArrowUpRightIcon className='rotate-45 text-black/60 dark:text-white/70'/>
+              <HugeiconsIcon icon={ArrowUpRight01Icon} className='rotate-45 text-black/60 dark:text-white/70'/>
           </button>
         </div>
         <div className="h-10 w-full flex">

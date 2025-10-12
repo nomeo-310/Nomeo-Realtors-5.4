@@ -1,8 +1,9 @@
 'use client'
 
-import { ArrowUpRightIcon, SearchIcon } from '@/components/ui/icons'
 import InputWithIcon from '@/components/ui/input-with-icon'
 import { cn } from '@/lib/utils'
+import { ArrowUpRight01Icon, SearchIcon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React from 'react'
@@ -38,7 +39,7 @@ const TransactionLayout = ({children}:{children: React.ReactNode}) => {
               inputClassName='placeholder:text-black/70 border dark:border-white/70 rounded-lg rounded-r-none dark:placeholder:text-white'
             />
             <button type="button" className='lg:h-12 h-10 aspect-square rounded-lg flex items-center justify-center border dark:border-white/70 rounded-l-none'>
-              <ArrowUpRightIcon className='rotate-45 text-black/60 dark:text-white/70'/>
+              <HugeiconsIcon icon={ArrowUpRight01Icon} className='rotate-45 text-black/60 dark:text-white/70'/>
             </button>
           </div>
         }

@@ -7,45 +7,52 @@ import { usePathname } from "next/navigation";
 import React from "react";
 
 type dashboardLinkProps = {
-  icon: any; // Hugeicons icon object
+  icon: any;
   text: string;
   path: string;
   notification: number;
   currentPage: string;
 };
 
-const DashboardLink = ({icon:Icon,text, path, notification, currentPage}: dashboardLinkProps) => {
+const DashboardLink = ({ icon: Icon, text, path, notification, currentPage }: dashboardLinkProps) => {
   const pathname = usePathname();
 
-  const agentTransactionBaseLink = "/agent-dashboard/transactions";
-  const agentCreatedBlogsBaseLink = "/agent-dashboard/created-blogs";
-  const agentCreateBlogBaseLink = "/agent-dashboard/create-blog";
-  const verificationBaseLink = "/admin-dashboard/verifications";
-  const adminTransactionBaseLink = "/admin-dashboard/transactions";
-  const adminApartmentsBaseLink = "/admin-dashboard/apartments";
-  const adminCreateBlogBaseLink = "/admin-dashboard/create-blog";
-  const adminCreatedBlogsBaseLink = "/admin-dashboard/created-blogs";
-  const adminBlogsBaseLink = "/admin-dashboard/all-blogs";
-  const userCreatedBlogsBaseLink = "/user-dashboard/created-blogs";
+  const getIsActive = () => {
+    if (pathname === path) return true;
 
-  const baseLinks = [
-    adminApartmentsBaseLink,
-    adminTransactionBaseLink,
-    adminCreateBlogBaseLink,
-    adminCreatedBlogsBaseLink,
-    verificationBaseLink,
-    agentTransactionBaseLink,
-    agentCreateBlogBaseLink,
-    agentCreatedBlogsBaseLink,
-    adminBlogsBaseLink,
-    userCreatedBlogsBaseLink,
-  ];
+    if (text === "Likes") {
+      const agentLikesBaseLink = "/agent-dashboard/likes";
+      const userLikesBaseLink = "/user-dashboard/likes";
+      return pathname.startsWith(agentLikesBaseLink) || pathname.startsWith(userLikesBaseLink);
+    }
 
-  const isBaseLinkActive = baseLinks.some(
-    (link) => path === link && pathname.startsWith(link)
-  );
+    if (text === "Saves") {
+      const agentSavesBaseLink = "/agent-dashboard/saves";
+      const userSavesBaseLink = "/user-dashboard/saves";
+      return pathname.startsWith(agentSavesBaseLink) || pathname.startsWith(userSavesBaseLink);
+    }
 
-  const isActive = isBaseLinkActive || pathname === path;
+    if (text === "Transactions") {
+      const agentTransactionBaseLink = "/agent-dashboard/transactions";
+      return pathname.startsWith(agentTransactionBaseLink);
+    }
+
+    if (text === "Created Blogs" || text === "Blogs") {
+      const agentCreatedBlogsBaseLink = "/agent-dashboard/created-blogs";
+      const userCreatedBlogsBaseLink = "/user-dashboard/created-blogs";
+      return pathname.startsWith(agentCreatedBlogsBaseLink) || pathname.startsWith(userCreatedBlogsBaseLink);
+    }
+    
+    if (text === "Create Blog") {
+      const agentCreateBlogBaseLink = "/agent-dashboard/create-blog";
+      const userCreateBlogsBaseLink = "/user-dashboard/create-blogs";
+      return pathname.startsWith(agentCreateBlogBaseLink) || pathname.startsWith(userCreateBlogsBaseLink);
+    }
+
+    return false;
+  };
+
+  const isActive = getIsActive();
 
   return (
     <React.Fragment>
@@ -72,7 +79,7 @@ const DashboardLink = ({icon:Icon,text, path, notification, currentPage}: dashbo
               "size-6 rounded-full tabular-nums bg-red-500 text-white flex items-center justify-center text-sm ml-3"
             )}
           >
-            {notification && notification > 0 ? notification : ""}
+            {notification}
           </span>
         )}
       </Link>
@@ -87,7 +94,7 @@ const DashboardLink = ({icon:Icon,text, path, notification, currentPage}: dashbo
         <h3 className="hidden lg:block">{text}</h3>
         {notification > 0 && (
           <span className="absolute right-1.5 top-1 size-4 rounded-full tabular-nums bg-red-500 text-white flex items-center justify-center text-xs">
-            {notification && notification > 0 ? notification : ""}
+            {notification}
           </span>
         )}
       </Link>

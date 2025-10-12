@@ -25,7 +25,7 @@ const TransactionLayout = ({children}:{children: React.ReactNode}) => {
       </div>
       <div className="flex flex-col gap-4">
         <div className="h-10 w-full flex">
-          <TabButton path='/admin-dashboard/transactions' label='Rentals'/>
+          <TabButton path='/agent-dashboard/transactions' label='Rentals'/>
           <TabButton path='/agent-dashboard/transactions/payment-history' label='Sales'/>
         </div>
         { pathname === '/agent-dashboard/transactions/payment-history' &&

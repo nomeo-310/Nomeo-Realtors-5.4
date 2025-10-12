@@ -23,7 +23,6 @@ export const getAgentVerificationStatus = async (agentId: string) => {
     }
 
   } catch (error) {
-    // Log the error for debugging and return a generic error to the client
     console.error("Error in getAgentVerificationStatus:", error);
     return { isPending: true, error: 'An unexpected error occurred' };
   }

@@ -3,9 +3,7 @@ import { toast } from 'sonner';
 
 interface ApiErrorResponse {
   message?: string;
-  error?:{
-    message?: string;
-  };
+  error?: string;
 }
 
 export const apiRequestHandler = async <T>(requestFn: () =>Promise<T>, setLoading?: (loading:boolean) =>void):Promise<T | null> => {
@@ -16,9 +14,9 @@ export const apiRequestHandler = async <T>(requestFn: () =>Promise<T>, setLoadin
   } catch (error) {
     const axiosError = error as AxiosError<ApiErrorResponse>;
     console.log(error);
-    if (axiosError?.response?.data?.message || axiosError?.response?.data?.error?.message) {
+    if (axiosError?.response?.data?.message || axiosError?.response?.data?.error) {
       console.log(axiosError?.response?.data?.message)
-      toast.error(axiosError?.response?.data?.message || axiosError?.response?.data?.error?.message || 'An unexpected error occurred.')
+      toast.error(axiosError?.response?.data?.message || axiosError?.response?.data?.error || 'An unexpected error occurred.')
     } else {
       toast.error('An unexpected error occured. Try again later.')
     }

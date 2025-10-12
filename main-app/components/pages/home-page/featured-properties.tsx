@@ -70,7 +70,7 @@ const FeaturedProperties = () => {
       }
       { status === 'success' && featuredProperties.length < 1 &&
         <div>
-          <EmptyState message='Featured blogs not available at the moment. Check later' className='w-fit'/>
+          <EmptyState message='Featured properties not available at the moment. Check later' className='w-fit'/>
         </div>
       }
       { status === 'success' && featuredProperties.length > 0 &&

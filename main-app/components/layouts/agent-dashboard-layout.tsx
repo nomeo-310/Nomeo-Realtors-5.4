@@ -23,7 +23,6 @@ const AgentDashboardLayout = async ({children,}: {children: React.ReactNode;}) =
 
   const isPending = status?.isPending ?? false;
 
-
   return (
     <React.Fragment>
       <div className="w-full">
@@ -38,7 +37,7 @@ const AgentDashboardLayout = async ({children,}: {children: React.ReactNode;}) =
         </div>
         <div className="w-full flex lg:px-8 px-4">
           <div className="lg:w-[220px] md:w-[60px] w-[50px] sticky lg:top-[70px] top-[60px] h-full py-4 lg:py-5 lg:pr-6 pr-3 md:pr-4">
-            <AgentDashBoardSideBar isCollaborator={current_user?.blogCollaborator} isPending={isPending}/>
+            <AgentDashBoardSideBar isCollaborator={current_user?.blogCollaborator} isPending={isPending} showSavedBlogs={current_user.showBookmarkedBlogs} showSavedApartments={current_user.showBookmarkedApartments} showLikedApartments={current_user.showLikedApartments} showLikedBlogs={current_user.showLikedBlogs} />
           </div>
           <div className="flex-1 min-h-screen lg:pt-[90px] pt-[76px] md:border-l dark:border-l-white/70 pl-3 lg:pl-6 lg:py-5 md:pl-4 py-4">
             {children}

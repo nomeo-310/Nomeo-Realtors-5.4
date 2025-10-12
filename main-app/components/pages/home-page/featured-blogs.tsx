@@ -78,15 +78,15 @@ const FeaturedBlogs = () => {
           <ErrorState message='Error occurred while getting featured blogs'/>
         </div>
       }
-      { status === 'success' && featuredBlogs.length < 1 &&
+      { status === 'success' && featuredBlogs?.length < 1 &&
         <div>
           <EmptyState message='Featured blogs not available at the moment. Check later'/>
         </div>
       }
-      {status === 'success' && featuredBlogs.length > 1 &&
+      {status === 'success' && featuredBlogs?.length > 0 &&
         <div className="w-full xl:h-[450px] lg:h-[420px] flex lg:gap-3 flex-col lg:flex-row gap-8">
           <div className="rounded-xl lg:w-1/4 flex flex-col overflow-hidden w-full h-[360px] md:h-[420px] lg:h-full">
-            <div className="relative overflow-hidden rounded-xl flex-1">
+            <div className="relative overflow-hidden rounded-md flex-1">
               <div className="w-full h-full absolute bg-black/30 rounded-lg z-[100] left-0 top-0"/>
               <div className="absolute bottom-3 right-3 text-white z-[300]">
                 {isCollaboration(featuredBlogs[0]) ? <Collaboration blog={featuredBlogs[0]}/> : <Avatar profileImage={featuredBlogs[0]?.author.profilePicture} email={featuredBlogs[0]?.author.email} placeholderColor={featuredBlogs[0]?.author.placeholderColor}/>}
@@ -119,7 +119,7 @@ const FeaturedBlogs = () => {
             </div>
           </div>
           <div className="rounded-xl flex flex-col overflow-hidden lg:w-1/2 w-full h-[360px] md:h-[420px] lg:h-full">
-            <div className="relative overflow-hidden rounded-xl flex-1">
+            <div className="relative overflow-hidden rounded-md flex-1">
               <div className="w-full h-full absolute bg-black/30 rounded-lg z-[100] left-0 top-0"/>
               <div className="absolute bottom-3 right-3 text-white z-[300]">
                 {isCollaboration(featuredBlogs[1]) ? <Collaboration blog={featuredBlogs[1]}/> : <Avatar profileImage={featuredBlogs[1]?.author.profilePicture} email={featuredBlogs[1]?.author.email} placeholderColor={featuredBlogs[1]?.author.placeholderColor}/>}
@@ -152,7 +152,7 @@ const FeaturedBlogs = () => {
             </div>
           </div>
           <div className="rounded-xl lg:w-1/4 flex flex-col overflow-hidden w-full h-[360px] md:h-[420px] lg:h-full">
-            <div className="relative overflow-hidden rounded-xl flex-1">
+            <div className="relative overflow-hidden rounded-md flex-1">
               <div className="w-full h-full absolute bg-black/30 rounded-lg z-[100] left-0 top-0"/>
               <div className="absolute bottom-3 right-3 text-white z-[300]">
                 {isCollaboration(featuredBlogs[2]) ? <Collaboration blog={featuredBlogs[2]}/> : <Avatar profileImage={featuredBlogs[2]?.author.profilePicture} email={featuredBlogs[2]?.author.email} placeholderColor={featuredBlogs[2]?.author.placeholderColor}/>}

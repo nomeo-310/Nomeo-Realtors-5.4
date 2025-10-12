@@ -4,8 +4,9 @@ import React from 'react'
 import TransactionLayout from './transaction-layout'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn, nairaSign } from '@/lib/utils';
-import { DeleteIcon, MoreHorizontalIcon } from '@/components/ui/icons';
 import Pagination from '@/components/ui/pagination';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Delete01Icon } from '@hugeicons/core-free-icons';
 
 type mobileItemProps = {
   open: boolean;
@@ -56,7 +57,7 @@ const PaymentHistoryClient = () => {
           <TableCell className="text-xs md:text-sm text-center">{nairaSign} 145,500.00</TableCell>
           <TableCell className="text-xs md:text-sm text-center">Claimed</TableCell>
           <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
-            <DeleteIcon className='size-5 text-red-500'/>
+            <HugeiconsIcon icon={Delete01Icon} className='size-5 text-red-500'/>
           </TableCell>
         </TableRow>
       )

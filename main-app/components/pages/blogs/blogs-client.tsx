@@ -336,14 +336,14 @@ const BlogsClient = ({user}:Props) => {
             <Pagination currentPage={currentPage} totalPages={allBlogs.pagination.totalPages} onPageChange={setCurrentPage}/>
           </div>
         )
-      }
+      };
 
       return (
         <div className="md:pt-10 lg:pt-12 pt-8 flex flex-col gap-6 md:gap-8 lg:gap-10 md:min-h-[600px] min-h-[550px]">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-x-4 md:gap-y-6">
             {allBlogs && allBlogs.blogs.length > 0 && allBlogs.blogs.map((blog) => (
-              <div className="rounded-xl flex flex-col overflow-hidden w-full" key={blog._id}>
-                <div className="relative overflow-hidden rounded-xl aspect-video">
+              <div className="rounded-md flex flex-col overflow-hidden w-full" key={blog._id}>
+                <div className="relative overflow-hidden rounded-md aspect-video">
                   <div className="w-full h-full absolute bg-black/30 rounded-lg z-[100] left-0 top-0"/>
                   <div className="absolute bottom-3 right-3 text-white z-[300]">
                     {isCollaboration(blog) ? <Collaboration blog={blog}/> : <Avatar profileImage={blog?.author.profilePicture} email={blog?.author.email} placeholderColor={blog?.author.placeholderColor}/>}

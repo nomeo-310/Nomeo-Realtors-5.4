@@ -21,7 +21,7 @@ const CustomSelect = ({height, data, placeholder, value, onChange, disabled, sty
       <SelectTrigger className={cn("w-full text-sm lg:text-base bg-inherit rounded-lg ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-0 focus:ring-none focus:ring-offset-0 ", height ? height : 'h-10', style)} disabled={disabled}>
         <SelectValue placeholder={placeholder} className={cn("capitalize text-sm lg:text-base text-black/60", placeholderStyle && placeholderStyle)}/>
       </SelectTrigger>
-      <SelectContent className="rounded">
+      <SelectContent className="rounded z-[80000000]">
         <SelectGroup className="z-[800]">
           {data && data.length > 0 && data.map((item:string, index:number) => (
             <SelectItem value={item} className="text-sm lg:text-base rounded" key={index}>{item.split('-').join(' ')}</SelectItem>

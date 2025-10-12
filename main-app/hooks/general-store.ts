@@ -1,10 +1,27 @@
+import { ClientProps } from "@/lib/types";
 import { create } from "zustand";
 
-type modalControProps = {
+type modalControlProps = {
   isOpen:boolean
   onOpen: () => void
   onClose: () => void
 };
+
+interface rentRenewalModalProps extends modalControlProps {
+  details: ClientProps | null;
+  isOverdue: boolean;
+  overdueDays: number | null;
+  setOverdueDays: (overdueDays: number) => void;
+  setIsOverdue: (isOverdue: boolean) => void;
+  setDetails: (details: ClientProps) => void;
+  clearDetails: () => void;
+}
+
+interface contactUserModalProps extends modalControlProps {
+  details: ClientProps | null;
+  setDetails: (details: ClientProps) => void;
+  clearDetails: () => void;
+}
 
 type togglePageProps ={
   page: "newsletter" | "contact";
@@ -23,97 +40,97 @@ export const useBreadCrumbs = create<breadcrumbsProps>((set) => ({
   clearCurrentPage: () => set({currentPage: ""})
 }))
 
-export const useOpenMobileMenu = create<modalControProps>((set) => ({
+export const useOpenMobileMenu = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useOpenDashboardMenu = create<modalControProps>((set) => ({
+export const useOpenDashboardMenu = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const usePrivacyPolicyModal = create<modalControProps>((set) => ({
+export const usePrivacyPolicyModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useTermsOfServiceModal = create<modalControProps>((set) => ({
+export const useTermsOfServiceModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useTermsAndConditionModal = create<modalControProps>((set) => ({
+export const useTermsAndConditionModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useCookiesModal = create<modalControProps>((set) => ({
+export const useCookiesModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useUserOnboardingModal = create<modalControProps>((set) => ({
+export const useUserOnboardingModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useAgentOnboardingModal = create<modalControProps>((set) => ({
+export const useAgentOnboardingModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useInspectionConditionModal = create<modalControProps>((set) => ({
+export const useInspectionConditionModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useStartRentOutModal = create<modalControProps>((set) => ({
+export const useStartRentOutModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useTransactionModal = create<modalControProps>((set) => ({
+export const useTransactionModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const usePaymentModal = create<modalControProps>((set) => ({
+export const usePaymentModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useDeleteAccountModal = create<modalControProps>((set) => ({
+export const useDeleteAccountModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useDeletePropertiesModal = create<modalControProps>((set) => ({
+export const useDeletePropertiesModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useTransferAccountModal = create<modalControProps>((set) => ({
+export const useTransferAccountModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
 }));
 
-export const useRejectAgentModal = create<modalControProps>((set) => ({
+export const useRejectAgentModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
@@ -122,6 +139,34 @@ export const useRejectAgentModal = create<modalControProps>((set) => ({
 export const togglePage = create<togglePageProps>((set) => ({
   page: "contact",
   setPage: (page: "newsletter" | "contact") => set({ page }),
+}));
+
+export const useRenewalReminderModal =  create<rentRenewalModalProps>((set) => ({
+  isOpen: false,
+  details: null,
+  isOverdue: false,
+  overdueDays: null,
+  setDetails: (details) => set({details: details}),
+  setIsOverdue: (isOverdue) => set({isOverdue: isOverdue}),
+  setOverdueDays: (overdueDays) => set({overdueDays: overdueDays}),
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+  clearDetails: () => set({ details: null }),
+}));
+
+export const useContactUserModal =  create<contactUserModalProps>((set) => ({
+  isOpen: false,
+  details: null,
+  setDetails: (details) => set({details: details}),
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+  clearDetails: () => set({ details: null }),
+}));
+
+export const useRentExtensionModal =  create<modalControlProps>((set) => ({
+  isOpen: false,
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
 }));
 
 

@@ -1,6 +1,7 @@
 import { getCurrentUser } from '@/actions/user-actions';
 import AgentBlogLayout from '@/components/pages/blogs/agent-blog-layout';
 import AllCollaborationClient from '@/components/pages/blogs/all-collaboration-client';
+import BlogLayout from '@/components/pages/blogs/blog-layout';
 import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import React from 'react'
@@ -17,9 +18,9 @@ const AllCollaborationPage = async () => {
   };
 
   return (
-    <AgentBlogLayout>
+    <BlogLayout user={current_user}>
       <AllCollaborationClient user={current_user}/>
-    </AgentBlogLayout>
+    </BlogLayout>
   )
 }
 
