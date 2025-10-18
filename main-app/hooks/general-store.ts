@@ -163,10 +163,22 @@ export const useContactUserModal =  create<contactUserModalProps>((set) => ({
   clearDetails: () => set({ details: null }),
 }));
 
-export const useRentExtensionModal =  create<modalControlProps>((set) => ({
+export const useContactAgentModal =  create<contactUserModalProps>((set) => ({
   isOpen: false,
+  details: null,
+  setDetails: (details) => set({details: details}),
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
+  clearDetails: () => set({ details: null }),
+}));
+
+export const useRentExtensionModal =  create<contactUserModalProps>((set) => ({
+  isOpen: false,
+  details: null,
+  setDetails: (details) => set({details: details}),
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+  clearDetails: () => set({ details: null }), 
 }));
 
 

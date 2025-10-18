@@ -1,4 +1,3 @@
-import { getAgentVerificationStatus } from '@/actions/agent-action';
 import { getCurrentUser } from '@/actions/user-actions';
 import ClientsClient from '@/components/pages/dashboard/clients-client'
 import { Metadata } from 'next';

@@ -16,6 +16,8 @@ import DeleteProperty from '@/components/modals/delete-property'
 import { getCurrentUserDetails } from '@/actions/user-actions'
 import RenewalReminder from '@/components/modals/renewal-reminder'
 import ContactUserModal from '@/components/modals/contact-user'
+import RentExtensionsModal from '@/components/modals/rent-extension'
+import ContactAgent from '@/components/modals/contact-agent'
 
 const ModalProvider = async () => {
   const user:userDetails = await getCurrentUserDetails();
@@ -38,6 +40,8 @@ const ModalProvider = async () => {
       {user && user.role === 'agent' && <DeleteProperty user={user}/>}
       <RenewalReminder/>
       <ContactUserModal/>
+      <ContactAgent/>
+      <RentExtensionsModal/>
     </React.Fragment>
   )
 }

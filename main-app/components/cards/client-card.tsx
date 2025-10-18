@@ -1,7 +1,5 @@
 import { useContactUserModal, useRenewalReminderModal } from '@/hooks/general-store';
 import { ClientProps } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 import Image from 'next/image'
 import React from 'react'
 import { CountdownTimer } from './count-down-timer';
@@ -36,7 +34,8 @@ const ClientCard = ({client}:{client:ClientProps}) => {
             <p className='text-sm font-medium'>{user.email}</p>
           </div>
         </div>
-        <CountdownTimer 
+        <CountdownTimer
+          isUser={false} 
           dateString={client.startDate}
           onOpenReminder={openReminderModal}
           onOpenContact={openContactModal}
@@ -44,6 +43,6 @@ const ClientCard = ({client}:{client:ClientProps}) => {
       </div>
     </div>
   )
-}
+};
 
 export default ClientCard

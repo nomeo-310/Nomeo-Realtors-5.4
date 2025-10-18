@@ -8,6 +8,7 @@ interface CountdownTimerProps {
   dateString: string;
   onOpenReminder: () => void;
   onOpenContact: () => void;
+  isUser: boolean
 }
 
 interface TimeLeft {
@@ -17,7 +18,7 @@ interface TimeLeft {
   seconds: number;
 }
 
-export const CountdownTimer: React.FC<CountdownTimerProps> = ({dateString, onOpenReminder, onOpenContact}) => {
+export const CountdownTimer: React.FC<CountdownTimerProps> = ({dateString, onOpenReminder, onOpenContact, isUser}) => {
 
   const [timeLeft, setTimeLeft] = React.useState<TimeLeft | null>(null);
   const [months, setMonths] = React.useState(0);
@@ -118,13 +119,13 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({dateString, onOpe
             className="text-xs uppercase font-medium px-3 py-0.5 rounded-full border" 
             onClick={onOpenReminder}
           >
-            Send Reminder
+            { isUser ? 'Demand Extension' : 'Send Reminder' }
           </button>
         )}
         <button className="text-xs uppercase font-medium px-3 py-0.5 rounded-full border"
           onClick={onOpenContact}
         >
-          Contact User
+          { isUser ? 'Contact Agent' : 'Contact User'}
         </button>
       </div>
       

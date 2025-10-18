@@ -5,7 +5,7 @@ import Modal from "../ui/modal";
 import { useContactUserModal } from "@/hooks/general-store";
 import { nairaSign } from "@/lib/utils";
 import CustomSelect from "../ui/custom-select";
-import { ArrowLeft01Icon, ArrowRight01Icon, Edit01Icon, Add01Icon, Delete01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Add01Icon, Delete01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 export interface MessageTemplate {
@@ -23,7 +23,6 @@ const ContactUserModal = () => {
   const [showPreview, setShowPreview] = React.useState(false);
   const [isEditingCustom, setIsEditingCustom] = React.useState(false);
   
-  // Dynamic inputs state
   const [newRent, setNewRent] = React.useState<string>('');
   const [rentEffectiveDate, setRentEffectiveDate] = React.useState<string>('');
   const [newServiceCharge, setNewServiceCharge] = React.useState<string>('');
@@ -705,17 +704,8 @@ ${details?.property.agent.agencyName ? details?.property.agent.agencyName : ''}`
 
   const renderPreview = () => (
     <div className="space-y-4">
-      {/* Back Button */}
-      <button 
-        className="flex items-center gap-2 mb-4 bg-gray-100 border border-gray-300 py-2 px-3 rounded-md text-sm hover:bg-gray-200 transition-colors"
-        onClick={() => setShowPreview(false)}
-      >
-        <HugeiconsIcon icon={ArrowLeft01Icon} className="w-4 h-4" />
-        <span className="font-semibold text-gray-900">Back To Editor</span>
-      </button>
-
       {/* Preview Content */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-3">
         <h4 className="font-semibold text-gray-900 mb-3">Message Preview</h4>
         
         <div className="space-y-3">

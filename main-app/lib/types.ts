@@ -419,9 +419,14 @@ export type ClientProps = {
     role: string;
   },
   property: {
+    title: string;
     propertyTypeTag: string;
     propertyIdTag: string;
     address: string;
+    bedrooms:  number;
+    bathrooms:  number;
+    toilets:  number;
+    squareFootage:  number;
     city: string;
     state: string;
     annualRent: number;
@@ -435,6 +440,7 @@ export type ClientProps = {
         email: string;
         phoneNumber: string;
         additionalPhoneNumber: string;
+        profilePicture: string;
       }
     },
   }

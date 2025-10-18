@@ -1,5 +1,5 @@
 import AgentDashboardLayout from "@/components/layouts/agent-dashboard-layout";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { userDetails } from "@/lib/types";
 import { getCurrentUserDetails } from "@/actions/user-actions";
 
@@ -12,7 +12,11 @@ export default async function Layout({children}: {children: React.ReactNode}) {
   };
 
   if (current_user.role !== 'agent') {
-    redirect('/user-dashboard') 
+    if (current_user.role === 'user') {
+      redirect('/user-dashboard')
+    } else {
+      notFound();
+    }
   };
 
   return (

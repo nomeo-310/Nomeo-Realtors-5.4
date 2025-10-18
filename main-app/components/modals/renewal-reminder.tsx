@@ -5,7 +5,7 @@ import Modal from "../ui/modal";
 import { useRenewalReminderModal } from "@/hooks/general-store";
 import { formatDate, nairaSign } from "@/lib/utils";
 import CustomSelect from "../ui/custom-select";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 export interface ReminderTemplate {
@@ -15,9 +15,6 @@ export interface ReminderTemplate {
 
 const RenewalReminder = () => {
   const { onClose, isOpen, details, isOverdue, overdueDays } = useRenewalReminderModal();
-
-  console.log(isOverdue);
-  console.log(overdueDays)
 
   const [reminderType, setReminderType] = React.useState<'Gentle' | 'Urgent' | 'Final'>('Gentle');
   const [customMessage, setCustomMessage] = React.useState<string>('');
@@ -107,11 +104,7 @@ ${details?.property.agent.agencyName ? details?.property.agent.agencyName : ''}`
       <div className="space-y-4">
         {showPreview ?
           <React.Fragment>
-            <button className="flex items-center gap-2 mb-2 bg-gray-100 border py-1.5 pr-3 rounded-md text-sm mt-3" onClick={() =>setShowPreview(false)}>
-              <HugeiconsIcon icon={ArrowLeft01Icon}/>
-              <h4 className="font-semibold text-gray-900">Back To Editor</h4>
-            </button>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-3">
               <h4 className="font-semibold text-gray-900 mb-3">Message Preview</h4>
               <p className="font-medium">Subject: {reminderTemplates[reminderType].subject}</p>
               <div className="mt-2 bg-gray-100 rounded border p-2">
