@@ -18,7 +18,8 @@ import { toast } from 'sonner';
 const NotificationClient = ({user}:{user:userProps}) => {
   const queryClient = useQueryClient();
 
-  const [showDelete, setShowDelete] = React.useState(false)
+  const [showDelete, setShowDelete] = React.useState(false);
+  const [clearing, setClearing] = React.useState(false);
 
   const fetchNotifications = async ({pageParam}:{pageParam: number}) => {
     const response = await axios.post('/api/notification/user-notifications', { page: pageParam })
@@ -50,18 +51,20 @@ const NotificationClient = ({user}:{user:userProps}) => {
     }
   });
 
-  //this deletes all notifications
-  const { mutate:clearAllNotifications } = useMutation({
-    mutationFn: deleteAllNotifications,
-    onSuccess: () => {
+  //this clears all notifications
+  const clearAllNotifications = async () => {
+    setClearing(true);
+    const response = await deleteAllNotifications();
+    if (response && response.status === 200) {
       queryClient.invalidateQueries({ queryKey: ['all-user-notifications'] });
-      queryClient.setQueryData(['all-user-notifications'], undefined);
-    },
-    onError: (error) => {
-      console.error('Error deleting all items:', error);
-      toast.error('Failed to delete all items. Please try again.');
-    },
-  });
+      toast.success(response.message);
+      setClearing(false);
+      setShowDelete(false);
+    } else {
+      toast.error(response.message || "Something went wrong");
+      setClearing(false);
+    }
+  }
 
   //this fetch all the users notifications
   const { data, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage, status } = useInfiniteQuery({
@@ -78,12 +81,18 @@ const NotificationClient = ({user}:{user:userProps}) => {
 
     const timer = setTimeout(() => {
       readAllNotifications();
-      if (notifications.length > 0) {
-        setShowDelete(true);
-      }
     }, 5000);
     return () => clearTimeout(timer);
-  },[notifications.length]);
+  },[]);
+
+  //This makes delete all button to show 
+  React.useEffect(() => {
+    if (notifications.length > 2) {
+      setShowDelete(true);
+    } else {
+      setShowDelete(false);
+    }
+  },[notifications, notifications.length]);
 
   const NotificationList = () => {
 
@@ -121,9 +130,10 @@ const NotificationClient = ({user}:{user:userProps}) => {
       <div className="items-center flex justify-between w-full">
         <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>Notifications</h2>
         { showDelete &&
-          <button type="button" className='text-sm py-1.5 lg:py-2 px-4 bg-red-600 text-white rounded-lg flex items-center gap-2' onClick={() =>clearAllNotifications()}>
+          <button type="button" className='text-sm py-1.5 lg:py-2 px-4 bg-red-600 text-white rounded-lg flex items-center gap-2' onClick={() =>clearAllNotifications()} disabled={clearing}>
             <HugeiconsIcon icon={Delete01Icon} className='md:size-5 size-4'/>
-            Clear All
+            { clearing ? 'Clearing All Notifications...' : 'Clear All' }
+            {clearing && <Loader2 className='animate-spin size-5'/>}
           </button>
         }
       </div>

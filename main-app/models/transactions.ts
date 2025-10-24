@@ -10,6 +10,7 @@ interface ITransaction extends Document {
   createdAt: string;
   transactionStatus: string;
   transactionId:string;
+  paymentMethod:string;
   referenceId: string;
   amount: number;
   currency: string;
@@ -25,6 +26,7 @@ const transactionSchema: Schema<ITransaction> = new Schema(
     approval: {type: String, enum: ['approved', 'pending', 'unapproved'], default: 'pending'},
     createdAt: {type: String, default: ''},
     transactionId: {type: String, default: ''},
+    paymentMethod: {type: String, enum: ['online_transfer', 'bank_transfer'], default: 'bank_transfer'},
     referenceId: {type: String, default: ''},
     transactionStatus: {type: String, default: ''},
     currency: {type: String, default: ''},

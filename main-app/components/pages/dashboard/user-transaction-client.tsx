@@ -3,7 +3,7 @@
 import EmptyState from '@/components/ui/empty-state'
 import ErrorState from '@/components/ui/error-state'
 import { ArrowUpRight03Icon, Bathtub01Icon, BedIcon, CenterFocusIcon, MapsIcon, Toilet01Icon } from '@hugeicons/core-free-icons'
-import { useTransactionModal } from '@/hooks/general-store'
+import { useActiveTab, useTransactionModal } from '@/hooks/general-store'
 import { cn, nairaSign } from '@/lib/utils'
 import { formatMoney } from '@/utils/formatMoney'
 import { useQuery } from '@tanstack/react-query'
@@ -28,7 +28,15 @@ const UserTransactionClient = () => {
 
   const { onOpen } = useTransactionModal();
 
-  const [activeTab, setActiveTab] = React.useState(propertyId && agentUserId ? 'make-payment' : 'history');
+  const { activeTab, setActiveTab } = useActiveTab();
+
+  React.useEffect(() => {
+    if (propertyId && agentUserId) {
+      setActiveTab('make-payment');
+    } else {
+      setActiveTab('history');
+    }
+  }, [propertyId, agentUserId]);
 
   const fetchData = async (): Promise<any> => {
     const response = await axios.post('/api/property/check-property', {
@@ -143,19 +151,19 @@ const UserTransactionClient = () => {
             {searchedItem?.address}, {searchedItem?.city}, {searchedItem?.state}.
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm lg:text-base">
               <HugeiconsIcon icon={BedIcon} className='size-5'/>
               {searchedItem?.bedrooms}
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm lg:text-base">
               <HugeiconsIcon icon={Bathtub01Icon} className='size-5'/>
               {searchedItem?.bathrooms}
             </div>
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm lg:text-base">
               <HugeiconsIcon icon={Toilet01Icon} className='size-5'/>
               {searchedItem?.toilets}
             </div>
-            <div className="flex items-center gap-2 text-sm ">
+            <div className="flex items-center gap-2 text-sm lg:text-base ">
               <HugeiconsIcon icon={CenterFocusIcon} className='size-5'/>
               <span>{searchedItem?.squareFootage} sqm</span>
             </div>
@@ -166,9 +174,9 @@ const UserTransactionClient = () => {
               <p key={item.name} className='capitalize bg-gray-300 dark:bg-[#424242] px-4 py-1.5 rounded-full text-sm font-medium'>{item.name}: {nairaSign}{formatMoney(item.amount)}</p>
             ))}
           </div>
-          <div className="flex items-center md:justify-between md:flex-row flex-col gap-6 md:gap-0">
+          <div className="flex items-center md:justify-between md:flex-row flex-col gap-3 md:gap-0">
             <p className='font-semibold text-white bg-red-500 py-1.5 px-4 rounded-full w-full md:w-fit'>Total Amount: {nairaSign}{formatMoney(searchedItem?.annualRent + calculateTotalFees(searchedItem?.mainFees))}</p>
-            <button type="button" className='text-sm px-4 py-1.5 rounded-full flex items-center gap-2 bg-gray-300 w-full md:w-fit justify-between md:justify-normal' onClick={handleProceed}>
+            <button type="button" className='text-sm lg:text-base px-4 py-1.5 rounded-full inline-flex items-center gap-2 bg-gray-300 w-fit justify-between md:justify-normal ml-auto' onClick={handleProceed}>
               Proceed With Payment
               <HugeiconsIcon icon={ArrowUpRight03Icon} className='rotate-45 size-5'/>
             </button>

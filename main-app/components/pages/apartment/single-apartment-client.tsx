@@ -1,7 +1,7 @@
 "use client";
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage,} from "@/components/ui/form";
-import { Bathtub01Icon, BedIcon, Building03Icon, Calendar04Icon, Cancel01Icon, CenterFocusIcon, ArrowRight01Icon, ArrowLeft01Icon, MapsIcon, TelephoneIcon, Toilet01Icon, User03Icon } from "@hugeicons/core-free-icons";
+import { Bathtub01Icon, BedIcon, Building03Icon, Calendar04Icon, Cancel01Icon, CenterFocusIcon, ArrowRight01Icon, ArrowLeft01Icon, MapsIcon, TelephoneIcon, Toilet01Icon, User03Icon, Timer01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { scheduleInspectionSchema, scheduleInspectionValues } from "@/lib/form-validations";
@@ -18,12 +18,15 @@ import CustomSelect from "@/components/ui/custom-select";
 import InputWithIcon from "@/components/ui/input-with-icon";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { useInspectionConditionModal } from "@/hooks/general-store";
+import { useInspectionConditionModal, useStartRentOutModal } from "@/hooks/general-store";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import LikeButton from "./like-button";
 import BookmarkButton from "./bookmark-button";
 import { scheduleInspection } from "@/actions/inspection-actions";
+import { cancelRentOut } from "@/actions/rentout-actions";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 
 type Props = {
   property: Partial<propertyProps>;
@@ -59,8 +62,55 @@ const SingleApartmentClient = ({ property, user }: Props) => {
   } = property;
 
   const [openSlider, setOpenSlider] = React.useState(false);
+  const [cancelling, setCancelling] = React.useState(false)
 
   const userIsAuthor = user?._id === property?.agent?.userId?._id;
+
+  const { onOpen } = useStartRentOutModal();
+
+  const queryClient = useQueryClient();
+
+  const userId = user?._id;
+  const agentId = property?.agent?._id;
+
+  const initiateRentOut = () => {
+    const rentOutData = {
+      userId: agentId,
+      agentUserId: userId,
+      propertyId: property.propertyIdTag,
+    }
+
+    localStorage.setItem('rent-data', JSON.stringify(rentOutData))
+    onOpen();
+  };
+
+  const cancelApartmentRentOut = async () => {
+
+    const data =  {
+      propertyIdTag: property.propertyIdTag || '',
+      agentId: agentId || '',
+      path: pathname
+    };
+
+    setCancelling(true);
+    const response = await cancelRentOut(data)
+    if (response && response.status === 200) {
+      toast.success(response.message);
+      queryClient.invalidateQueries({ queryKey: ['added-properties'] });
+      setCancelling(false);
+    } else {
+      toast.error(response.message);
+      setCancelling(false);
+    }
+  }
+
+  const handleRentOut = () => {
+    if (property.availabilityStatus === 'available') {
+      initiateRentOut();
+    } else {
+      cancelApartmentRentOut();
+    }
+  };
 
   const Header = () => {
     return (
@@ -75,10 +125,21 @@ const SingleApartmentClient = ({ property, user }: Props) => {
               {address}, {city}, {state}.
             </h3>
           </div>
-          { !userIsAuthor &&
+          { !userIsAuthor ?
             <div className="flex items-center gap-4">
               <LikeButton property={property} user={user} />
               <BookmarkButton property={property} user={user} />
+            </div> :
+            <div>
+              { property.availabilityStatus === 'rented' ?
+                <div className='flex items-center gap-3 px-3 py-1.5 border rounded-md text-sm lg:text-base text-white bg-secondary-blue border-secondary-blue'>
+                  Apartment Rented
+                </div> :
+                <button className='flex items-center gap-3 px-3 py-1.5 border rounded-md text-sm lg:text-base text-white bg-secondary-blue border-secondary-blue' onClick={handleRentOut}>
+                  { cancelling ? <Loader2 className="animate-spin size-4 lg:size-5" /> : <HugeiconsIcon icon={Timer01Icon} className='size-4 lg:size-5'/>}
+                  { property.availabilityStatus === 'available' ? 'Initiate Rent-out' : (cancelling ? 'Cancelling Rent-out ...' : 'Cancel Rent-out')}
+                </button>
+              }
             </div>
           }
         </div>

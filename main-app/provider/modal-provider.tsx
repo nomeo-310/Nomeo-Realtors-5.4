@@ -18,6 +18,7 @@ import RenewalReminder from '@/components/modals/renewal-reminder'
 import ContactUserModal from '@/components/modals/contact-user'
 import RentExtensionsModal from '@/components/modals/rent-extension'
 import ContactAgent from '@/components/modals/contact-agent'
+import ManualTransferModal from '@/components/modals/manual-transfer-modal'
 
 const ModalProvider = async () => {
   const user:userDetails = await getCurrentUserDetails();
@@ -42,6 +43,7 @@ const ModalProvider = async () => {
       <ContactUserModal/>
       <ContactAgent/>
       <RentExtensionsModal/>
+      <ManualTransferModal/>
     </React.Fragment>
   )
 }

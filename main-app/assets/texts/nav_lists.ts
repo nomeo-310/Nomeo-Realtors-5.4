@@ -1,4 +1,4 @@
-import { Notification02Icon, AddInvoiceIcon, PlazaIcon, FavouriteIcon, BookmarkCheck01Icon, FileIcon, UserMultiple02Icon, Settings01Icon, User03Icon, DashboardCircleEditIcon, QuillWrite02Icon, LicenseIcon, BookmarkAdd01Icon} from '@hugeicons/core-free-icons';
+import { Notification02Icon, AddInvoiceIcon, PlazaIcon, FavouriteIcon, BookmarkCheck01Icon, FileIcon, UserMultiple02Icon, Settings01Icon, User03Icon, DashboardCircleEditIcon, QuillWrite02Icon, LicenseIcon, BookmarkAdd01Icon, Calendar01Icon} from '@hugeicons/core-free-icons';
 
 const user_nav_links = [
   {
@@ -112,6 +112,12 @@ const agent_nav_link = [
     icon: UserMultiple02Icon,
     path: '/agent-dashboard/clients',
     page: 'clients'
+  },
+  {
+    text: 'Inspections',
+    icon: Calendar01Icon,
+    path: '/agent-dashboard/inspections',
+    page: 'inspections'
   },
   {
     text: 'Settings',

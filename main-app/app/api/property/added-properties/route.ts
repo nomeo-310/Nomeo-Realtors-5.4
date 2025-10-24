@@ -23,7 +23,7 @@ export const GET = async (req:Request) => {
     const skip = (page - 1) * limit;
 
     const properties = await Apartment.find({agent: current_user.agentId})
-    .select('_id propertyTag propertyIdTag city state bedrooms bathrooms squareFootage annualRent propertyPrice facilityStatus hideProperty')
+    .select('_id propertyTag propertyIdTag city state bedrooms bathrooms squareFootage annualRent propertyPrice facilityStatus hideProperty availabilityStatus')
     .populate({
       path: 'apartmentImages',
       model: Attachment,

@@ -1,12 +1,16 @@
 import Image from 'next/image';
 import React from 'react'
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Bathtub01Icon, BedIcon, CenterFocusIcon, Delete01Icon, Link05Icon, Location06Icon, Menu02Icon, Clock03Icon, ViewIcon, ViewOffSlashIcon  } from '@hugeicons/core-free-icons';
+import { Bathtub01Icon, BedIcon, CenterFocusIcon, Delete01Icon, Link05Icon, Location06Icon, Menu02Icon, Clock03Icon, ViewIcon, ViewOffSlashIcon, Loading03Icon  } from '@hugeicons/core-free-icons';
 import { formatMoney } from '@/utils/formatMoney';
 import Link from 'next/link';
 import { useStartRentOutModal } from '@/hooks/general-store';
 import { useDeleteApartment } from '@/hooks/use-delete-apartment';
 import { useHideApartment } from '@/hooks/use-hide-apartment';
+import { cancelRentOut } from '@/actions/rentout-actions';
+import { usePathname } from 'next/navigation';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 type propertyCardProps = {
   _id: string;
@@ -23,13 +27,19 @@ type propertyCardProps = {
   facilityStatus: string;
   userId: string;
   agentId: string;
+  availabilityStatus: string;
   hideProperty: boolean
 }
 
 const PropertyCardWithAction = (props:propertyCardProps) => {
-  const {_id, propertyIdTag, propertyTag, city, state, bedrooms, bathrooms, squareFootage, mainImage, propertyPrice, annualRent, facilityStatus, userId, agentId, hideProperty } = props;
+  const {_id, propertyIdTag, propertyTag, city, state, bedrooms, bathrooms, squareFootage, mainImage, propertyPrice, annualRent, facilityStatus, userId, agentId, hideProperty, availabilityStatus } = props;
 
+  const path = usePathname();
   const [showMenu, setShowMenu] = React.useState(false);
+
+  const [cancelling, setCancelling] = React.useState(false);
+
+  const queryClient = useQueryClient();
 
   const { onOpen } = useStartRentOutModal();
 
@@ -74,6 +84,26 @@ const PropertyCardWithAction = (props:propertyCardProps) => {
     onOpen();
   };
 
+  const cancelApartmentRentOut = async () => {
+
+    const data =  {
+      propertyIdTag: propertyIdTag,
+      agentId: agentId,
+      path: path
+    };
+
+    setCancelling(true);
+    const response = await cancelRentOut(data)
+    if (response && response.status === 200) {
+      toast.success(response.message);
+      queryClient.invalidateQueries({ queryKey: ['added-properties'] });
+      setCancelling(false);
+    } else {
+      toast.error(response.message);
+      setCancelling(false);
+    }
+  }
+  
   const deleteApartment = useDeleteApartment(_id);
   const hideApartment = useHideApartment(_id)
 
@@ -87,9 +117,9 @@ const PropertyCardWithAction = (props:propertyCardProps) => {
           {hideProperty ? <HugeiconsIcon icon={ViewIcon} className='size-4'/> : <HugeiconsIcon icon={ViewOffSlashIcon} className='size-4'/>}
           {hideProperty ? 'unhide' : 'hide'}
         </button>
-        <button className='text-sm px-1 py-1 hover:bg-gray-200 dark:hover:text-black/50 rounded-md capitalize flex items-center gap-4' onClick={onOpenRentOut}>
-          <HugeiconsIcon icon={Clock03Icon} className='size-4'/>
-          { propertyTag === 'for-rent' ? 'rentout' : 'sell' }
+        <button className='text-sm px-1 py-1 hover:bg-gray-200 dark:hover:text-black/50 rounded-md capitalize flex items-center gap-4' onClick={availabilityStatus === 'pending' ? () => cancelApartmentRentOut() : () => onOpenRentOut()}>
+          {cancelling ? <HugeiconsIcon icon={Loading03Icon} className='size-4'/> : <HugeiconsIcon icon={Clock03Icon} className='size-4'/>}
+          { propertyTag === 'for-rent' ? (availabilityStatus === 'pending' ? 'cancel rentout' : 'rentout') : (availabilityStatus === 'pending' ? 'cancel sell' : 'sell') }
         </button>
         <button className='text-sm px-1 py-1 hover:bg-gray-200 dark:hover:text-black/50 rounded-md capitalize flex items-center gap-4' onClick={() => {deleteApartment.mutate(); openItem()}}>
           <HugeiconsIcon icon={Delete01Icon} className='size-4'/>
@@ -102,7 +132,7 @@ const PropertyCardWithAction = (props:propertyCardProps) => {
   return (
     <div className='flex flex-col shadow-md rounded-xl overflow-hidden'>
       <div className='relative w-full h-[220px] overflow-hidden'>
-        <span className='absolute top-3 left-3 rounded-lg bg-[#424242] text-white px-3 py-2 text-sm z-[400]'>
+        <span className='absolute top-3 left-3 rounded-lg bg-secondary-blue text-white px-3 py-2 text-sm z-[400]'>
           {propertyTag === 'for-rent' ? 'For Rent' : 'For Sale'}
         </span>
         <div className="absolute left-0 top-0 w-full h-full bg-black/40 z-50"/>

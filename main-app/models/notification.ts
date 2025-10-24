@@ -8,6 +8,8 @@ interface INotification extends Document {
   issuer?: Types.ObjectId;
   recipient?: Types.ObjectId;
   blogId?: Types.ObjectId;
+  agentId?: Types.ObjectId;
+  inspectionId?: Types.ObjectId;
   seen: boolean;
   createdAt: Date;
 }
@@ -25,6 +27,8 @@ const notificationSchema: Schema<INotification> = new Schema(
     issuer: { type: Schema.Types.ObjectId, ref: 'User' },
     recipient: { type: Schema.Types.ObjectId, ref: 'User' },
     blogId: { type: Schema.Types.ObjectId, ref: 'Blog' },
+    agentId: { type: Schema.Types.ObjectId, ref: 'User' },
+    inspectionId: { type: Schema.Types.ObjectId, ref: 'Inspection' },
     seen: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now() },
   },

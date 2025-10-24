@@ -7,6 +7,7 @@ interface IInspection extends Document {
   apartment: string;
   agent: Types.ObjectId;
   additionalNumber?: string;
+  status: string;
 }
 
 const inspectionSchema: Schema<IInspection> = new Schema(
@@ -16,7 +17,8 @@ const inspectionSchema: Schema<IInspection> = new Schema(
     user: { type: Schema.Types.ObjectId, ref: 'User' },
     apartment: { type: String, required: true },
     agent: { type: Schema.Types.ObjectId, ref: 'Agent' },
-    additionalNumber: { type: String, default: undefined }
+    additionalNumber: { type: String, default: undefined },
+    status: {type: String, enum: ['completed', 'pending'], default: 'pending'}
   },
   { timestamps: true });
 

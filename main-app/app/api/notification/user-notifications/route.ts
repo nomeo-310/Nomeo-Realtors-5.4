@@ -1,5 +1,6 @@
 import { getCurrentUser } from "@/actions/user-actions";
 import { connectToMongoDB } from "@/lib/connectToMongoDB";
+import Agent from "@/models/agent";
 import Notification from "@/models/notification";
 import User from "@/models/user";
 
@@ -22,13 +23,23 @@ export const POST = async (request:Request) => {
     .populate({
       path:'issuer', 
       model: User,
-      select: 'firstName lastName profilePicture phoneNumber'
+      select: 'surName lastName profilePicture phoneNumber'
     })
     .populate({
       path:'recipient', 
       model: User,
-      select: 'firstName lastName profilePicture phoneNumber'
-    }) 
+      select: 'surName lastName profilePicture phoneNumber'
+    })
+    .populate({
+      path: 'agentId', 
+      model: Agent,
+      select: 'officeAddress agencyName officeNumber userId',
+      match: { _id: { $ne: null } }, // Only populate if agentId field exists and is not null
+      populate: {
+      path: 'userId',
+      model: User,
+      select: 'surName lastName profilePicture phoneNumber email'}
+    })
     .skip((pageNumber - 1) * pageSize)
     .limit(pageSize + 1)
     .sort({created_at: -1})

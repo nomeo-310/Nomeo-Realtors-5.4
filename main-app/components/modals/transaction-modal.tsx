@@ -24,7 +24,7 @@ const TransactionModal = ({user}:{user:userDetails}) => {
       resolver: zodResolver(transactionSchema),
       defaultValues: {
         amount: fullPayment ? fullPayment : '',
-        email: '',
+        email: user?.email,
         phoneNumber: user?.phoneNumber
       }
     });
@@ -111,7 +111,7 @@ const TransactionModal = ({user}:{user:userDetails}) => {
             <LoadingButton
               label='Proceed'
               loadingLabel='Proceeding ...'
-              className='mt-6 w-full py-2 lg:py-2.5 bg-black dark:bg-[#424242] text-white text-sm lg:text-base rounded-lg'
+              className='mt-6 w-full py-2 lg:py-2.5 bg-secondary-blue text-white text-sm lg:text-base rounded-lg'
             />
           }
         </form>

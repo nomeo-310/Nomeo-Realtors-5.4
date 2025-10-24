@@ -122,3 +122,22 @@ export const parseRoomToiletCount = (label: string): number => {
 
   return numberMap[numberWord] || 0;
 };
+
+export const generateUID = () => {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2);
+  
+  let baseString = timestamp + random;
+  
+  while (baseString.length < 32) {
+    baseString += Math.random().toString(36).substring(2);
+  }
+  
+  return [
+    baseString.substring(0, 8),
+    baseString.substring(8, 12),
+    baseString.substring(12, 16),
+    baseString.substring(16, 20),
+    baseString.substring(20, 32)
+  ].join('-');
+}

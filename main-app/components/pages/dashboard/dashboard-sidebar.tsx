@@ -155,9 +155,26 @@ export const AgentDashBoardSideBar = ({
     return data;
   };
 
+  const fetchInspections = async () => {
+    const response = await axios.get("/api/inspections/counts");
+
+    if (response.status !== 200) {
+      throw new Error("Something went wrong, try again later");
+    }
+
+    const data = response.data as { count: number };
+    return data;
+  };
+
   const { data: notificationCount } = useQuery({
     queryKey: ["unread-notification-count"],
     queryFn: fetchNotification,
+    refetchInterval: 5000,
+  });
+
+  const { data: inspectionCount } = useQuery({
+    queryKey: ["inspection-count"],
+    queryFn: fetchInspections,
     refetchInterval: 5000,
   });
 
@@ -186,7 +203,7 @@ export const AgentDashBoardSideBar = ({
           text={link.text}
           path={link.path}
           notification={
-            link.text === "Notifications" ? notificationCount?.count || 0 : 0
+            link.text === "Notifications" ? notificationCount?.count || 0 : link.text === "Inspections" ? inspectionCount?.count || 0 : 0
           }
         />
       ))}

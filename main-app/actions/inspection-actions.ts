@@ -10,6 +10,7 @@ import { render } from "@react-email/render";
 import { InspectionEmailTemplate } from "@/components/email-templates/inspection-email-template";
 import { sendEmail } from "@/lib/send-email";
 import Notification from "@/models/notification";
+import { revalidatePath } from "next/cache";
 
 type scheduleInspetionType = {
   time: string;
@@ -46,20 +47,26 @@ export const scheduleInspection = async (data:scheduleInspetionType) => {
     return { success: false, message: 'This property does not exist', status: 404 }
   };
 
-  if (JSON.stringify(currentApartment.agent) === JSON.stringify(agent._id)) {
+  if (JSON.stringify(currentApartment.agent) === JSON.stringify(current_user.agentId)) {
     return { success: false, message: 'You cannot schedule inspection for the property you are managing', status: 409 }
   }
 
   const existingInspection = await Inspection.findOne({user: current_user._id, apartment: currentApartment._id, date: date});
 
   if (existingInspection) {
-    return { success: false, message: 'You have already scheduled an inspection for this date and time', status: 409 }
+    return { success: false, message: 'You have already scheduled an inspection for this property', status: 409 }
   };
 
-  const userFullName = `${current_user.lastName} ${current_user.firstName}`;
-  const agentFullName = `${agentUserDetails?.lastName} ${agentUserDetails?.firstName}`;
+  const existingInspectionForAgent = await Inspection.findOne({agent: agentId, date: date, time: time});
 
-  const message = `${userFullName} scheduled for an inspection of one of the apartments you are managing. For more details checkout your notification on our website.`;
+  if (existingInspectionForAgent) {
+    return { success: false, message: 'The agent is already scheduled for an inspection for this date and time', status: 409 }
+  }
+
+  const userFullName = `${current_user.surName} ${current_user.lastName}`;
+  const agentFullName = `${agentUserDetails?.surName} ${agentUserDetails?.lastName}`;
+
+  const message = `${userFullName} scheduled an inspection of one of the apartments you are managing. For more details checkout your notification on our website.`;
 
   const inspectionData = {
     date: date,
@@ -81,12 +88,14 @@ export const scheduleInspection = async (data:scheduleInspetionType) => {
       propertyId: apartment,
       issuer: current_user._id,
       recipient: current_user._id,
+      inspectionId: newInspection._id,
+      agentId: agentId
     });
     
     const agentNotification = await Notification.create({
       type: 'inspection',
       title: 'Notification Reminder',
-      content: `Here is a reminder that you are scheduled for an inspection with ${userFullName} on ${date} for ${time}. Below are the details of the user and the apartment. Feel free to cancel this if you will not be able to meet up.`,
+      content: `Here is a reminder that you are scheduled for an inspection with ${userFullName} on ${date} for ${time}. Below are the details of the ${userFullName} and the apartment. Feel free to call and have him/her cancel this schedule if you will not be able to meet up.`,
       propertyId: apartment,
       issuer: current_user._id,
       recipient: agentUserDetails ? agentUserDetails._id : null,
@@ -123,7 +132,7 @@ export const scheduleInspection = async (data:scheduleInspetionType) => {
   }
 };
 
-export const cancelInspection = async (id:string) => {
+export const cancelInspection = async ({id, path}:{id:string, path:string}) => {
   await connectToMongoDB();
 
   const current_user = await getCurrentUser();
@@ -138,7 +147,7 @@ export const cancelInspection = async (id:string) => {
     return { success: false, message: 'Inpsection does not exist!', status: 404 }
   };
 
-  if (JSON.stringify(inspection.user) !== current_user._id) {
+  if (JSON.stringify(inspection.user) !== JSON.stringify(current_user._id)) {
     return { success: false, message: 'You are not  authorized to acess this feature', status: 403 }
   };
   
@@ -154,10 +163,10 @@ export const cancelInspection = async (id:string) => {
     return { success: false, message: 'Agent does not exist', status: 409 }
   };
 
-  const userFullName = `${current_user.lastName} ${current_user.firstName}`;
-  const agentFullName = `${agentUserDetails.lastName} ${agentUserDetails.firstName}`;
+  const userFullName = `${current_user.lastName} ${current_user.surName}`;
+  const agentFullName = `${agentUserDetails.lastName} ${agentUserDetails.surName}`;
 
-  const message = `${userFullName} cancelled the scheduled inspection of one of the apartments you are managing. For more details reach out to the user regarding the new schedule.`;
+  const message = `${userFullName} cancelled the earlier scheduled inspection of one of the apartments you are managing. Sorry for the inconviences this might cause you. For more details reach out to the ${userFullName} regarding the new schedule.`;
 
   try {
     await Agent.findOneAndUpdate({_id: inspection.agent}, {$pull: {inspections: inspection._id}})
@@ -180,6 +189,20 @@ export const cancelInspection = async (id:string) => {
 
     await sendEmail(sendOption);
 
+    const userNotification = await Notification.create({
+      type: 'inspection',
+      title: 'Inspection Cancelled',
+      content: `You cancelled your scheduled inspection with ${agentFullName} on ${inspection.date} for ${inspection.time}. Feel free to call ${agentFullName} to explain reason`,
+      issuer: current_user._id,
+      recipient: current_user._id,
+      agentId: inspection.agent
+    });
+
+    userNotification.save();
+
+    await User.findOneAndUpdate({_id: current_user._id}, {$push: {notifications: userNotification._id}});
+
+    revalidatePath(path)
     return {success: true, message: 'Inspection successfully cancelled', status: 200}
   } catch (error) {
 

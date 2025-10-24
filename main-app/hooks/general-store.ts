@@ -34,6 +34,12 @@ type breadcrumbsProps = {
   clearCurrentPage: () => void;
 };
 
+interface ActiveTabState {
+  activeTab: string;
+  setActiveTab: (activeTab: string) => void;
+  reset: () => void;
+}
+
 export const useBreadCrumbs = create<breadcrumbsProps>((set) => ({
   currentPage: '',
   setCurrentPage: (page:string) => set({currentPage: page}),
@@ -181,6 +187,17 @@ export const useRentExtensionModal =  create<contactUserModalProps>((set) => ({
   clearDetails: () => set({ details: null }), 
 }));
 
+export const useManualTransferModal = create<modalControlProps>((set) => ({
+  isOpen: false,
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+}));
+
+export const useActiveTab = create<ActiveTabState>()((set) => ({
+  activeTab: 'profile',
+  setActiveTab: (activeTab: string) => set({ activeTab }),
+  reset: () => set({ activeTab: 'profile' }),
+}))
 
 
 

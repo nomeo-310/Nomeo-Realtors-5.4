@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from 'react'
 import Modal from '../ui/modal'
-import { usePaymentModal } from '@/hooks/general-store'
+import { useManualTransferModal, usePaymentModal } from '@/hooks/general-store'
 import { toast } from 'sonner'
 import { PaystackButton } from 'react-paystack';
 import { usePathname, useSearchParams } from 'next/navigation'
 import { initiateTransaction } from '@/actions/transaction-actions'
+import { useDeleteNotification } from '@/hooks/use-delete-notification'
 
 type referenceProps = {
   reference: string;
@@ -64,7 +65,13 @@ const PaymentModal = () => {
 
   const propertyId = searchParams.get('propertyId');
   const agentUserId = searchParams.get('agentUserId');
+  const notificationId = searchParams.get('notificationId') ;
+
   const public_key = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
+
+  const { mutate } = useDeleteNotification(notificationId ?? '', false);
+
+  const { onOpen } = useManualTransferModal();
 
   if (!public_key) {
     toast.error('PayStack public key is not set!!');
@@ -100,14 +107,16 @@ const PaymentModal = () => {
           transactionStatus: reference.status,
           currency: 'NGN',
           amount: transactionData.amount,
-          type: 'rent-payment',
           propertyId: propertyId || '',
           agentUserId: agentUserId || '',
+          paymentMethod: 'online_transfer',
           path: pathname
         };
 
         await initiateTransaction({ values }).then((response) => {
           if (response && response.status === 200) {
+            localStorage.removeItem('transaction-data');
+            mutate();
             toast.success('Transaction was successful!!');
           } else {
             toast.error(response.message);
@@ -128,22 +137,21 @@ const PaymentModal = () => {
     <Modal
       title='Make Payment'
       description='Are you sure you want to proceed with the payment?'
-      useCloseButton={false}
+      useCloseButton
       isOpen={isOpen}
       onClose={onClose}
     >
       <div className="flex items-center justify-between mt-5">
         <PaystackButton
-          text='Make Payment'
-          className='py-1.5 px-4 rounded-md bg-black text-white dark:bg-[#424242]'
+          text='Make Online Transfer'
+          className='py-1.5 px-4 rounded-md bg-secondary-blue text-white text-sm lg:text-base'
           {...paystackConfig}
         />
         <button
           type="button"
-          className='py-1.5 px-4 rounded-md border dark:border-white/70'
-          onClick={onClose}
-        >
-          Cancel
+          className='py-1.5 px-4 rounded-md border dark:border-white/70 text-sm lg:text-base'
+          onClick={() => {onOpen(); onClose();}}>
+          Make Bank Transfer
         </button>
       </div>
     </Modal>

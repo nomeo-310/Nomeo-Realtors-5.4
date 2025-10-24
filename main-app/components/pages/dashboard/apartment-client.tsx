@@ -30,7 +30,16 @@ const ApartmentClient = ({userId, agentId}:{userId: string; agentId: string;}) =
   const PropertyList = () => {
 
     if (status === 'pending') {
-      return <PropertySkeletons/>
+      return (
+        <React.Fragment>
+          <div className='hidden lg:block'>
+            <PropertySkeletons use_three/>
+          </div>
+          <div className='lg:hidden'>
+            <PropertySkeletons/>
+          </div>
+        </React.Fragment>
+      )
     };
   
     if (status === 'success' && !properties.length) {
@@ -51,6 +60,7 @@ const ApartmentClient = ({userId, agentId}:{userId: string; agentId: string;}) =
               mainImage={item.apartmentImages.images[0]}
               userId={userId}
               agentId={agentId}
+              availabilityStatus={item.availabilityStatus}
             />
           ))}
         </div>

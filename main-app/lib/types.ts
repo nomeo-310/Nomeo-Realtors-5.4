@@ -58,8 +58,9 @@ type Image = {
 
 export interface userDetails {
   _id: string;
+  email: string;
   username: string;
-  firstName?: string;
+  surName?: string;
   lastName?: string;
   profilePicture?: string;
   profileImage?: Image;
@@ -85,18 +86,33 @@ export interface notificationProps {
   blogId?: string;
   issuer?: {
     _id: string;
-    firstName: string;
+    surName: string;
     lastName: string;
     profilePicture: string;
     phoneNumber: string;
   };
   recipient?: {
     _id: string;
-    firstName: string;
+    surName: string;
     lastName: string;
     profilePicture: string;
     phoneNumber: string;
   };
+  agentId?: {
+    _id: string,
+    userId: {
+      _id: string,
+      email: string,
+      lastName: string;
+      profilePicture: string;
+      phoneNumber: string;  
+      surName: string;
+    },
+    agencyName: string,
+    officeAddress: string
+    officeNumber: string
+  },
+  inspectionId?: string;
   seen: boolean;
   createdAt: string;
 }
@@ -338,6 +354,7 @@ export interface Property {
   apartmentImages: ApartmentImage;
   agent: Agent;
   facilityStatus: string;
+  availabilityStatus: string;
 }
 
 export interface PropertyPagination {

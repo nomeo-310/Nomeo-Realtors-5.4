@@ -217,7 +217,7 @@ export const getCurrentUserDetails = async () => {
       userAccountDeleted: false,
     })
       .select(
-        "_id profilePicture username firstName lastName bio phoneNumber additionalPhoneNumber address city state role userOnboarded profileCreated userVerified placeholderColor "
+        "_id profilePicture username surName lastName bio phoneNumber additionalPhoneNumber address city state role userOnboarded profileCreated userVerified placeholderColor email"
       )
       .exec();
 
