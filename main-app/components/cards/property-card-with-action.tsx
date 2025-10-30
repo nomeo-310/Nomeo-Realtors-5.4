@@ -7,10 +7,8 @@ import Link from 'next/link';
 import { useStartRentOutModal } from '@/hooks/general-store';
 import { useDeleteApartment } from '@/hooks/use-delete-apartment';
 import { useHideApartment } from '@/hooks/use-hide-apartment';
-import { cancelRentOut } from '@/actions/rentout-actions';
 import { usePathname } from 'next/navigation';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCancelRentout } from '@/hooks/use-cancel-rentout';
 
 type propertyCardProps = {
   _id: string;
@@ -36,10 +34,6 @@ const PropertyCardWithAction = (props:propertyCardProps) => {
 
   const path = usePathname();
   const [showMenu, setShowMenu] = React.useState(false);
-
-  const [cancelling, setCancelling] = React.useState(false);
-
-  const queryClient = useQueryClient();
 
   const { onOpen } = useStartRentOutModal();
 
@@ -77,6 +71,7 @@ const PropertyCardWithAction = (props:propertyCardProps) => {
       userId: agentId,
       agentUserId: userId,
       propertyId: propertyIdTag,
+      propertyType: propertyTag
     }
 
     localStorage.setItem('rent-data', JSON.stringify(rentOutData))
@@ -84,26 +79,13 @@ const PropertyCardWithAction = (props:propertyCardProps) => {
     onOpen();
   };
 
-  const cancelApartmentRentOut = async () => {
-
-    const data =  {
-      propertyIdTag: propertyIdTag,
-      agentId: agentId,
-      path: path
-    };
-
-    setCancelling(true);
-    const response = await cancelRentOut(data)
-    if (response && response.status === 200) {
-      toast.success(response.message);
-      queryClient.invalidateQueries({ queryKey: ['added-properties'] });
-      setCancelling(false);
-    } else {
-      toast.error(response.message);
-      setCancelling(false);
-    }
-  }
+  const cancelData =  {
+    propertyIdTag: propertyIdTag,
+    agentId: agentId,
+    path: path
+  };
   
+  const cancelApartmentRentOut = useCancelRentout()
   const deleteApartment = useDeleteApartment(_id);
   const hideApartment = useHideApartment(_id)
 
@@ -117,8 +99,8 @@ const PropertyCardWithAction = (props:propertyCardProps) => {
           {hideProperty ? <HugeiconsIcon icon={ViewIcon} className='size-4'/> : <HugeiconsIcon icon={ViewOffSlashIcon} className='size-4'/>}
           {hideProperty ? 'unhide' : 'hide'}
         </button>
-        <button className='text-sm px-1 py-1 hover:bg-gray-200 dark:hover:text-black/50 rounded-md capitalize flex items-center gap-4' onClick={availabilityStatus === 'pending' ? () => cancelApartmentRentOut() : () => onOpenRentOut()}>
-          {cancelling ? <HugeiconsIcon icon={Loading03Icon} className='size-4'/> : <HugeiconsIcon icon={Clock03Icon} className='size-4'/>}
+        <button className='text-sm px-1 py-1 hover:bg-gray-200 dark:hover:text-black/50 rounded-md capitalize flex items-center gap-4' onClick={availabilityStatus === 'pending' ? () => cancelApartmentRentOut.mutate(cancelData) : () => onOpenRentOut()}>
+          {cancelApartmentRentOut.isPending ? <HugeiconsIcon icon={Loading03Icon} className='size-4'/> : <HugeiconsIcon icon={Clock03Icon} className='size-4'/>}
           { propertyTag === 'for-rent' ? (availabilityStatus === 'pending' ? 'cancel rentout' : 'rentout') : (availabilityStatus === 'pending' ? 'cancel sell' : 'sell') }
         </button>
         <button className='text-sm px-1 py-1 hover:bg-gray-200 dark:hover:text-black/50 rounded-md capitalize flex items-center gap-4' onClick={() => {deleteApartment.mutate(); openItem()}}>

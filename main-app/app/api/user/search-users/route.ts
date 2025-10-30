@@ -12,7 +12,7 @@ export const POST = async (request:Request) => {
 
   try {
     const users = await User.find({role: 'user', _id:{ $ne: current_user?._id }, $or: [{ name: new RegExp(queryText, 'i')},{ username: new RegExp(queryText, 'i') }, { email: new RegExp(queryText, 'i') }]})
-    .select('_id username firstName lastName role email profilePicture phoneNumber')
+    .select('_id username surName lastName role email profilePicture phoneNumber')
     .limit(6).exec();
     
     

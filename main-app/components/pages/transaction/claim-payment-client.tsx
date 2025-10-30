@@ -7,7 +7,7 @@ import ClaimRewardCard from '@/components/cards/claim-reward-card'
 const ClaimPaymentClient = () => {
   return (
     <TransactionLayout>
-      <div className="flex flex-col">
+      <div className="flex flex-col w-full lg:w-[80%] xl:w-[70%] md:w-[80%]">
         <ClaimRewardCard/>
         <ClaimRewardCard/>
       </div>

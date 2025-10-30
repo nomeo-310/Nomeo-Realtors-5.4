@@ -189,7 +189,7 @@ const CreateBlogForm = ({user}:{user:userProps}) => {
       })
       .catch((err) => {
         toast.error("Error uploading image");
-        console.log(err);
+
         setIsLoading(false);
       });
   };

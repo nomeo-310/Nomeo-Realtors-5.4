@@ -5,7 +5,7 @@ import Modal from '../ui/modal';
 import { useStartRentOutModal } from '@/hooks/general-store';
 import InputWithIcon from '../ui/input-with-icon';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Search01Icon, UserAdd01Icon, User03Icon, Loading03Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon, UserAdd01Icon, User03Icon } from '@hugeicons/core-free-icons';
 import Image from 'next/image';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,11 +14,12 @@ import { toast } from 'sonner';
 import ErrorState from '../ui/error-state';
 import EmptyState from '../ui/empty-state';
 import { initiateRentOut } from '@/actions/rentout-actions';
+import { initiateSellOut } from '@/actions/sellout-actions';
 
 type clientDetail = {
   _id: string;
   email: string;
-  firstName: string;
+  surName: string;
   lastName: string;
   phoneNumber: string;
   profilePicture: string;
@@ -26,6 +27,21 @@ type clientDetail = {
 
 const StartRentOut = () => {
   const { isOpen, onClose } = useStartRentOutModal();
+  const data = localStorage.getItem('rent-data');
+
+  const modalData = (() => {
+    try {
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Failed to parse modal data:', error);
+      return null;
+    }
+  })();
+
+  const isRent = modalData?.propertyType === 'for-rent';
+  const actionText = isRent ? 'rent out' : 'sell out';
+  const title = modalData ? `Initiate ${isRent ? 'Apartment Rent-Out' : 'Property Sell-Out'}` : 'Initiate Property Action';
+  const description = `Nice work agent! This step means you are ready to ${actionText} the property because the client is satisfied with the inspection`;
 
   const StartRentOutForm = () => {
     const [queryText, setQueryText] = React.useState('');
@@ -35,9 +51,7 @@ const StartRentOut = () => {
     const queryClient = useQueryClient();
 
     const fetchData = async (): Promise<clientDetail[]> => {
-      const response = await axios.post('/api/user/search-users', {
-        queryText: queryText,
-      });
+      const response = await axios.post('/api/user/search-users', { queryText: queryText,});
 
       if (response.status !== 200) {
         throw new Error('Something went wrong, try again later');
@@ -56,32 +70,60 @@ const StartRentOut = () => {
     const searchedItems = data || [];
 
     const AddClientCard = ({ client }: { client: clientDetail }) => {
+
       const handleRentout = async () => {
         setInitiatingClientId(client._id);
-        
-        const data = localStorage.getItem('rent-data');
-        const initiateData = {
-          userId: client._id,
-          email: client.email,
-          agentId: data ? JSON.parse(data).userId : '',
-          agentUserId: data ? JSON.parse(data).agentUserId : '',
-          propertyIdTag: data ? JSON.parse(data).propertyId : '',
-        };
 
         try {
-          const response = await initiateRentOut(initiateData);
+          // Get and validate data from localStorage
+          const storedData = localStorage.getItem('rent-data');
+          if (!storedData) {
+            toast.error('No rental data found');
+            setInitiatingClientId(null);
+            return;
+          }
+
+          const parsedData = JSON.parse(storedData);
+          
+          // Validate required fields
+          if (!parsedData.userId || !parsedData.propertyId) {
+            toast.error('Incomplete rental data');
+            setInitiatingClientId(null);
+            return;
+          }
+
+          const initiateData = {
+            userId: client._id,
+            email: client.email,
+            agentId: parsedData.userId,
+            agentUserId: parsedData.agentUserId,
+            propertyIdTag: parsedData.propertyId,
+            propertyTag: parsedData.propertyType,
+          };
+
+          // Determine which API to call
+          let response;
+          if (parsedData.propertyType === 'for-rent') {
+            response = await initiateRentOut(initiateData);
+          } else {
+            response = await initiateSellOut(initiateData);
+          }
+
           if (response.status === 200) {
             toast.success(response.message);
             localStorage.removeItem('rent-data');
-            setInitiatingClientId(null);
             queryClient.invalidateQueries({ queryKey: ['added-properties'] });
             onClose();
           } else {
-            toast.error(response.message);
-            setInitiatingClientId(null);
+            toast.error(response.message || 'Operation failed');
           }
         } catch (error) {
-          toast.error('Failed to initiate rent out');
+          console.error('Rentout error:', error);
+          toast.error(error instanceof SyntaxError 
+            ? 'Invalid data format' 
+            : 'Failed to initiate rent out'
+          );
+        } finally {
           setInitiatingClientId(null);
         }
       };
@@ -93,14 +135,14 @@ const StartRentOut = () => {
           <div className="relative size-9 lg:size-10 border rounded-full overflow-hidden flex items-center justify-center flex-none">
             <Image
               src={client.profilePicture || '/images/default_user.png'}
-              alt={client.firstName}
+              alt={client.surName}
               fill
               className="object-cover object-center"
             />
           </div>
           <div className="flex flex-col flex-1">
             <div className="text-sm">
-              {client.firstName} {client.lastName}
+              {client.surName} {client.lastName}
             </div>
             <div className="flex flex-col lg:flex-row lg:gap-3">
               <div className="text-sm">{client.email}</div>
@@ -115,12 +157,12 @@ const StartRentOut = () => {
               className="flex items-center md:gap-2 text-sm border lg:px-3 lg:py-2 rounded-lg p-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isInitiating ? (
-                <HugeiconsIcon icon={Loading03Icon} className="size-5 animate-spin" />
+                <Loader2 className="size-5 animate-spin"/>
               ) : (
                 <HugeiconsIcon icon={UserAdd01Icon} className="size-4 lg:size-5" />
               )}
               <span className="hidden md:block">
-                {isInitiating ? 'Initiating...' : 'Initiate Rent Out'}
+                {isInitiating ? 'Initiating...' : (isRent ? 'Initiate Rent Out': 'Initiate Sell Out')}
               </span>
               <span className="block md:hidden">
                 {isInitiating ? 'Initiating' : 'Initiate'}
@@ -194,6 +236,7 @@ const StartRentOut = () => {
 
     return (
       <div className="w-full">
+        <div className='md:text-sm text-xs text-red-600 font-semibold mb-4 lg:mb-5'>Inorder to initiate either sellout or rentout, input name of the client and press enter. Make sure it is the name of the user that inspected the property and actually wants it.</div>
         <form className="flex items-center gap-2 border rounded-lg" onSubmit={handleSubmit}>
           <InputWithIcon
             icon={User03Icon}
@@ -220,8 +263,8 @@ const StartRentOut = () => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Initiate Apartment Rent-Out"
-      description="Nice work agent!. This step means you are ready to rent out the apartment because the client is satisfied with the inspection"
+      title={title}
+      description={description}
       useCloseButton
       width="lg:w-[600px] xl:w-[700px] md:w-[550px]"
     >

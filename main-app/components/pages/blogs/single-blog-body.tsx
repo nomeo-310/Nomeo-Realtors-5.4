@@ -4,7 +4,7 @@ import ImageAvatar from './image-avatar'
 import Link from 'next/link'
 import { togglePage } from '@/hooks/general-store'
 
-const SingleBlogBody = ({blog, user}:{blog:SingleBlog, user?:userProps}) => {
+const SingleBlogBody = ({blog}:{blog:SingleBlog, user?:userProps}) => {
   const { setPage } = togglePage();
   return (
     <div className="pt-4 pb-6 md:pt-6 md:pb-10 lg:pt-8 lg:pb-12 flex lg:gap-8 md:gap-6 gap-4 lg:flex-row flex-col">

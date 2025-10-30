@@ -12,18 +12,12 @@ export const metadata: Metadata = {
 const LikedApartments = async () => {
   const current_user = await getCurrentUser();
 
-  const adminRoles = ['creator', 'admin', 'superAdmin']
-
   if (!current_user) {
     redirect('/')
   };
 
   if (current_user.role !== 'user') {
-    if (adminRoles.includes(current_user.role)) {
-      return notFound()
-    } else {
-      redirect('/agent-dashboard');
-    }
+    return notFound();
   };
 
   if (current_user.role === 'user' ) {

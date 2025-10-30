@@ -29,7 +29,7 @@ export const GET = async (req: Request) => {
 
     return Response.json(latestBlogs)
   } catch (error) {
-    console.log(error);
+
     return Response.json({ error: "Internal server error, try again later" },{ status: 500 });
   }
 };

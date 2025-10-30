@@ -77,7 +77,8 @@ const SingleApartmentClient = ({ property, user }: Props) => {
     const rentOutData = {
       userId: agentId,
       agentUserId: userId,
-      propertyId: property.propertyIdTag,
+      propertyId: property.propertyIdTag, 
+      propertyType: property.propertyTag
     }
 
     localStorage.setItem('rent-data', JSON.stringify(rentOutData))
@@ -137,7 +138,7 @@ const SingleApartmentClient = ({ property, user }: Props) => {
                 </div> :
                 <button className='flex items-center gap-3 px-3 py-1.5 border rounded-md text-sm lg:text-base text-white bg-secondary-blue border-secondary-blue' onClick={handleRentOut}>
                   { cancelling ? <Loader2 className="animate-spin size-4 lg:size-5" /> : <HugeiconsIcon icon={Timer01Icon} className='size-4 lg:size-5'/>}
-                  { property.availabilityStatus === 'available' ? 'Initiate Rent-out' : (cancelling ? 'Cancelling Rent-out ...' : 'Cancel Rent-out')}
+                  { property.availabilityStatus === 'available' ? (property.propertyTag === 'for-rent' ? 'Initiate Rent-out' : 'Initiate Sell-out') : (cancelling ? (property.propertyTag === 'for-rent' ? 'Cancelling Rent-out' : 'Cancelling Sell-out') : (property.propertyTag === 'for-rent' ? 'Cancel Rent-out' : 'Cancel Sell-out'))}
                 </button>
               }
             </div>
@@ -427,7 +428,7 @@ const SingleApartmentClient = ({ property, user }: Props) => {
             }
           })
           .catch((error) => {
-            console.log(error);
+
             setIsLoading(false);
             toast.error("Something went wrong, try again later!!");
           });

@@ -54,7 +54,7 @@ const FeaturedProperties = () => {
   });
 
   const featuredProperties = data?.data as Property[] || [];
-  console.log(featuredProperties);
+  (featuredProperties);
 
   return (
     <div className='xl:p-16 md:p-10 p-6 flex flex-col xl:gap-10 gap-6 xl:pt-[84px] md:pt-[84px] pt-[84px]' id='featuredProperties'>

@@ -1,20 +1,9 @@
 "use client";
 
 import { contactUs } from "@/actions/contact-us";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  User03Icon,
-  TelephoneIcon,
-  Home04Icon,
-  Mail01Icon,
-} from "@hugeicons/core-free-icons";
+import { User03Icon, TelephoneIcon, Home04Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import InputWithIcon from "@/components/ui/input-with-icon";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Textarea } from "@/components/ui/textarea";
@@ -141,7 +130,7 @@ const ContactUsClient = () => {
                 We&apos;re here for you — anytime, anywhere and anyday.
               </h3>
             )}
-            {page === "newsletter" ? (
+            { page === "newsletter" ? (
               <React.Fragment>
                 <p className="text-sm lg:text-base">
                   Subscribe to our newsletter to stay up-to-date with the latest
@@ -207,7 +196,7 @@ const ContactUsClient = () => {
           <hr className="lg:hidden" />
         </div>
         { page === "newsletter" ? (
-          <div className="lg:w-[50%] w-full">
+          <form className="lg:w-[50%] w-full pt-6 pb-10 lg:pb-0 lg:pt-0" onSubmit={handleSubscribe}>
             <InputWithIcon
               id="user_email"
               type="text"
@@ -215,6 +204,7 @@ const ContactUsClient = () => {
               icon={Mail01Icon}
               className="rounded-lg bg-[#d4d4d4] dark:bg-[#424242] border w-full"
               inputClassName="rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 w-full"
+              onChange={onChange}
             />
             <div className="mt-6">
               <LoadingButton
@@ -224,13 +214,10 @@ const ContactUsClient = () => {
                 className="lg:h-12 h-11 w-full bg-secondary-blue text-white rounded-lg"
               />
             </div>
-          </div>
+          </form>
         ) : (
           <Form {...form}>
-            <form
-              className="lg:w-[50%] w-full flex flex-col gap-3 pt-6 pb-10 lg:pb-0 lg:pt-0"
-              onSubmit={form.handleSubmit(submitForm)}
-            >
+            <form className="lg:w-[50%] w-full flex flex-col gap-3 pt-6 pb-10 lg:pb-0 lg:pt-0" onSubmit={form.handleSubmit(submitForm)}>
               <FormField
                 control={form.control}
                 name="fullName"

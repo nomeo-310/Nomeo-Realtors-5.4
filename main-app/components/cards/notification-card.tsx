@@ -169,9 +169,7 @@ const NotificationCard = ({notification, user }:notificationCardProps) => {
   }
 
   return (
-    <div
-      className='w-full border-b dark:border-b-white/70 last:border-b-0 flex gap-2 items-start py-2 md:py-3'
-    >
+    <div className='w-full border-b dark:border-b-white/70 last:border-b-0 flex gap-2 items-start py-2 md:py-3'>
       <div className={cn(`size-8 md:size-9 lg:size-10 flex items-center justify-center rounded-md ${bg_color}`, seen && 'bg-gray-200 dark:bg-[#424242] text-gray-600 dark:text-white')}>
         {icon}
       </div>

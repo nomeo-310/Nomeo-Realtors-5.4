@@ -57,11 +57,17 @@ export const scheduleInspection = async (data:scheduleInspetionType) => {
     return { success: false, message: 'You have already scheduled an inspection for this property', status: 409 }
   };
 
-  const existingInspectionForAgent = await Inspection.findOne({agent: agentId, date: date, time: time});
+  const existingInspectionForAgent = await Inspection.findOne({agent: agent._id, date: date, time: time});
 
   if (existingInspectionForAgent) {
-    return { success: false, message: 'The agent is already scheduled for an inspection for this date and time', status: 409 }
-  }
+    return { success: false, message: 'The agent is already scheduled for an inspection for this date and time.', status: 409 }
+  };
+
+  const existingInspectionForSameDay = await Inspection.findOne({user: current_user._id, agent: agent._id, date: date, time: time});
+
+  if (existingInspectionForSameDay) {
+    return { success: false, message: 'You have already scheduled an inspection with the agent for same day and time.', status: 409 }
+  };
 
   const userFullName = `${current_user.surName} ${current_user.lastName}`;
   const agentFullName = `${agentUserDetails?.surName} ${agentUserDetails?.lastName}`;
@@ -72,7 +78,7 @@ export const scheduleInspection = async (data:scheduleInspetionType) => {
     date: date,
     time: time,
     user: current_user._id,
-    apartment: apartment,
+    apartment: currentApartment._id,
     agent: agentId,
     additionalNumber: additionalPhoneNumber,
   };
@@ -83,7 +89,7 @@ export const scheduleInspection = async (data:scheduleInspetionType) => {
 
     const userNotification = await Notification.create({
       type: 'inspection',
-      title: 'Notification Reminder',
+      title: 'Inspection Reminder',
       content: `Here is a reminder that you scheduled an inspection with ${agentFullName} on ${date} for ${time}. Feel free to cancel this if you will not be able to meet up`,
       propertyId: apartment,
       issuer: current_user._id,
@@ -94,7 +100,7 @@ export const scheduleInspection = async (data:scheduleInspetionType) => {
     
     const agentNotification = await Notification.create({
       type: 'inspection',
-      title: 'Notification Reminder',
+      title: 'Inspection Reminder',
       content: `Here is a reminder that you are scheduled for an inspection with ${userFullName} on ${date} for ${time}. Below are the details of the ${userFullName} and the apartment. Feel free to call and have him/her cancel this schedule if you will not be able to meet up.`,
       propertyId: apartment,
       issuer: current_user._id,
@@ -112,7 +118,8 @@ export const scheduleInspection = async (data:scheduleInspetionType) => {
       InspectionEmailTemplate({
         name: agentFullName,
         title: 'Apartment Inspection Schedule',
-        message: message
+        message: message,
+        isInspection: true,
       })
     );
 
@@ -177,7 +184,8 @@ export const cancelInspection = async ({id, path}:{id:string, path:string}) => {
       InspectionEmailTemplate({
         name: agentFullName,
         title: 'Inspection Cancellation',
-        message: message
+        message: message,
+        isInspection: true
       })
     );
 
@@ -211,3 +219,70 @@ export const cancelInspection = async ({id, path}:{id:string, path:string}) => {
   }
 };
 
+export const toggleInspectionStatus = async({id, status, path}:{id:string, status: string, path:string}) => {
+  await connectToMongoDB();
+
+  const current_user = await getCurrentUser();
+
+  if (!current_user) {
+    return { success: false, message: 'You are not logged in, login to access this feature', status: 403 }
+  };
+
+  const inspection = await Inspection.findOne({_id: id});
+  
+  if (!inspection) {
+    return { success: false, message: 'Inpsection does not exist!', status: 404 }
+  };
+
+  if (JSON.stringify(inspection.agent) !== JSON.stringify(current_user.agentId)) {
+    return { success: false, message: 'You are not  authorized to acess this feature', status: 403 }
+  };
+
+  if (inspection.status === status) {
+    return { success: false, message: 'Inspection status is already set to this', status: 409 }
+  };
+
+  try {
+    await Inspection.findOneAndUpdate({_id: inspection._id}, {status: status});
+
+    revalidatePath(path);
+    return {success: true, message: 'Inspection status successfully updated', status: 200}
+  } catch (error) {
+    return  {success: false, message: 'Error occurred while toggling inspection status', status: 500}
+  }
+  
+};
+
+export const toggleInspectionVerdict = async({id, verdict, path}:{id:string, verdict: string, path:string}) => {
+  await connectToMongoDB();
+
+  const current_user = await getCurrentUser();
+
+  if (!current_user) {
+    return { success: false, message: 'You are not logged in, login to access this feature', status: 403 }
+  };
+
+  const inspection = await Inspection.findOne({_id: id});
+  
+  if (!inspection) {
+    return { success: false, message: 'Inpsection does not exist!', status: 404 }
+  };
+
+  if (JSON.stringify(inspection.agent) !== JSON.stringify(current_user.agentId)) {
+    return { success: false, message: 'You are not  authorized to acess this feature', status: 403 }
+  };
+
+  if (inspection.verdict === verdict) {
+    return { success: false, message: 'Inspection verdict is already set to this', status: 409 }
+  };
+
+  try {
+    await Inspection.findOneAndUpdate({_id: inspection._id}, {verdict: verdict});
+
+    revalidatePath(path);
+    return {success: true, message: 'Inspection status successfully updated', status: 200}
+  } catch (error) {
+    return  {success: false, message: 'Error occurred while toggling inspection status', status: 500}
+  }
+  
+};

@@ -53,7 +53,6 @@ const SingleBlogClient = ({blog, user}:{blog:SingleBlog, user?:userProps}) => {
       try {
         sessionStorage.setItem(READ_STATUS_KEY, 'true');
         await readBlog(data);
-        console.log(`Successfully tracked new read for blog ${blog._id}.`);
       } catch (err) {
         sessionStorage.removeItem(READ_STATUS_KEY);
         console.error('Error tracking read:', err);

@@ -14,7 +14,7 @@ import { propertyProps } from "@/lib/types";
 import { deleteArrayOfImages } from "./delete-cloudinary-image";
 import Inspection from "@/models/inspection";
 import Notification from "@/models/notification";
-import Rented from "@/models/rented";
+import Rented from "@/models/rentout";
 import { ObjectId } from "mongodb";
 
 type imageProps = {
@@ -98,7 +98,6 @@ export const createProperty = async ({values}:{values:IAddApartmentClient}) => {
 
     return {success: true, message: "Property created successfully", status: 200};
   } catch (error) {
-    console.log(error);
     return {success: false, message: "Error creating property", status: 500};
   }
 };
@@ -179,7 +178,6 @@ export const likeProperty = async (values:{path:string; propertyId: string;}) =>
       return {success: true, message: 'You liked this apartment', status: 200}
     }
   } catch (error) {
-    console.log(error);
     return {success: false, message: 'Internal server error', status: 500}
   }
 };
@@ -228,7 +226,6 @@ export const bookmarkProperty = async (values:{path:string; propertyId: string;}
       return {success: true, message: 'You bookmarked this apartment', status: 200}
     }
   } catch (error) {
-    console.log(error);
     return {success: false, message: 'Internal server error', status: 500}
   }
 };
@@ -275,7 +272,6 @@ export const deleteAllApartments = async (values:{email:string; path:string}) =>
           return {success: true, message: 'Properties successfully deleted', status: 200}
         } catch (error) {
 
-          console.log(error);
           return {success: false, message: 'Internal server error', status: 500}
         }
       } else {
@@ -383,7 +379,6 @@ export const hideProperty = async (id:string) => {
 
       return updatedProperty
     } catch (error) {
-      console.log(error);
 
       return {success: false, message: 'Internal server error', status: 200}
     }
@@ -395,7 +390,6 @@ export const hideProperty = async (id:string) => {
 
       return updatedProperty
     } catch (error) {
-      console.log(error);
 
       return {success: false, message: 'Internal server error', status: 200}
     }

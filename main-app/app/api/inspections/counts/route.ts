@@ -16,7 +16,7 @@ export const GET = async () => {
   }
 
   try {
-    const inspections = await Inspection.countDocuments({agent: current_user.agentId})
+    const inspections = await Inspection.countDocuments({agent: current_user.agentId, status: 'pending'})
     const data = {count: inspections};
 
     return Response.json(data);

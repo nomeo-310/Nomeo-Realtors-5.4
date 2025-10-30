@@ -1,8 +1,8 @@
 import mongoose, { Schema, Document, Model, Types } from 'mongoose';
 
-interface IRented extends Document {
+interface IRentout extends Document {
   user: Types.ObjectId;
-  apartment: string;
+  apartment: Types.ObjectId;
   agent: Types.ObjectId;
   rented: boolean;
   status: string;
@@ -10,10 +10,10 @@ interface IRented extends Document {
   endDate?: string;
 }
 
-const rentedSchema: Schema<IRented> = new Schema(
+const rentoutSchema: Schema<IRentout> = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User' },
-    apartment: { type: String, required: true },
+    apartment: { type: Schema.Types.ObjectId, ref: 'Apartment' },
     agent: { type: Schema.Types.ObjectId, ref: 'Agent' },
     startDate: { type: String, default: undefined },
     endDate: { type: String, default: undefined},
@@ -22,17 +22,17 @@ const rentedSchema: Schema<IRented> = new Schema(
   },
   { timestamps: true });
 
-let Rented: Model<IRented>;
+let Rentout: Model<IRentout>;
 
 try {
-  Rented = mongoose.model<IRented>('Rented');
+  Rentout = mongoose.model<IRentout>('Rentout');
 } catch (error) {
   if (error instanceof mongoose.Error.OverwriteModelError) {
-    Rented = mongoose.model<IRented>('Rented');
+    Rentout = mongoose.model<IRentout>('Rentout');
   } else {
-    Rented = mongoose.model<IRented>('Rented', rentedSchema);
+    Rentout = mongoose.model<IRentout>('Rentout', rentoutSchema);
   }
-  Rented = mongoose.model<IRented>('Rented', rentedSchema);
+  Rentout = mongoose.model<IRentout>('Rentout', rentoutSchema);
 }
 
-export default Rented;
+export default Rentout;

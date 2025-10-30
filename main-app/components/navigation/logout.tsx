@@ -3,14 +3,7 @@
 import { cn } from "@/lib/utils";
 import { ImageAvatar } from "../ui/image-avatar";
 import { signOut } from "next-auth/react";
-import {
-  DropdownMenu,
-  DropdownMenuLabel,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuLabel, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { userProps } from "@/lib/types";
 
 export const LogOut = ({ user }: { user: userProps }) => {

@@ -16,13 +16,13 @@ export function CollaborationEmailTemplate (props:EmailTemplateProps) {
       <Body style={{ backgroundColor: '#f4f4f4', fontFamily: 'Arial, sans-serif', margin: 0, padding: 0 }}>
         <Container style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '10px', maxWidth: '600px', margin: '20px auto' }}>
           <Text style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center', padding: '20px', backgroundColor: '#4caf50', borderRadius: '10px 10px 0 0', color: '#ffffff',  }}>
-            You've been invited to collaborate on a new blog post!
+            You&apos;ve been invited to collaborate on a new blog post!
           </Text>
           <Text style={{ fontSize: '16px', marginBottom: '10px' }}>
             Hi {recipient},
           </Text>
           <Text style={{ fontSize: '16px', marginBottom: '10px' }}>
-            You've been invited by {author} to collaborate on a new blog post titled:
+            You&apos;ve been invited by {author} to collaborate on a new blog post titled:
           </Text>
           <Text style={{ fontSize: '24px', marginBottom: '20px', marginTop: '20px', textAlign: 'center', lineHeight: '36px', color: '#333' }}>
             {blog_title}

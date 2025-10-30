@@ -465,6 +465,53 @@ export type ClientProps = {
   nextDueDate: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type Inspection =  {
+  _id: string;
+  date: string;
+  time: string;
+  user: {
+    _id: string;
+    email: string;
+    lastName: string;
+    phoneNumber: string;
+    profilePicture: string;
+    surName: string;
+  };
+  apartment: {
+    _id: string;
+    propertyIdTag: string;
+    address: string;
+    city: string;
+    state: string;
+    annualRent: number;
+    propertyTag: string; 
+    propertyPrice: number; 
+    bedrooms: number; 
+    bathrooms: number; 
+    toilets: number;
+  };
+  agent: {
+    _id: string;
+    userId: {
+      _id: string;
+      email: string;
+      lastName: string;
+      phoneNumber: string;
+      profilePicture: string;
+      surName: string; 
+    };
+    agencyName: string;
+    officeAddress: string;
+    officeNumber: string;
+  };
+  additionalNumber: string;
+  status: string;
+  verdict: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
 }
 
 

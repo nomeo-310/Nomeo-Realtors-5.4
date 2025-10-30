@@ -11,18 +11,12 @@ export const metadata: Metadata = {
 const ClientsPage = async () => {
   const current_user = await getCurrentUser();
 
-  const adminRoles = ['creator', 'admin', 'superAdmin']
-
   if (!current_user) {
     redirect('/')
   };
 
   if (current_user.role !== 'agent') {
-    if (adminRoles.includes(current_user.role)) {
-      return notFound()
-    } else {
-      redirect('/user-dashboard');
-    }
+    return notFound();
   };
 
   return (

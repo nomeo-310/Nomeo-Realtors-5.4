@@ -1,15 +1,15 @@
 import { getCurrentUser } from '@/actions/user-actions';
-import AllDraftClient from '@/components/pages/blogs/all-draft-client';
+import AllCollaborationClient from '@/components/pages/blogs/all-collaboration-client';
 import BlogLayout from '@/components/pages/blogs/blog-layout';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
 
 export const metadata: Metadata = {
-  title: 'All Drafts'
+  title: 'Collaborations'
 };
 
-const AllDraftsPage = async () => {
+const AllCollaborationPage = async () => {
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -26,9 +26,9 @@ const AllDraftsPage = async () => {
 
   return (
     <BlogLayout user={current_user}>
-      <AllDraftClient user={current_user}/>
+      <AllCollaborationClient user={current_user}/>
     </BlogLayout>
   )
 }
 
-export default AllDraftsPage
+export default AllCollaborationPage

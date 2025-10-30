@@ -4,7 +4,7 @@ import React from 'react'
 import { Cropper, ReactCropperElement } from 'react-cropper'
 import 'cropperjs/dist/cropper.css'
 import { HugeiconsIcon } from '@hugeicons/react';
-import { SparklesIcon, Cancel01Icon, ImageAdd02Icon, ImageDelete02Icon, ImageUploadIcon, Location06Icon, TelephoneIcon, User03Icon } from '@hugeicons/core-free-icons';
+import { SparklesIcon, ImageAdd02Icon, Location06Icon, TelephoneIcon, User03Icon } from '@hugeicons/core-free-icons';
 import InputWithIcon from '../ui/input-with-icon'
 import Image from 'next/image'
 import { Input } from '../ui/input'
@@ -181,7 +181,7 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
         toast.error(response.message);
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong!!')
     })
   };

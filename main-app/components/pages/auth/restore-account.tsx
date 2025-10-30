@@ -6,7 +6,7 @@ import { AtIcon, Mail01Icon, SquareLock01Icon } from '@hugeicons/core-free-icons
 import InputWithIcon from '@/components/ui/input-with-icon'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from "@hookform/resolvers/zod"
-import { restoreSchema, restoreValues, signupSchema, signupValues } from '@/lib/form-validations'
+import { restoreSchema, restoreValues } from '@/lib/form-validations'
 import { LoadingButton } from '@/components/ui/loading-button'
 import Link from 'next/link'
 import { toast } from 'sonner'

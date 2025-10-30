@@ -216,7 +216,7 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
         }
       })
       .catch((error) => {
-        console.log(error);
+
         toast.error("Something went wrong!!");
       });
   };

@@ -47,25 +47,26 @@ const PaymentModal = () => {
   const pathname = usePathname();
   const { isOpen, onClose } = usePaymentModal();
 
-  const [transactionData, setTransactionData] = useState<transactionData | null>(null);
-
-  useEffect(() => {
+  // Read from localStorage synchronously on component mount
+  const [transactionData, setTransactionData] = useState<transactionData | null>(() => {
     if (typeof window !== 'undefined') {
       const data = localStorage.getItem('transaction-data');
       if (data) {
         try {
-          const parsed = JSON.parse(data);
-          setTransactionData(parsed);
+          return JSON.parse(data);
         } catch (err) {
           console.error("Failed to parse transaction data", err);
         }
       }
     }
-  }, []);
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
 
   const propertyId = searchParams.get('propertyId');
   const agentUserId = searchParams.get('agentUserId');
-  const notificationId = searchParams.get('notificationId') ;
+  const notificationId = searchParams.get('notificationId');
 
   const public_key = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
@@ -73,63 +74,90 @@ const PaymentModal = () => {
 
   const { onOpen } = useManualTransferModal();
 
+  // Reset transaction data when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const data = localStorage.getItem('transaction-data');
+      if (data) {
+        try {
+          setTransactionData(JSON.parse(data));
+        } catch (err) {
+          console.error("Failed to parse transaction data", err);
+          setTransactionData(null);
+        }
+      } else {
+        setTransactionData(null);
+      }
+    }
+  }, [isOpen]);
+
   if (!public_key) {
     toast.error('PayStack public key is not set!!');
+    return null;
   }
 
-  if (!transactionData) return null; // Wait until localStorage is read
-
   const paystackConfig: PaystackConfig = {
-    email: transactionData.email,
-    amount: transactionData.amount * 100,
-    publicKey: public_key || '',
+    email: transactionData?.email || '',
+    amount: (transactionData?.amount || 0) * 100,
+    publicKey: public_key,
     currency: 'NGN',
     metadata: {
       custom_fields: [
         {
           display_name: 'Email',
           variable_name: 'email',
-          value: transactionData.email
+          value: transactionData?.email || ''
         },
         {
           display_name: 'Amount',
           variable_name: 'amount',
-          value: transactionData.amount
+          value: transactionData?.amount || 0
         },
       ]
     },
     onSuccess: async (reference) => {
       if (reference && reference.status === 'success') {
-        const values = {
-          createdAt: new Date(Date.now()).toISOString(),
-          transactionId: reference.transaction,
-          referenceId: reference.reference,
-          transactionStatus: reference.status,
-          currency: 'NGN',
-          amount: transactionData.amount,
-          propertyId: propertyId || '',
-          agentUserId: agentUserId || '',
-          paymentMethod: 'online_transfer',
-          path: pathname
-        };
+        setIsLoading(true);
+        try {
+          const values = {
+            createdAt: new Date(Date.now()).toISOString(),
+            transactionId: reference.transaction,
+            referenceId: reference.reference,
+            transactionStatus: reference.status,
+            currency: 'NGN',
+            amount: transactionData?.amount || 0,
+            propertyId: propertyId || '',
+            agentUserId: agentUserId || '',
+            paymentMethod: 'online_transfer',
+            path: pathname
+          };
 
-        await initiateTransaction({ values }).then((response) => {
+          const response = await initiateTransaction({ values });
           if (response && response.status === 200) {
             localStorage.removeItem('transaction-data');
             mutate();
             toast.success('Transaction was successful!!');
+            onClose();
           } else {
             toast.error(response.message);
           }
-        });
+        } catch (error) {
+          console.error('Transaction error:', error);
+          toast.error('Transaction failed, try again later!!');
+        } finally {
+          setIsLoading(false);
+        }
       }
     },
     onClose: () => {
-      toast.error('Transaction cancelled!!');
+      if (!isLoading) {
+        toast.error('Transaction cancelled!!');
+      }
     },
     onError: (error) => {
-      console.log(error);
+
       toast.error('Transaction failed, try again later!!');
+      setIsLoading(false);
     }
   };
 
@@ -141,18 +169,35 @@ const PaymentModal = () => {
       isOpen={isOpen}
       onClose={onClose}
     >
-      <div className="flex items-center justify-between mt-5">
-        <PaystackButton
-          text='Make Online Transfer'
-          className='py-1.5 px-4 rounded-md bg-secondary-blue text-white text-sm lg:text-base'
-          {...paystackConfig}
-        />
-        <button
-          type="button"
-          className='py-1.5 px-4 rounded-md border dark:border-white/70 text-sm lg:text-base'
-          onClick={() => {onOpen(); onClose();}}>
-          Make Bank Transfer
-        </button>
+      <div className="flex flex-col space-y-4 mt-5">
+        {!transactionData ? (
+          <div className="text-center py-4">
+            <p>Loading payment information...</p>
+          </div>
+        ) : (
+          <>
+            <div className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              <p>Amount: <strong>₦{transactionData.amount.toLocaleString()}</strong></p>
+              <p>Email: <strong>{transactionData.email}</strong></p>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <PaystackButton
+                text={isLoading ? 'Processing...' : 'Make Online Transfer'}
+                className='py-2 px-4 rounded-md bg-secondary-blue text-white text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex-1 text-center'
+                {...paystackConfig}
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                className='py-2 px-4 rounded-md border dark:border-white/70 text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex-1'
+                onClick={() => { onOpen(); onClose(); }}
+                disabled={isLoading}
+              >
+                Make Bank Transfer
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </Modal>
   );

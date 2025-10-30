@@ -1,7 +1,7 @@
 'use server'
 
 import { ContactEmailTemplate } from "@/components/email-templates/contact-email-template";
-import { contactValues, faqMessageValues } from "@/lib/form-validations"
+import { contactValues } from "@/lib/form-validations"
 import { sendMessage } from "@/lib/send-message";
 import { render } from "@react-email/components";
 

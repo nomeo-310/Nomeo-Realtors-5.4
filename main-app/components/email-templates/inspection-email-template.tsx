@@ -5,10 +5,11 @@ interface EmailTemplateProps {
   name: string;
   title: string;
   message: string;
+  isInspection: boolean;
 };
 
 export function InspectionEmailTemplate (props:EmailTemplateProps) {
-  const { title, name, message } = props;
+  const { title, name, message, isInspection } = props;
 
   return (
     <Html>
@@ -25,7 +26,7 @@ export function InspectionEmailTemplate (props:EmailTemplateProps) {
             {message}
           </Text>
           <Text style={{ fontSize: '14px', color: '#888', lineHeight: '21px', textAlign: 'center', marginBottom: '20px' }}>
-            If this schedule was not meant for you, go ahead and ignore it.
+            {isInspection ? 'If this schedule was not meant for you, go ahead and ignore it.' : 'If this information is not meant for you, go ahead and ignore it.'}
           </Text>
         </Container>
       </Body>

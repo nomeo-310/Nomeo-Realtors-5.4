@@ -241,7 +241,6 @@ const EditBlogForm = ({blog, user}:{blog:BlogPost, user:userProps}) => {
       })
       .catch((err) => {
         toast.error("Error uploading image");
-        console.log(err);
       });
   };
 

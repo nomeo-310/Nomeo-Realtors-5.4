@@ -56,7 +56,6 @@ export const useDeleteApartment = (id: string) => {
       }
     },
     onError: (error, variables, context) => {
-      console.log(error);
       
       // Revert optimistic update on error
       if (context?.previousProperties) {

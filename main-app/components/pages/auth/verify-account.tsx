@@ -9,9 +9,9 @@ import { LoadingButton } from '@/components/ui/loading-button'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { toast } from 'sonner'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { resendOtp, verifyAccount } from '@/app/action/user-actions'
 import { Loader2 } from 'lucide-react'
 import { signIn } from 'next-auth/react'
+import { resendOtp, verifyAccount } from '@/actions/user-actions'
 
 const  VerifyAccountForm = () => {
 

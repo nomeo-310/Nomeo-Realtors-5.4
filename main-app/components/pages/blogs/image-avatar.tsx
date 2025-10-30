@@ -15,7 +15,6 @@ interface avatarProps {
 const ImageAvatar = ({src, alt, className, name, placeholderColor}: avatarProps) => {
 
   const initials = name ? name.trim().split(" ").map((word) => word.charAt(0).toUpperCase()).slice(0, 2).join("") : null; 
-  console.log(initials)
 
   const wrapperClass = cn("relative size-8 rounded-full overflow-hidden flex items-center justify-center font-semibold text-white text-sm md:text-xl", className);
 

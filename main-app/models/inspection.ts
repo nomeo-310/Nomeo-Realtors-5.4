@@ -4,10 +4,11 @@ interface IInspection extends Document {
   date: string;
   time: string;
   user: Types.ObjectId;
-  apartment: string;
+  apartment: Types.ObjectId;
   agent: Types.ObjectId;
   additionalNumber?: string;
   status: string;
+  verdict: string;
 }
 
 const inspectionSchema: Schema<IInspection> = new Schema(
@@ -15,13 +16,14 @@ const inspectionSchema: Schema<IInspection> = new Schema(
     date: { type: String, required: true },
     time: { type: String, required: true },
     user: { type: Schema.Types.ObjectId, ref: 'User' },
-    apartment: { type: String, required: true },
+    apartment: { type: Schema.Types.ObjectId, ref: 'Apartment' },
     agent: { type: Schema.Types.ObjectId, ref: 'Agent' },
     additionalNumber: { type: String, default: undefined },
-    status: {type: String, enum: ['completed', 'pending'], default: 'pending'}
+    status: {type: String, enum: ['completed', 'pending', 'uncompleted'], default: 'pending'},
+    verdict: {type: String, enum: ['accepted', 'rejected', 'pending'], default: 'pending'}
   },
   { timestamps: true });
-
+ 
 let Inspection: Model<IInspection>;
 
 try {

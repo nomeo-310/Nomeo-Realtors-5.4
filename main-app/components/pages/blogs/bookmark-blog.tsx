@@ -1,7 +1,5 @@
 'use client'
 
-
-import { bookmarkProperty } from '@/actions/property-actions';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Bookmark01Icon, BookmarkAdd01Icon } from '@hugeicons/core-free-icons';
 import { SingleBlog, userProps } from '@/lib/types';

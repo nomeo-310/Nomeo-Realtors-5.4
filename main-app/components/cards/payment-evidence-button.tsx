@@ -1,6 +1,6 @@
 'use client'
 
-import { Attachment01Icon, MailSend01Icon } from "@hugeicons/core-free-icons";
+import { MailSend01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import React from "react";
 import { toast } from "sonner";

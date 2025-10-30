@@ -155,7 +155,6 @@ export const createNewBlog = async (blogData: blogData) => {
     revalidatePath(path);
     return { success: true, message: "Blog created successfully", status: 200 };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -290,7 +289,6 @@ export const createNewDraft = async (blogData: draftBlogData) => {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -407,7 +405,6 @@ export const acceptCollaboration = async (acceptData: acceptDataProps) => {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -531,7 +528,6 @@ export const rejectCollaboration = async (acceptData: acceptDataProps) => {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -553,7 +549,6 @@ export const getEditBlog = async (id: string) => {
 
   const isAuthor = currentBlog.author.toString() === current_user._id.toString();
   const isCollaborator = currentBlog.collaborators?.some((collabId) => collabId.toString() === current_user._id.toString());
-  console.log(isCollaborator);
 
   if (!isCollaborator && !isAuthor) {
     return {
@@ -578,7 +573,6 @@ export const getEditBlog = async (id: string) => {
 
     return blogs;
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -626,7 +620,6 @@ export const updateDraft = async (blogData: updateBlogData) => {
   };
 
   const newCollaboratorAdded = (collaborators?.length || 0) > (currentBlog.collaborators?.length || 0);
-  console.log(newCollaboratorAdded)
 
   let newCollaborators = [];
   if (newCollaboratorAdded) {
@@ -727,7 +720,6 @@ export const updateDraft = async (blogData: updateBlogData) => {
     revalidatePath(path);
     return { success: true, message: "Blog updated successfully", status: 200 };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -848,7 +840,6 @@ export const publishDraft = async (blogData: updateBlogData) => {
     revalidatePath(path);
     return { success: true, message: "Blog successfully published", status: 200 };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 }
@@ -879,7 +870,6 @@ export const deletePost = async (blogId: string) => {
     await Blog.findByIdAndUpdate(blogId, { is_deleted: true });
     return { success: true, message: "Blog deleted successfully", status: 200 };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -913,7 +903,6 @@ export const restoreDeletedPost = async (blogId: string) => {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -954,7 +943,6 @@ export const fullPostDelete = async (blogId: string) => {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
     return { success: false, message: "Internal server error", status: 500 };
   }
 };

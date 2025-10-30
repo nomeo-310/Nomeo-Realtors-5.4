@@ -16,7 +16,7 @@ import { deleteCloudinaryImages } from "./delete-cloudinary-image";
 import Notification from "@/models/notification";
 import { agentProps, propertyProps, userProps } from "@/lib/types";
 import Apartment from "@/models/apartment";
-import Rented from "@/models/rented";
+import Rented from "@/models/rentout";
 import { TemporaryDeleteEmailTemplate } from "@/components/email-templates/temporary-delete-email-template";
 import { capitalizeName } from "@/lib/utils";
 
@@ -1039,7 +1039,7 @@ export const changeProfileImage = async (value: {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
+
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
@@ -1290,7 +1290,7 @@ export const changeAgencyAddress = async (values: {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to update office address.",
@@ -1332,7 +1332,7 @@ export const changeInspectionFee = async (values: {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to update inspection fee.",
@@ -1371,7 +1371,7 @@ export const changeOfficeNumber = async (values: {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to update office number.",
@@ -1404,7 +1404,7 @@ export const changePhoneNumber = async (values: {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to update phone number.",
@@ -1455,7 +1455,7 @@ export const toggleListings = async (values: {
       };
     }
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to update listings.",
@@ -1513,7 +1513,7 @@ export const toggleLikedApartments = async (values: {
       };
     }
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",
@@ -1571,7 +1571,7 @@ export const toggleBookmarkedApartments = async (values: {
       };
     }
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",
@@ -1626,7 +1626,7 @@ export const toggleLikedBlogs = async (values: {
       };
     }
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",
@@ -1684,7 +1684,7 @@ export const toggleBookmarkedBlogs = async (values: {
       };
     }
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",
@@ -1895,7 +1895,6 @@ export const transferAccount = async (values: {
       status: 200,
     };
   } catch (error) {
-    console.log(error);
 
     return {
       success: true,
@@ -1966,7 +1965,7 @@ export const toggleCollaborator = async (values: {
       };
     }
   } catch (error) {
-    console.log(error);
+
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",

@@ -3,7 +3,7 @@
 import User from "@/models/user";
 import { getCurrentUser } from "./user-actions"
 import Apartment from "@/models/apartment";
-import Transaction from "@/models/transactions";
+import Transaction from "@/models/transaction";
 import { revalidatePath } from "next/cache";
 import Notification from "@/models/notification";
 

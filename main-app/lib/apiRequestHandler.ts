@@ -13,9 +13,9 @@ export const apiRequestHandler = async <T>(requestFn: () =>Promise<T>, setLoadin
     return response;
   } catch (error) {
     const axiosError = error as AxiosError<ApiErrorResponse>;
-    console.log(error);
+
     if (axiosError?.response?.data?.message || axiosError?.response?.data?.error) {
-      console.log(axiosError?.response?.data?.message)
+
       toast.error(axiosError?.response?.data?.message || axiosError?.response?.data?.error || 'An unexpected error occurred.')
     } else {
       toast.error('An unexpected error occured. Try again later.')

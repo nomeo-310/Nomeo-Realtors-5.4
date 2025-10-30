@@ -1,7 +1,5 @@
 'use client'
 
-
-
 import { userProps } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ViewIcon } from '@hugeicons/core-free-icons';

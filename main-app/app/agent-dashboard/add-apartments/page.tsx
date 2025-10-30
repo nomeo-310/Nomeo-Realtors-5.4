@@ -17,7 +17,7 @@ const AddApartments = async () => {
   };
 
   if (current_user.role !== 'agent') {
-    redirect('/user-dashboard');
+    return notFound();
   };
 
   let status;

@@ -1,7 +1,5 @@
 'use client'
 
-
-
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import EmptyState from '@/components/ui/empty-state';
 import ErrorState from '@/components/ui/error-state';
@@ -71,7 +69,6 @@ const AllDraftClient = ({user}:{user:userProps}) => {
 
   const BlogCard = ({blog}:{blog:Blog}) => {
     const isCollaboration = blog.collaboration;
-    console.log(blog.collaborators, 'collaborators')
 
     const Avatar = ({profileImage, email, placeholderColor}: {profileImage?:string, email:string, placeholderColor: string}) => {
       return (

@@ -3,7 +3,7 @@ import { getCurrentUser } from '@/actions/user-actions';
 import EditBlogClient, { BlogPost } from '@/components/pages/create-blog/edit-blog-client';
 import { userProps } from '@/lib/types';
 import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'Edit Blog',
@@ -31,7 +31,7 @@ const EditBlogPage = async ({ params }: PageProps) => {
     }
 
     if (!currentBlog) {
-      redirect(`/${current_user.role}-dashboard`);
+      return notFound();
     };
 
     return <EditBlogClient blog={currentBlog} user={current_user} />;

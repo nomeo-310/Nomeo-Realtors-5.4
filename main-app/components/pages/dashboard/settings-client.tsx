@@ -134,7 +134,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
       }
     }).catch((error) => {
       if (error) {
-        console.log(error);
+
         toast.error('An error occurred while changing password')
       }
     }).finally(() => settingPassword(false))
@@ -185,7 +185,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
       }
     }).catch((error) => {
       if (error) {
-        console.log(error);
+
         toast.error('An error occurred while changing email')
       }
     }).finally(() => settingNewEmail(false))
@@ -220,7 +220,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
       }
     }).catch((error) => {
       if (error) {
-        console.log(error);
+
         toast.error('An error occurred while verifying new email')
       }
     }).finally(() => {settingNewEmail(false); settingVerification(false);})
@@ -253,7 +253,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message)
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong, try again later.')
     })
   };
@@ -290,7 +290,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message)
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong, try again later.')
     })
   };
@@ -322,7 +322,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message)
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong, try again later.')
     })
   };
@@ -354,7 +354,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message)
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong, try again later.')
     })
   };
@@ -384,7 +384,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message);
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong! Try again later')
     })
   };
@@ -407,7 +407,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message);
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong! Try again later')
     })
   };
@@ -430,7 +430,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message);
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong! Try again later')
     })
   };
@@ -453,7 +453,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message);
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong! Try again later')
     })
   };
@@ -476,7 +476,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message);
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong! Try again later')
     })
   };
@@ -499,7 +499,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
         toast.error(response.message);
       }
     }).catch((error) => {
-      console.log(error);
+
       toast.error('Something went wrong! Try again later')
     })
   };
@@ -683,7 +683,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
           <div className='flex flex-col gap-2'>
             <h2 className='lg:text-base text-sm font-medium'>Join Our Contributor Circle <span className='px-2 py-1 rounded-full text-xs bg-red-600 text-white'>New</span></h2>
             <div className="flex gap-3">
-              <p className='lg:text-base text-sm text-black/50 dark:text-white/70' >This is your chance to go beyond your day-to-day work and help shape our brand's voice and vision. By contributing to our blog, sharing your ideas, and lending your expertise, you won't just be a part of our team—you'll be a key driver of our growth.</p>
+              <p className='lg:text-base text-sm text-black/50 dark:text-white/70' >This is your chance to go beyond your day-to-day work and help shape our brand&apos;s voice and vision. By contributing to our blog, sharing your ideas, and lending your expertise, you won&apos;t just be a part of our team—you&apos;ll be a key driver of our growth.</p>
               <Switch
                 checked={collaborator}
                 onCheckedChange={() => handleCollab()}

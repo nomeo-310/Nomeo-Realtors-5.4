@@ -5,9 +5,7 @@ import cloudinary from "@/utils/cloudinary";
 
 export const deleteCloudinaryImages = (publicId:string) => {
   cloudinary.uploader.destroy(publicId, function(error: any,result: any) {
-    console.log(result, error);
   }).then((response: any) => {
-    console.log(response);
     return {response}; 
   })
     .catch((_err: any) => console.log("Something went wrong, please try again later.")

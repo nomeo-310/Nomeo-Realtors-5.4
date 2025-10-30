@@ -1,13 +1,45 @@
-import EditBlogClient from '@/components/pages/create-blog/edit-blog-client';
+import { getEditBlog } from '@/actions/blog-actions';
+import { getCurrentUser } from '@/actions/user-actions';
+import EditBlogClient, { BlogPost } from '@/components/pages/create-blog/edit-blog-client';
+import { userProps } from '@/lib/types';
 import { Metadata } from 'next';
+import { notFound, redirect } from 'next/navigation';
 import React from 'react'
 
 export const metadata: Metadata = {
   title: 'Edit Blog'
 };
 
-const EditBlogPage = () => {
-  return <EditBlogClient/>
+interface PageProps {
+  params: { id: string };
 }
 
-export default EditBlogPage
+const EditBlogPage = async ({ params }: PageProps) => {
+  const { id } = params;
+
+  if (!id || typeof id !== 'string') {
+    redirect('/user-dashboard');
+  }
+
+  try {
+    const [current_user, currentBlog] = await Promise.all([
+      getCurrentUser() as Promise<userProps | null>,
+      getEditBlog(id) as Promise<BlogPost | null>,
+    ]);
+
+    if (!current_user) {
+      redirect('/');
+    }
+
+    if (!currentBlog) {
+      return notFound();
+    };
+
+    return <EditBlogClient blog={currentBlog} user={current_user} />;
+  } catch (error) {
+    console.error('Error in EditBlogPage:', error);
+    redirect('/user-dashboard');
+  }
+};
+
+export default EditBlogPage;

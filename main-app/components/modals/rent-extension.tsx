@@ -5,7 +5,7 @@ import Modal from "../ui/modal";
 import { useRentExtensionModal } from "@/hooks/general-store";
 import { formatDate, nairaSign } from "@/lib/utils";
 import CustomSelect from "../ui/custom-select";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
@@ -24,9 +24,6 @@ const RentExtensionsModal = () => {
   const [reason, setReason] = React.useState<string>("Delayed salary payment");
   const [proposedDate, setProposedDate] = React.useState<Date | undefined>(undefined)
   const [showPreview, setShowPreview] = React.useState(false);
-
-  console.log(extensionDays);
-  console.log(formatDate(proposedDate?.toISOString() || ""));
 
   const [open, setOpen] = React.useState(false);
 

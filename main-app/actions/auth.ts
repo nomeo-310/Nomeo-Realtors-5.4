@@ -1,7 +1,7 @@
 'use server'
 
 import { request } from '@arcjet/next'
-import { protectSignUpRules } from '../arcjet';
+import { protectSignUpRules } from '../arcject';
 
 export const protectSignUpActions = async (email:string) => {
   const req = await request();

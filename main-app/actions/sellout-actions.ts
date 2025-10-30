@@ -11,8 +11,8 @@ import { capitalizeName } from "@/lib/utils";
 import Apartment from "@/models/apartment";
 import { revalidatePath } from "next/cache";
 import Inspection from "@/models/inspection";
+import Sellout from "@/models/sellout";
 import mongoose from "mongoose";
-import Rentout from "@/models/rentout";
 
 type initialProps = {
   userId: string;
@@ -28,7 +28,8 @@ type cancelProps = {
   path: string;
 }
 
-export const initiateRentOut = async (data: initialProps) => {
+
+export const initiateSellOut = async (data: initialProps) => {
   const { userId, agentId, propertyIdTag, email, agentUserId } = data;
   
   // Validate required fields
@@ -38,7 +39,7 @@ export const initiateRentOut = async (data: initialProps) => {
 
   await connectToMongoDB();
 
-  const session = await mongoose.startSession();
+  const session = await mongoose.startSession(); // Add transaction support
   session.startTransaction();
 
   try {
@@ -52,7 +53,7 @@ export const initiateRentOut = async (data: initialProps) => {
     }
 
     if (agentId !== current_user.agentId) {
-      return { success: false, message: 'You are not authorized to rent out this property', status: 403 };
+      return { success: false, message: 'You are not authorized to sell out this property', status: 403 };
     }
 
     // Parallelize database queries for better performance
@@ -84,43 +85,41 @@ export const initiateRentOut = async (data: initialProps) => {
     });
 
     if (!completedInspection) {
-      return { success: false, message: 'This property cannot be rented out to this client.', status: 403 };
+      return { success: false, message: 'This property cannot be sold to this client.', status: 403 };
     }
 
-    // Check for existing rentout
-    const rentOutExists = await Rentout.findOne({
+    // Check for existing sellout
+    const sellOutExists = await Sellout.findOne({
       apartment: apartmentDetails._id,
       agent: agentId
     });
 
-    if (rentOutExists) {
-      return { success: false, message: 'A rental process has already been initiated for this property. To proceed, please cancel the initial one.', status: 403 };
+    if (sellOutExists) {
+      return { success: false, message: 'A sell-out process has already been initiated for this property. To proceed, please cancel the initial one.', status: 403 };
     }
 
     const userFullName = `${capitalizeName(potentialClient.lastName ?? '')} ${capitalizeName(potentialClient.surName ?? '')}`;
-    
-    // Fixed grammar: "have" → "has"
-    const message = `Your contact agent: ${capitalizeName(current_user.lastName ?? '')} ${capitalizeName(current_user.surName ?? '')} has successfully initiated the rent-out process for the property with ID: ${propertyIdTag}. Check your account to continue with process of payment.\n\nThank you for using our service!`;
+    const message = `Your contact agent: ${capitalizeName(current_user.lastName ?? '')} ${capitalizeName(current_user.surName ?? '')} have successfully initiated the sell-out process for the property with ID: ${propertyIdTag}. Check your account to continue with process of payment.\n\nThank you for using our service!`;
 
-    const initialRentOutData = {
+    const initialSellOutData = {
       user: userId,
       agent: agentId,
       apartment: apartmentDetails._id,
-      rented: false,
+      sold: false,
     };
 
     const notificationData = {
-      title: 'Apartment Rent-Out',
-      content: `The rent-out process has been successfully initiated for the property with the ID: ${propertyIdTag}. You can go ahead and make payment.`, // Fixed typo: "intiated" → "initiated"
+      title: 'Property Purchase',
+      content: `The sell-out process has been successfully initiated for the property with the ID: ${propertyIdTag}. You can go ahead and make payment.`,
       recipient: userId,
       issuer: agentUserDetails._id,
       type: 'payment',
       propertyId: propertyIdTag
     };
 
-    // Create rentout and notification within transaction
-    const [initialRentOut, newNotification] = await Promise.all([
-      Rentout.create([initialRentOutData], { session }),
+    // Create sellout and notification within transaction
+    const [initialSellOut, newNotification] = await Promise.all([
+      Sellout.create([initialSellOutData], { session }),
       Notification.create([notificationData], { session })
     ]);
 
@@ -138,14 +137,11 @@ export const initiateRentOut = async (data: initialProps) => {
       )
     ]);
 
-    // Commit transaction first
-    await session.commitTransaction();
-
-    // Send email after transaction commit (external service)
+    // Send email (outside transaction since it's external)
     const emailTemplate = await render(
       InspectionEmailTemplate({
         name: userFullName,
-        title: 'Apartment Rent-Out',
+        title: 'Property Purchase',
         message: message,
         isInspection: false
       })
@@ -153,31 +149,29 @@ export const initiateRentOut = async (data: initialProps) => {
 
     const sendOption = {
       email: email,
-      subject: 'Apartment Rent-Out Initialization',
+      subject: 'Property Sell-Out Initialization',
       html: emailTemplate
     };
 
-    try {
-      await sendEmail(sendOption);
-    } catch (emailError) {
-      console.error('Failed to send rent-out email:', emailError);
-      // Don't fail the entire operation if email fails
-    }
+    await sendEmail(sendOption);
 
-    return { success: true, message: 'Rent out successfully initiated. Contact client', status: 200 };
+    // Commit transaction
+    await session.commitTransaction();
+
+    return { success: true, message: 'Sell-out successfully initiated. Contact client', status: 200 };
 
   } catch (error) {
     // Rollback transaction on error
     await session.abortTransaction();
-    console.error('Rent-out initiation error:', error);
+    console.error('Sell-out initiation error:', error);
 
-    return { success: false, message: 'Error occurred while initiating rent-out. Please try again later.', status: 500 };
+    return { success: false, message: 'Error occurred while initiating sell-out. Please try again later.', status: 500 };
   } finally {
     session.endSession();
   }
 };
 
-export const cancelRentOut = async (data: cancelProps) => {
+export const cancelSellOut = async (data: cancelProps) => {
   const { agentId, propertyIdTag, path } = data;
   
   // Validate required fields
@@ -201,7 +195,7 @@ export const cancelRentOut = async (data: cancelProps) => {
     }
 
     if (agentId !== current_user.agentId) {
-      return { success: false, message: 'You are not authorized to cancel rent-out for this property', status: 403 };
+      return { success: false, message: 'You are not authorized to cancel purchase process for this property', status: 403 };
     }
 
     const apartmentDetails = await Apartment.findOne({ propertyIdTag: propertyIdTag });
@@ -209,29 +203,29 @@ export const cancelRentOut = async (data: cancelProps) => {
       return { success: false, message: 'Property does not exist', status: 403 };
     }
 
-    const rentOut = await Rentout.findOne({ 
+    const sellOut = await Sellout.findOne({ 
       agent: agentId, 
       apartment: apartmentDetails._id 
     });
     
-    if (!rentOut) {
-      return { success: false, message: 'Rent out process does not exist', status: 403 };
+    if (!sellOut) {
+      return { success: false, message: 'Property purchase process does not exist', status: 403 };
     }
 
-    const potentialClient = await User.findById(rentOut.user);
+    const potentialClient = await User.findById(sellOut.user);
     if (!potentialClient) {
       return { success: false, message: 'Client seeking this property does not exist', status: 403 };
     }
 
     const clientFullName = `${capitalizeName(potentialClient.lastName ?? '')} ${capitalizeName(potentialClient.surName ?? '')}`;
     
-    // Fixed spacing in message
-    const message = `Your contact agent: ${capitalizeName(current_user.lastName ?? '')} ${capitalizeName(current_user.surName ?? '')} has cancelled the rent-out process for the property with ID: ${propertyIdTag}. You can reach out to the agent to find out the reason for this change.\n\nThank you for using our service!`;
+    // Fixed message content (was mentioning "rent-out" instead of "sell-out")
+    const message = `Your contact agent: ${capitalizeName(current_user.lastName ?? '')} ${capitalizeName(current_user.surName ?? '')} has cancelled the sell-out process for the property with ID: ${propertyIdTag}. You can reach out to the agent to find out the reason for this change.\n\nThank you for using our service!`;
 
     const notificationData = {
-      title: 'Rent-Out Cancellation',
-      content: `The rent-out process initiated for the property with the ID: ${propertyIdTag} has been cancelled. For further details reach out to the contact agent.`, // Fixed typo: "intiated" → "initiated"
-      recipient: rentOut.user,
+      title: 'Property Purchase Cancellation',
+      content: `The sell-out process initiated for the property with the ID: ${propertyIdTag} has been cancelled. For further details reach out to the contact agent.`,
+      recipient: sellOut.user,
       issuer: current_user._id,
       type: 'payment',
       propertyId: propertyIdTag
@@ -241,7 +235,7 @@ export const cancelRentOut = async (data: cancelProps) => {
     const emailTemplate = await render(
       InspectionEmailTemplate({
         name: clientFullName,
-        title: 'Rent-Out Cancellation',
+        title: 'Property Purchase Cancellation',
         message: message,
         isInspection: false
       })
@@ -249,7 +243,7 @@ export const cancelRentOut = async (data: cancelProps) => {
 
     const sendOption = {
       email: potentialClient.email,
-      subject: 'Apartment Rent-Out Cancellation', // Fixed: "Initialization" → "Cancellation"
+      subject: 'Property Purchase Cancellation', // Fixed subject line
       html: emailTemplate
     };
 
@@ -258,16 +252,14 @@ export const cancelRentOut = async (data: cancelProps) => {
       Notification.create([notificationData], { session })
     ]);
 
-    // **CRITICAL FIX**: Fixed the Rented.findOneAndDelete query
-    // Was using propertyIdTag instead of apartmentDetails._id
     await Promise.all([
       User.findOneAndUpdate(
-        { _id: rentOut.user },
+        { _id: sellOut.user },
         { $push: { notifications: newNotification[0]._id } },
         { session }
       ),
-      Rentout.findOneAndDelete(
-        { apartment: apartmentDetails._id, agent: agentId }, // Fixed: was propertyIdTag
+      Sellout.findOneAndDelete(
+        { apartment: apartmentDetails._id, agent: agentId },
         { session }
       ),
       Apartment.findOneAndUpdate(
@@ -284,21 +276,21 @@ export const cancelRentOut = async (data: cancelProps) => {
     try {
       await sendEmail(sendOption);
     } catch (emailError) {
-      console.error('Failed to send rent-out cancellation email:', emailError);
+      console.error('Failed to send cancellation email:', emailError);
       // Don't fail the entire operation if email fails
     }
 
     // Revalidate path after successful operation
     revalidatePath(path);
 
-    return { success: true, message: 'Rent out successfully cancelled.', status: 200 };
+    return { success: true, message: 'Property purchase successfully cancelled.', status: 200 };
 
   } catch (error) {
     // Rollback transaction on error
     await session.abortTransaction();
-    console.error('Cancel rent-out error:', error);
+    console.error('Cancel sell-out error:', error);
 
-    return { success: false, message: 'Error occurred while cancelling rent out.', status: 500 };
+    return { success: false, message: 'Error occurred while cancelling sell-out.', status: 500 };
   } finally {
     session.endSession();
   }
