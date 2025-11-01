@@ -1,7 +1,7 @@
 import React from 'react'
-import LoginLayout from '@/components/pages/auth/login-layout'
 import { Metadata } from 'next'
 import SendOtpForm from '@/components/pages/auth/send-otp-form'
+import AuthContentWrapper from '@/components/pages/auth/auth-content-wrapper'
 
 export const metadata: Metadata = {
   title: 'Reset Pasword',
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 const ResetPassword = () => {
   return (
-    <LoginLayout>
+    <AuthContentWrapper bannerImage={'/images/log-in-banner.jpg'} altText='login_banner'>
       <SendOtpForm/>
-    </LoginLayout>
+    </AuthContentWrapper>
   )
 }
 

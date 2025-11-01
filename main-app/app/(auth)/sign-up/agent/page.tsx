@@ -1,7 +1,7 @@
 import React from 'react'
 import { Metadata } from 'next'
-import SignUpLayout from '@/components/pages/auth/signup-layout'
 import AgentSignUpForm from '@/components/pages/auth/agent-sign-up-form'
+import AuthContentWrapper from '@/components/pages/auth/auth-content-wrapper'
 
 export const metadata: Metadata = {
   title: 'Sign Up',
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 const SignUp = () => {
   return (
-    <SignUpLayout>
+    <AuthContentWrapper bannerImage={'/images/agent-sign-up-banner.jpg'} altText='agent_signup_banner'>
       <AgentSignUpForm/>
-    </SignUpLayout>
+    </AuthContentWrapper>
   )
 }
 

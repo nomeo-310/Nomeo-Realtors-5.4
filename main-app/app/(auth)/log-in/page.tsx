@@ -1,7 +1,7 @@
 import React from 'react'
 import { Metadata } from 'next'
-import LoginLayout from '@/components/pages/auth/login-layout'
 import LoginForm from '@/components/pages/auth/login-form'
+import AuthContentWrapper from '@/components/pages/auth/auth-content-wrapper'
 
 export const metadata: Metadata = {
   title: 'Login',
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 const Login = () => {
   return (
-    <LoginLayout>
+    <AuthContentWrapper bannerImage={'/images/log-in-banner.jpg'} altText='login_banner'>
       <LoginForm/>
-    </LoginLayout>
+    </AuthContentWrapper>
   )
 }
 

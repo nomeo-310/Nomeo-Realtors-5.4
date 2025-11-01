@@ -1,4 +1,4 @@
-import SignUpLayout from '@/components/pages/auth/signup-layout'
+import SignUpLayout from '@/components/pages/auth/user-signup-layout'
 import VerifyAccountForm from '@/components/pages/auth/verify-account'
 import { Metadata } from 'next'
 import React from 'react'

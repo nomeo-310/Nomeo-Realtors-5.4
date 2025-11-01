@@ -1,7 +1,7 @@
-import LoginLayout from '@/components/pages/auth/login-layout'
 import ForgotPasswordForm from '@/components/pages/auth/forgot-password-form'
 import { Metadata } from 'next'
 import React from 'react'
+import AuthContentWrapper from '@/components/pages/auth/auth-content-wrapper'
 
 export const metadata: Metadata = {
   title: 'Forgot Password',
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 const ResetPassword = () => {
   return (
-    <LoginLayout>
+    <AuthContentWrapper bannerImage={'/images/log-in-banner.jpg'} altText='login_banner'>
       <ForgotPasswordForm/>
-    </LoginLayout>
+    </AuthContentWrapper>
   )
 }
 

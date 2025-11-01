@@ -1,5 +1,5 @@
+import AuthContentWrapper from '@/components/pages/auth/auth-content-wrapper'
 import RestoreAccountForm from '@/components/pages/auth/restore-account'
-import SignUpLayout from '@/components/pages/auth/signup-layout'
 import { Metadata } from 'next'
 import React from 'react'
 
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 const page = () => {
   return (
-    <SignUpLayout>
+    <AuthContentWrapper bannerImage={'/images/sign-up-banner.jpg'} altText='user_signup_banner'>
       <RestoreAccountForm/>
-    </SignUpLayout>
+    </AuthContentWrapper>
   )
 }
 
