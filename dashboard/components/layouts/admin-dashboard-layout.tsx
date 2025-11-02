@@ -1,20 +1,11 @@
-import { LogOut } from '@/components/navigation/logout'
-import { UserDashBoardSideBar } from '@/components/pages/dashboard/dashboard-sidebar'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { EntranceStairsIcon } from '@hugeicons/core-free-icons'
 import { ThemeToggler } from '@/components/ui/theme-toggler'
-import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import React from 'react'
-import { getCurrentUser } from '@/actions/user-actions'
+import { ImageAvatar } from '../ui/image-avatar'
+import { AdminDashBoardSideBar } from '../dashboard-features/dashboard-sidebar'
 
-const UserDashboardLayout = async ({children}:{children:React.ReactNode}) => {
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    redirect('log-in')
-  };
-
+const AdminDashboardLayout = async ({children}:{children:React.ReactNode}) => {
   return (
     <div className='w-full min-h-screen flex flex-col'>
       {/* Fixed Header */}
@@ -22,12 +13,12 @@ const UserDashboardLayout = async ({children}:{children:React.ReactNode}) => {
         <div className="w-full h-full border-b dark:border-b-0 flex items-center justify-between px-3">
           <div className="flex items-center gap-5">
             <ThemeToggler/>
-            <Link href={'/'} className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <HugeiconsIcon icon={EntranceStairsIcon} className='size-5 md:size-6'/>
-              <p className='text-sm md:text-base'>Nomeo Realtors</p>
-            </Link>
+              <p className='text-sm md:text-base'>Nomeo Realtors Dashboard</p>
+            </div>
           </div>
-          {current_user && <LogOut user={current_user}/>}
+          <ImageAvatar username='onome_310'/>
         </div>
       </header>
 
@@ -36,13 +27,7 @@ const UserDashboardLayout = async ({children}:{children:React.ReactNode}) => {
         {/* Scrollable Sidebar */}
         <aside className="lg:w-[220px] md:w-[60px] w-[50px] sticky top-[70px] self-start max-h-[calc(100vh-70px)] overflow-y-auto">
           <div className="py-4 lg:py-6 lg:pr-4 pr-2">
-            <UserDashBoardSideBar 
-              isCollaborator={current_user?.blogCollaborator} 
-              showSavedBlogs={current_user.showBookmarkedBlogs} 
-              showSavedApartments={current_user.showBookmarkedApartments} 
-              showLikedApartments={current_user.showLikedApartments} 
-              showLikedBlogs={current_user.showLikedBlogs} 
-            />
+            <AdminDashBoardSideBar/>
           </div>
         </aside>
 
@@ -55,4 +40,4 @@ const UserDashboardLayout = async ({children}:{children:React.ReactNode}) => {
   )
 }
 
-export default UserDashboardLayout
+export default AdminDashboardLayout

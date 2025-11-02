@@ -24,27 +24,40 @@ const AgentDashboardLayout = async ({children,}: {children: React.ReactNode;}) =
   const isPending = status?.isPending ?? false;
 
   return (
-    <React.Fragment>
-      <div className="w-full">
-        <div className="fixed left-0 top-0 w-full lg:h-[70px] h-[60px] lg:px-8 px-4 bg-white dark:bg-[#424242] z-[4000]">
-          <div className="w-full h-full md:border-b dark:border-b-0 flex items-center justify-between">
-            <div className="flex items-center gap-5">
-              <ThemeToggler />
-              <BreadCrumbs />
-            </div>
-            {current_user && <LogOut user={current_user} />}
+    <div className='w-full min-h-screen flex flex-col'>
+      {/* Fixed Header */}
+      <header className='fixed left-0 top-0 w-full lg:h-[70px] h-[60px] lg:px-8 px-4 bg-white dark:bg-[#424242] z-[4000]'>
+        <div className="w-full h-full md:border-b dark:border-b-0 flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            <ThemeToggler />
+            <BreadCrumbs />
           </div>
+          {current_user && <LogOut user={current_user} />}
         </div>
-        <div className="w-full flex lg:px-8 px-4">
-          <div className="lg:w-[220px] md:w-[60px] w-[50px] sticky lg:top-[70px] top-[60px] h-full py-4 lg:py-5 lg:pr-6 pr-3 md:pr-4">
-            <AgentDashBoardSideBar isCollaborator={current_user?.blogCollaborator} isPending={isPending} showSavedBlogs={current_user.showBookmarkedBlogs} showSavedApartments={current_user.showBookmarkedApartments} showLikedApartments={current_user.showLikedApartments} showLikedBlogs={current_user.showLikedBlogs} />
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex flex-1 lg:pt-[70px] pt-[60px] lg:px-8 px-4">
+        {/* Scrollable Sidebar */}
+        <aside className="lg:w-[220px] md:w-[60px] w-[50px] sticky top-[70px] self-start max-h-[calc(100vh-70px)] overflow-y-auto">
+          <div className="py-4 lg:py-6 lg:pr-4 pr-2">
+            <AgentDashBoardSideBar 
+              isCollaborator={current_user?.blogCollaborator} 
+              isPending={isPending} 
+              showSavedBlogs={current_user.showBookmarkedBlogs} 
+              showSavedApartments={current_user.showBookmarkedApartments} 
+              showLikedApartments={current_user.showLikedApartments} 
+              showLikedBlogs={current_user.showLikedBlogs} 
+            />
           </div>
-          <div className="flex-1 min-h-screen lg:pt-[90px] pt-[76px] md:border-l dark:border-l-white/70 pl-3 lg:pl-6 lg:py-5 md:pl-4 py-4">
-            {children}
-          </div>
-        </div>
-      </div>
-    </React.Fragment>
+        </aside>
+
+        {/* Page Content */}
+        <section className="flex-1 md:border-l dark:border-l-white/70 lg:pl-6 pl-3 lg:py-6 py-4 min-h-[calc(100vh-70px)] lg:pr-0 pr-2">
+          {children}
+        </section>
+      </main>
+    </div>
   );
 };
 

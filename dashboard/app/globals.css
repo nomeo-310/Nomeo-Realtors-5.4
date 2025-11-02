@@ -2,14 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
+/* ===== CSS Variables & Theming ===== */
 @layer base {
   :root {
+    /* Base colors */
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -29,18 +25,34 @@
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
+    
+    /* Chart colors */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    
+    /* Custom brand colors */
+    --primary-red: 358 85% 48%;
+    --primary-blue: 215 81% 42%;
+    --secondary-red: 360 70% 42%;
+    --secondary-blue: 216 99% 56%;
+    
+    /* Scrollbar variables */
+    --scrollbar-width: 12px;
+    --scrollbar-track: transparent;
+    --scrollbar-thumb: #cbd5e1;
+    --scrollbar-thumb-hover: #94a3b8;
+    --scrollbar-radius: 12px;
+    --scrollbar-border: 4px;
+    
+    /* Border radius */
     --radius: 0.5rem;
-    --primary-red: 358 85% 48%; /* New color */
-    --primary-blue: 215 81% 42%; /* New color */
-    --secondary-red: 360 70% 42%; /* New color */
-    --secondary-blue: 216 99% 56%; /* New color */
   }
+
   .dark {
+    /* Base colors */
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
     --card: 0 0% 3.9%;
@@ -60,41 +72,82 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 83.1%;
+    
+    /* Chart colors */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --primary-red: 358 85% 58%; /* Adjusted for dark mode (lighter) */
-    --primary-blue: 215 81% 52%; /* Adjusted for dark mode (lighter) */
-    --secondary-red: 360 70% 52%; /* Adjusted for dark mode (lighter) */
-    --secondary-blue: 216 99% 66%; /* Adjusted for dark mode (lighter) */
+    
+    /* Custom brand colors - adjusted for dark mode */
+    --primary-red: 358 85% 58%;
+    --primary-blue: 215 81% 52%;
+    --secondary-red: 360 70% 52%;
+    --secondary-blue: 216 99% 66%;
+    
+    /* Scrollbar variables for dark mode */
+    --scrollbar-thumb: #475569;
+    --scrollbar-thumb-hover: #64748b;
   }
 
+  /* Base element styles */
   * {
     @apply border-border;
   }
+  
   body {
-    @apply bg-background dark:text-foreground dark:bg-[#181818] font-urbanist;
+    @apply bg-background text-foreground font-urbanist;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
-html {
-  transition: background-color 0.3s ease, color 0.3s ease;
+/* ===== Utility Classes ===== */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
 
-
-html body[data-scroll-locked] {
-  overflow: visible !important;
-  margin-right: 0 !important;
-  scroll-behavior: smooth !important;
+/* ===== Scrollbar Styling ===== */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar,
+div::-webkit-scrollbar {
+  width: var(--scrollbar-width);
 }
 
-html body[data-scroll-locked] {
-  overflow: visible !important;
-  margin-right: 0 !important;
+::-webkit-scrollbar-track,
+div::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--scrollbar-radius);
 }
 
+::-webkit-scrollbar-thumb,
+div::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--scrollbar-radius);
+  border: var(--scrollbar-border) solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover,
+div::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  border: var(--scrollbar-border) solid transparent;
+  background-clip: content-box;
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+[data-theme="dark"] * {
+  scrollbar-color: #475569 transparent;
+}
+
+/* ===== ProseMirror Editor Styles ===== */
 .ProseMirror {
   padding: 10px;
   background: transparent;
@@ -106,10 +159,12 @@ html body[data-scroll-locked] {
   margin-top: 0.9rem;
 }
 
+/* Lists */
 .ProseMirror ul {
   padding: 0 1rem;
   list-style: disc !important;
 }
+
 .ProseMirror ol {
   padding: 0 2rem;
   list-style: decimal !important;
@@ -120,9 +175,13 @@ html body[data-scroll-locked] {
   @apply text-black dark:text-white;
 }
 
+/* Code & Preformatted */
 .ProseMirror code {
-  background-color: rgba(#616161, 0.1);
+  background-color: rgba(97, 97, 97, 0.1);
   color: #616161;
+  padding: 0;
+  background: none;
+  font-size: 0.8rem;
 }
 
 .ProseMirror pre {
@@ -132,15 +191,10 @@ html body[data-scroll-locked] {
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
 }
-.ProseMirror code {
-  color: inherit;
-  padding: 0;
-  background: none;
-  font-size: 0.8rem;
-}
 
+/* Blockquotes */
 .ProseMirror blockquote {
-  @apply p-3 md:p-4 lg:p-8 bg-[#d4d4d4] rounded-md;
+  @apply p-3 md:p-4 lg:p-8 bg-gray-200 dark:bg-gray-700 rounded-md;
 }
 
 .ProseMirror blockquote strong {
@@ -151,12 +205,14 @@ html body[data-scroll-locked] {
   align-items: end;
 }
 
+/* Horizontal Rule */
 .ProseMirror hr {
   border: none;
   border-top: 3px solid #999999;
   margin: 2rem 0;
 }
 
+/* Typography Scale */
 .ProseMirror p {
   @apply xl:text-lg md:text-base text-sm;
 }
@@ -173,59 +229,7 @@ html body[data-scroll-locked] {
   @apply xl:text-lg md:text-base text-sm;
 }
 
-
-::-webkit-scrollbar,
-div::-webkit-scrollbar {
-  width: 22px;
-}
-
-::-webkit-scrollbar-track,
-div::-webkit-scrollbar-track {
-  background-color: transparent;
-}
-
-::-webkit-scrollbar-thumb,
-div::-webkit-scrollbar-track {
-  background-color: #d6dee1;
-}
-
-::-webkit-scrollbar-thumb,
-div::-webkit-scrollbar-track {
-  background-color: #d6dee1;
-  border-radius: 22px;
-}
-
-::-webkit-scrollbar-thumb,
-div::-webkit-scrollbar-track {
-  background-color: #d6dee1;
-  border-radius: 22px;
-  border: 6px solid transparent;
-  background-clip: content-box;
-}
-
-::-webkit-scrollbar-thumb:hover,
-div::-webkit-scrollbar-track {
-  background-color: #a8bbbf;
-}
-
-.slide-in-left {
-  -webkit-animation: slide-in-left 0.5s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
-          animation: slide-in-left 0.5s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
-}
-
-.fade-out {
-	-webkit-animation: fade-out 1s ease-out both;
-	        animation: fade-out 1s ease-out both;
-}
-
-@-webkit-keyframes fade-out {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
+/* ===== Animation Keyframes ===== */
 @keyframes fade-out {
   0% {
     opacity: 1;
@@ -235,16 +239,33 @@ div::-webkit-scrollbar-track {
   }
 }
 
-
-@-webkit-keyframes slide-in-left {
+@keyframes slide-in-left {
   0% {
-    -webkit-transform: translateX(-1000px);
-            transform: translateX(-1000px);
+    transform: translateX(-1000px);
     opacity: 0;
   }
   100% {
-    -webkit-transform: translateX(0);
-            transform: translateX(0);
+    transform: translateX(0);
     opacity: 1;
   }
+}
+
+/* ===== Animation Classes ===== */
+.slide-in-left {
+  animation: slide-in-left 0.5s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+}
+
+.fade-out {
+  animation: fade-out 1s ease-out both;
+}
+
+/* ===== Scroll Lock Overrides ===== */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
+  scroll-behavior: smooth !important;
 }

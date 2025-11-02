@@ -12,8 +12,9 @@ const BreadCrumbs = () => {
   const pathSegments = pathname.split('/').filter(segment => segment);
 
   const pathNamesMap: { [key: string]: string } = {
-    'agent-dashboard': 'Agent Dashboard',
-    'user-dashboard': 'User Dashboard',
+    'admin-dashboard': 'Admin Dashboard',
+    'creator-dashboard': 'Creator Dashboard',
+    'superadmin-dashboard': 'Super Admin Dashboard',
     'notifications': 'Notifications',
     'create-blog': 'Create Blog',
   };

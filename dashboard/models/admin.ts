@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import generateAgentId from '../utils/generateAgentId';
 import bcrypt from 'bcryptjs';
+import { ROLE_PERMISSIONS } from '@/lib/permissions';
 
 
 interface IAdmin extends mongoose.Document {
@@ -47,9 +48,9 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
     resetAccessIdOtpExpiresIn: { type: Number, default: undefined },
     lockUntil: { type: Date, default: undefined },
     deactivatedAt: { type: Date, default: undefined },
-    deactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    deactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     adminOnboarded: { type: Boolean, default: false },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
   },
   { timestamps: true }
 );
@@ -58,6 +59,19 @@ adminSchema.pre<IAdmin>('save', async function (next) {
   if (!this.adminId) {
     const adminIdTag = generateAgentId();
     this.adminId = adminIdTag;
+  }
+
+  if (this.isModified('role') || this.adminPermissions.length === 0) {
+    const roleKey = this.role.toUpperCase() as keyof typeof ROLE_PERMISSIONS;
+    this.adminPermissions = ROLE_PERMISSIONS[roleKey] || [];
+  }
+
+  if (this.isModified('role')) {
+    if (this.role === 'superAdmin') {
+      this.adminAccess = 'full_access';
+    } else {
+      this.adminAccess = 'limited_access';
+    }
   }
 
   if (this.isModified('password') && this.password) {
