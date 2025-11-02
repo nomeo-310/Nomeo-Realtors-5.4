@@ -51,10 +51,10 @@ const ForgotPasswordForm = () => {
   return (
     <React.Fragment>
       <div className="flex-1">
-        <div className='flex flex-col justify-between md:max-w-[450px] max-w-[400px] lg:min-h-[250px] min-h-[150px]'>
+        <div className='flex flex-col justify-between md:max-w-[500px] max-w-[450px] lg:min-h-[250px] min-h-[150px]'>
           <div className="flex flex-col gap-4">
-            <h2 className='lg:text-5xl text-3xl font-semibold font-quicksand'>Forgot Password</h2>
-            <p>To reset your password, input your email address and you will get a one-time pin. This OTP will expire within five minutes and thus must be instantly submitted</p>
+            <h2 className='lg:text-4xl text-3xl font-semibold font-quicksand'>Forgot Password</h2>
+            <p className="lg:text-base text-sm">To reset your password, input your email address and you will get a one-time pin. This OTP will expire within five minutes and thus must be instantly submitted</p>
           </div>
           <div className="lg:flex flex-col gap-1 hidden">
             <p className='text-sm md:text-base'>Don&apos;t have an account yet? <Link href={'/sign-up'} className='font-semibold'>Sign Up</Link></p>
@@ -63,7 +63,7 @@ const ForgotPasswordForm = () => {
         </div>
       </div>
       <Form {...form}>
-        <form className='md:max-w-[450px] max-w-[400px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
+        <form className='md:max-w-[500px] max-w-[450px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
           <FormField
             control={form.control}
             name="email"

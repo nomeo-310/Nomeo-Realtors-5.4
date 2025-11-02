@@ -1,5 +1,3 @@
-import Pagination from "@/components/ui/pagination";
-
 export interface userProps {
   _id: string;
   username: string;

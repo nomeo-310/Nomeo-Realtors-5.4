@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { ROLE_PERMISSIONS } from '@/lib/permissions';
-import generateAdminId from '@/utils/generateAdminId';
+import generateAdminId from '../utils/generateAdminId';
+import { ROLE_PERMISSIONS } from '../utils/permissions';
 
 
 interface IAdmin extends mongoose.Document {

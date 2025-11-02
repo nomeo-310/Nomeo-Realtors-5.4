@@ -3,20 +3,18 @@
 import React from 'react'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { Mail01Icon, SquareLock01Icon } from '@hugeicons/core-free-icons'
-import { useTermsAndConditionModal } from '@/hooks/general-store';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { loginSchema, LoginValues } from '@/utils/form-validations';
 import { zodResolver } from "@hookform/resolvers/zod"
 import CustomInput from '../ui/custom-input';
 import { LoadingButton } from '../ui/loading-button';
+import { signIn } from 'next-auth/react'
+import { toast } from 'sonner';
 
 const LoginForm = () => {
   
   const [isLoading, setIsLoading] = React.useState(false);
-
-  const { onOpen } = useTermsAndConditionModal();
-
   const router = useRouter();
 
   const form = useForm<LoginValues>({
@@ -27,10 +25,27 @@ const LoginForm = () => {
     }
   })
 
-  const submitForm = async (value:LoginValues) => {
+  const submitForm = async (values: LoginValues) => {
     setIsLoading(true);
-    console.log(value);
-    setIsLoading(false);
+    
+    try {
+      const result = await signIn("credentials", {
+        ...values, 
+        redirect: false
+      });
+
+      if (result?.error) {
+        toast.error(result.error);
+      } else if (result?.ok) {
+        toast.success("Login Successful");
+        router.refresh();
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

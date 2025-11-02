@@ -81,10 +81,10 @@ const RestoreAccountForm = () => {
   return (
     <React.Fragment>
       <div className="flex-1">
-        <div className='flex flex-col justify-between md:max-w-[450px] max-w-[400px] lg:min-h-[250px] min-h-[200px]'>
+        <div className='flex flex-col justify-between md:max-w-[500px] max-w-[450px] lg:min-h-[250px] min-h-[200px]'>
           <div className="flex flex-col gap-3">
-            <h2 className='lg:text-5xl text-3xl font-semibold font-quicksand'>Restore Account</h2>
-            <p>Welcome back to Nomeo Realtors, we are glad to have you. Please make sure to use the exact details used in creating the account initially inorder to have an effective account restoration.</p>
+            <h2 className='lg:text-4xl text-3xl font-semibold font-quicksand'>Restore Account</h2>
+            <p className="lg:text-base text-sm">Welcome back to Nomeo Realtors, we are glad to have you. Please make sure to use the exact details used in creating the account initially inorder to have an effective account restoration.</p>
           </div>
           <div className="lg:flex flex-col gap-1 hidden">
            <p className='mt-1 text-sm md:text-base'>Would you rather clear the old data and start afresh? <button className='font-semibold' onClick={() =>{}}>Signup</button></p>
@@ -93,7 +93,7 @@ const RestoreAccountForm = () => {
         </div>
       </div>
       <Form {...form}>
-        <form className='md:max-w-[450px] max-w-[400px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
+        <form className='md:max-w-[500px] max-w-[450px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
           <FormField
             control={form.control}
             name="username"

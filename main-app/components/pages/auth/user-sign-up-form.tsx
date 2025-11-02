@@ -93,16 +93,10 @@ const UserSignUpForm = () => {
   return (
     <React.Fragment>
       <div className="flex-1">
-        <div className="flex flex-col justify-between md:max-w-[450px] max-w-[400px] lg:min-h-[250px] min-h-[200px]">
+        <div className="flex flex-col justify-between md:max-w-[500px] max-w-[450px] lg:min-h-[250px] min-h-[200px]">
           <div className="flex flex-col gap-3">
-            <h2 className="lg:text-5xl text-3xl font-semibold font-quicksand">
-              User Account
-            </h2>
-            <p>
-              Welcome to Nomeo Realtors, we are glad to have you. Creating a
-              user account enables you to be able to checkout our verified
-              listing and schedule inspection for any apartment of choice.
-            </p>
+            <h2 className="lg:text-4xl text-3xl font-semibold font-quicksand">Join Nomeo Realtors</h2>
+            <p className='text-sm lg:text-base'>Create your account to explore verified listings, schedule apartment inspections, and find your perfect home with trusted real estate partners.</p>
           </div>
           <div className="lg:flex flex-col gap-1 hidden">
             <p className="mt-1 text-sm md:text-base">
@@ -122,7 +116,7 @@ const UserSignUpForm = () => {
       </div>
       <Form {...form}>
         <form
-          className="md:max-w-[450px] max-w-[400px] w-full flex flex-col gap-4"
+          className="md:max-w-[500px] max-w-[450px] w-full flex flex-col gap-4"
           autoComplete="off"
           onSubmit={form.handleSubmit(submitForm)}
         >

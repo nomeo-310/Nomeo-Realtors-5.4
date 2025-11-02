@@ -68,10 +68,10 @@ const AgentSignUpForm = () => {
   return (
     <React.Fragment>
       <div className="flex-1">
-        <div className='flex flex-col justify-between md:max-w-[450px] max-w-[400px] lg:min-h-[250px] min-h-[200px]'>
+        <div className='flex flex-col justify-between md:max-w-[500px] max-w-[450px] lg:min-h-[250px] min-h-[200px]'>
           <div className="flex flex-col gap-3">
-            <h2 className='lg:text-5xl text-3xl font-semibold font-quicksand'>Agent Account</h2>
-            <p>Welcome to Nomeo Realtors, we are glad to have you. Creating an agent account enables you to be able to put out apartments for lease and possibly for sale.</p>
+            <h2 className="lg:text-4xl text-3xl font-semibold font-quicksand">Become a Nomeo Agent</h2>
+            <p className='text-sm lg:text-base'>Join our network of professional real estate agents. List properties for lease and sale, connect with buyers, and grow your business with Nomeo Realtors.</p>
           </div>
           <div className="lg:flex flex-col gap-1 hidden">
               <p className='mt-1 text-sm md:text-base'>Do you rather want to be a user? <Link href={'/sign-up/user'} className='font-semibold'>User Signup</Link>
@@ -81,7 +81,7 @@ const AgentSignUpForm = () => {
         </div>
       </div>
       <Form {...form}>
-        <form className='md:max-w-[450px] max-w-[400px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
+        <form className='md:max-w-[500px] max-w-[450px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
           <FormField
             control={form.control}
             name="username"

@@ -152,13 +152,13 @@ const  VerifyAccountForm = () => {
   return (
     <React.Fragment>
       <div className="flex-1">
-        <div className='flex flex-col gap-3 md:max-w-[450px] max-w-[400px]'>
-          <h2 className='lg:text-5xl text-3xl font-semibold font-quicksand'>Email Verification</h2>
-          <p>To complete the sign up process and verify your email address, we have sent a one-time pin to your email address. If you did not get it ask for a resend.</p>
+        <div className='flex flex-col gap-3 md:max-w-[500px] max-w-[450px]'>
+          <h2 className='lg:text-4xl text-3xl font-semibold font-quicksand'>Email Verification</h2>
+          <p className="lg:text-base text-sm">To complete the sign up process and verify your email address, we have sent a one-time pin to your email address. If you did not get it ask for a resend.</p>
         </div>
       </div>
       <Form {...form}>
-        <form className='md:max-w-[450px] max-w-[400px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
+        <form className='md:max-w-[500px] max-w-[450px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
           <FormField
             control={form.control}
             name="otp"

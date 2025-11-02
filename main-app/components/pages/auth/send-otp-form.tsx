@@ -55,13 +55,13 @@ const SendOtpForm = () => {
   return (
     <React.Fragment>
       <div className="flex-1">
-        <div className='flex flex-col gap-3 md:max-w-[450px] max-w-[400px]'>
-          <h2 className='lg:text-5xl text-3xl font-semibold font-quicksand'>Change Password</h2>
+        <div className='flex flex-col gap-3 md:max-w-[500px] max-w-[450px]'>
+          <h2 className='lg:text-4xl text-3xl font-semibold font-quicksand'>Change Password</h2>
           <p>To actually be sure you initiated this password reset, you have to send the OTP sent to you email address as well as the new password you intend to use.</p>
         </div>
       </div>
       <Form {...form}>
-        <form className='md:max-w-[450px] max-w-[400px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
+        <form className='md:max-w-[500px] max-w-[450px] w-full flex flex-col gap-4' autoComplete='off' onSubmit={form.handleSubmit(submitForm)}>
           <FormField
             control={form.control}
             name="otp"

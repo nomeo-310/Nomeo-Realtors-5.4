@@ -1,9 +1,21 @@
+import { getCurrentUser } from '@/actions/auth-actions'
+import NotificationClient from '@/components/dashboard-features/notification/notification-client';
+import { notFound, redirect } from 'next/navigation';
 import React from 'react'
 
-const page = () => {
-  return (
-    <div>notification page</div>
-  )
+const NotificationPage = async () => {
+  const current_user = await getCurrentUser();
+
+  if (!current_user) {
+    redirect('/')
+  };
+
+  if (current_user.role !== 'superAdmin') {
+    notFound();
+  };
+
+  console.log(current_user)
+  return <NotificationClient user={current_user}/>
 }
 
-export default page
+export default NotificationPage
