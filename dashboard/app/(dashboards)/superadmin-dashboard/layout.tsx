@@ -14,8 +14,6 @@ export default async function Layout({children}: {children: React.ReactNode}) {
     notFound();
   };
 
-  console.log(current_user)
-
   return (
     <SuperAdminDashboardLayout>
       {children}

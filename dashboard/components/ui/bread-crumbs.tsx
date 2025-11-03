@@ -14,7 +14,7 @@ const BreadCrumbs = () => {
   const pathNamesMap: { [key: string]: string } = {
     'admin-dashboard': 'Admin Dashboard',
     'creator-dashboard': 'Creator Dashboard',
-    'superadmin-dashboard': 'Super Admin Dashboard',
+    'superadmin-dashboard': 'Super-Admin Dashboard',
     'notifications': 'Notifications',
     'create-blog': 'Create Blog',
   };
@@ -44,7 +44,7 @@ const BreadCrumbs = () => {
   });
 
   return (
-    <div className="flex items-center gap-2 font-semibold tracking-wider text-sm uppercase">
+    <div className="hidden md:flex items-center gap-2 font-semibold tracking-wider text-sm uppercase">
       <Link href={'/'}>
         <HugeiconsIcon icon={Home04Icon} />
       </Link>

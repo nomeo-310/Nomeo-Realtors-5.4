@@ -21,8 +21,10 @@ const NotificationClient = ({user}:{user:AdminDetailsProps}) => {
   const [showDelete, setShowDelete] = React.useState(false);
   const [clearing, setClearing] = React.useState(false);
 
+  console.log(user)
+
   const fetchNotifications = async ({pageParam}:{pageParam: number}) => {
-    const response = await axios.post('/api/notification/user-notifications', { page: pageParam })
+    const response = await axios.post('/api/admin/notification/user-notifications', { page: pageParam })
 
     if (response.status !== 200 ) {
       throw new Error('Something went wrong, try again later');
@@ -33,7 +35,7 @@ const NotificationClient = ({user}:{user:AdminDetailsProps}) => {
   };
 
   const readNotifications = async () => {
-    const response = await axios.put('/api/notification/read-notification', {})
+    const response = await axios.put('/api/admin/notification/read-notification', {})
 
     if (response.status !== 200) {
       throw new Error('Something went wrong, try again later')

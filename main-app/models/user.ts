@@ -33,6 +33,9 @@ interface IUser extends Document {
   userIsAnAgent: boolean;
   userAccountDeleted:  boolean;
   userAccountSuspended: boolean;
+  suspensionReason: string;
+  suspendedAt: Date;
+  suspendedBy: Types.ObjectId;
   showLikedApartments: boolean;
   showBookmarkedApartments: boolean;
   showLikedBlogs: boolean;
@@ -84,6 +87,9 @@ const userSchema: Schema<IUser> = new Schema(
     userIsAnAgent: { type: Boolean, default: false },
     userAccountDeleted: { type: Boolean, default: false },
     userAccountSuspended: { type: Boolean, default: false },
+    suspensionReason: { type: String, default: '' },
+    suspendedAt: { type: Date, default: undefined },
+    suspendedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     showLikedApartments: { type: Boolean, default: false },
     showBookmarkedApartments: { type: Boolean, default: false },
     showLikedBlogs: { type: Boolean, default: false },

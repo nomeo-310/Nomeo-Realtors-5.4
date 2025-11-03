@@ -20,10 +20,11 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
   const getIsActive = () => {
     if (pathname === path) return true;
 
-    if (text === "Likes") {
-      const agentLikesBaseLink = "/agent-dashboard/likes";
-      const userLikesBaseLink = "/user-dashboard/likes";
-      return pathname.startsWith(agentLikesBaseLink) || pathname.startsWith(userLikesBaseLink);
+    if (text === "Verifications") {
+      const superAdminBaseLink = "/superadmin-dashboard/verifications";
+      const adminBaseLink = "/admin-dashboard/verifications";
+      const creatorBaseLink = "/creator-dashboard/verifications";
+      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
     }
 
     if (text === "Saves") {

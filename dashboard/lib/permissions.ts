@@ -50,6 +50,9 @@ export const ADMIN_PERMISSIONS = [
   'admins.edit',
   'admins.delete',
   'admins.manage',
+  'admin.suspend', 
+  'admin.deactivate',  
+  'admin.reactivate',
 
   // Admin Management Permissions
   'admins.view',

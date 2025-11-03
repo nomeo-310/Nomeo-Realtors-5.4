@@ -4,7 +4,7 @@ import { ROLE_PERMISSIONS } from '@/lib/permissions';
 import generateAdminId from '@/utils/generateAdminId';
 
 
-interface IAdmin extends mongoose.Document {
+export interface IAdmin extends mongoose.Document {
   userId: mongoose.Types.ObjectId;
   role: string;
   adminAccess: 'full_access' | 'limited_access' | 'no_access';
@@ -13,6 +13,10 @@ interface IAdmin extends mongoose.Document {
   isActivated: boolean;
   activatedAt: Date;
   activatedBy: mongoose.Types.ObjectId;
+  isSuspended: boolean;
+  suspendedAt: Date;
+  suspendedBy: mongoose.Types.ObjectId;
+  suspensionReason: string;
   password?: string;
   passwordAdded: boolean;
   accessId: string;
@@ -24,6 +28,9 @@ interface IAdmin extends mongoose.Document {
   lockUntil?: Date;
   deactivatedAt: Date;
   deactivatedBy: mongoose.Types.ObjectId;
+  deactivationReason: string;
+  reactivatedAt: Date,
+  reactivatedBy: mongoose.Types.ObjectId;
   adminOnboarded: boolean;
   createdBy:  mongoose.Types.ObjectId;
 }
@@ -37,7 +44,7 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
     adminId: { type: String, unique: true, default: undefined },
     isActivated: { type: Boolean, default: false },
     activatedAt: { type: Date, default: Date.now()},
-    activatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    activatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },      
     password: { type: String, default: undefined },
     passwordAdded: { type: Boolean, default: false }, 
     accessId: { type: String, unique: true },
@@ -46,10 +53,16 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
     otpExpiresIn: { type: Number, default: undefined },
     resetAccessIdOtp: { type: String, default: undefined },
     resetAccessIdOtpExpiresIn: { type: Number, default: undefined },
-    
+    isSuspended: { type: Boolean, default: false },
+    suspendedAt: { type: Date, default: undefined },
+    suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    suspensionReason: { type: String, default: undefined },
     lockUntil: { type: Date, default: undefined },
     deactivatedAt: { type: Date, default: undefined },
     deactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    deactivationReason: {type: String, default: undefined},
+    reactivatedAt: { type: Date, default: undefined },
+    reactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     adminOnboarded: { type: Boolean, default: false },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
   },

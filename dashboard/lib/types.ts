@@ -11,6 +11,7 @@ export type BasicUserProps = {
 export type AdminDetailsProps = {
   _id: string;
   userId: {
+    _id: string;
     email: string; 
     surName: string; 
     lastName: string; 

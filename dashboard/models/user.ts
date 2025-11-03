@@ -7,7 +7,7 @@ type Image = {
   secure_url: string;
 };
 
-interface IUser extends Document {
+export interface IUser extends Document {
   username: string;
   email: string;
   password?: string;
@@ -33,6 +33,9 @@ interface IUser extends Document {
   userIsAnAgent: boolean;
   userAccountDeleted:  boolean;
   userAccountSuspended: boolean;
+  suspensionReason: string;
+  suspendedAt: Date;
+  suspendedBy: Types.ObjectId;
   showLikedApartments: boolean;
   showBookmarkedApartments: boolean;
   showLikedBlogs: boolean;
@@ -50,7 +53,9 @@ interface IUser extends Document {
   comments?: Types.ObjectId[];
   propertyAgents?: Types.ObjectId[];
   propertiesRented?: Types.ObjectId[];
-  createdAt: Date;
+  previousRole?: string;
+  roleChangedAt?: Date;
+  roleChangedBy?: Types.ObjectId;
   updatedAt: Date;
 }
 
@@ -84,6 +89,9 @@ const userSchema: Schema<IUser> = new Schema(
     userIsAnAgent: { type: Boolean, default: false },
     userAccountDeleted: { type: Boolean, default: false },
     userAccountSuspended: { type: Boolean, default: false },
+    suspensionReason: { type: String, default: '' },
+    suspendedAt: { type: Date, default: undefined },
+    suspendedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     showLikedApartments: { type: Boolean, default: false },
     showBookmarkedApartments: { type: Boolean, default: false },
     showLikedBlogs: { type: Boolean, default: false },
@@ -101,6 +109,9 @@ const userSchema: Schema<IUser> = new Schema(
     comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }],
     propertyAgents: [{ type: Schema.Types.ObjectId, ref: 'Agent' }],
     propertiesRented: [{ type: Schema.Types.ObjectId, ref: 'Apartment' }],
+    previousRole: { type: String, default: undefined },
+    roleChangedAt: { type: Date, default: undefined },
+    roleChangedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }
 );
