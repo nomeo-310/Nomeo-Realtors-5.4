@@ -72,7 +72,7 @@ const apartmentSchema: Schema<IApartment> = new Schema(
     likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     reviews: [{ type: Schema.Types.ObjectId, ref: 'Review' }],
     availabilityStatus: { type: String, enum: ['available', 'rented', 'pending'], default: 'available' },
-    propertyApproval: { type: String, enum: ['approved', 'pending', 'unapproved'], default: 'unapproved' },
+    propertyApproval: { type: String, enum: ['approved', 'pending', 'unapproved', 'rejected'], default: 'unapproved' },
     furnitureStatus: { type: String, enum: ['furnished', 'non furnished'], default: 'non furnished' },
     facilityStatus: { type: String, enum: ['service', 'non service'], default: 'non service' },
   },

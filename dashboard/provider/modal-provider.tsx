@@ -4,6 +4,7 @@ import PrivacyPolicy from '@/components/modals/privacy-policy'
 import TermsAndCondition from '@/components/modals/terms-and-condition'
 import TermsOfService from '@/components/modals/terms-of-service'
 import AgentRejectionModal from '@/components/modals/agent-rejection-modal'
+import PropertyRejectionModal from '@/components/modals/property-rejection-modal'
 
 const ModalProvider = async () => {
 
@@ -14,6 +15,7 @@ const ModalProvider = async () => {
       <TermsOfService/>
       <PrivacyPolicy/>
       <AgentRejectionModal/>
+      <PropertyRejectionModal/>
     </React.Fragment>
   )
 }

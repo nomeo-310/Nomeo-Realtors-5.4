@@ -14,6 +14,7 @@ import { apiRequestHandler } from '@/utils/apiRequestHandler'
 import { capitalizeName } from '@/utils/capitalizeName'
 import ErrorState from '@/components/ui/error-state'
 import EmptyState from '@/components/ui/empty-state'
+import Link from 'next/link'
 
 type mobileItemProps = {
   open: boolean;
@@ -88,7 +89,7 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         <TableCell className="text-xs md:text-sm text-center">{data?.startDate}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{data?.endDate}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
-          <Menu/>
+          <Menu data={data}/>
         </TableCell>
       </TableRow>
     )
@@ -108,11 +109,11 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         <div className="border-b border-black my-3"/>
         <div className="flex items-center justify-between">
           <p className="text-sm">Annual Rent</p>
-          <p className="text-sm">{nairaSign} {nairaSign}{data?.apartment.annualRent.toLocaleString()}</p>
+          <p className="text-sm">{nairaSign} {data?.apartment.annualRent.toLocaleString()}</p>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm">Total Amount Paid</p>
-          <p className="text-sm">{nairaSign} {nairaSign}{data?.totalAmount?.toLocaleString() ?? 0}</p>
+          <p className="text-sm">{nairaSign} {data?.totalAmount?.toLocaleString() ?? 0}</p>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm">Date</p>
@@ -122,7 +123,7 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const Menu = () => {
+  const Menu = ({data}:{data:VerificationRentalProps}) => {
     return (
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
@@ -130,7 +131,9 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem>
-            Full Details
+            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data?.apartment.propertyIdTag}`} prefetch>
+              View Details
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
             Start Rental
@@ -156,12 +159,12 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
             }
             {status === 'error' &&
               <div className='w-full h-full items-center'>
-                <ErrorState message='An error occurred while fetching apartments. Try again later.'/>
+                <ErrorState message='An error occurred while fetching rentouts. Try again later.'/>
               </div>
             }
             {status === 'success' && apartments.length === 0 &&
               <div className='w-full h-full items-center'>
-                <EmptyState message='No pending apartments at the moment.'/>
+                <EmptyState message='No pending rentouts at the moment.'/>
               </div>
             }
             {status === 'success' && apartments.length > 0 &&
@@ -189,15 +192,15 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
               }
               {status === 'error' &&
                 <div className='w-full h-full items-center'>
-                  <ErrorState message='An error occurred while fetching apartments. Try again later.'/>
+                  <ErrorState message='An error occurred while fetching rentouts. Try again later.'/>
                 </div>
               }
-              {status === 'success' && apartments.length === 0 &&
+              { status === 'success' && apartments.length === 0 &&
                 <div className='w-full h-full items-center'>
-                  <EmptyState message='No pending apartments at the moment.'/>
+                  <EmptyState message='No pending rentouts at the moment.'/>
                 </div>
               }
-              {status === 'success' && apartments.length > 0 &&
+              { status === 'success' && apartments.length > 0 &&
                 <React.Fragment>
                   {apartments && apartments.length > 0 && apartments.map((apartment:VerificationRentalProps) => (
                     <MobileItem

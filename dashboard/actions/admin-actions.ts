@@ -1,7 +1,6 @@
 'use server'
 
 
-import Agent from "@/models/agent";
 import { revalidatePath } from "next/cache";
 import User from "@/models/user";
 import Notification from "@/models/notification";
@@ -15,20 +14,11 @@ interface agentDetails {
   path: string;
 }
 
-interface rejectionDetails extends agentDetails {
-  reason: string;
-};
-
 type userDetails = {
   userId: string;
   path: string;
   reason: string;
 }
-
-type imageProps = {
-  public_id: string;
-  secure_url: string;
-};
 
 interface AdminActionParams {
   adminId: string;
@@ -50,90 +40,6 @@ const validateSuperAdminAccess = async (): Promise<{ success: boolean; user?: an
   }
 
   return { success: true, user: current_user };
-};
-
-export const verifyAgent = async (values: agentDetails) => {
-  const { agentId, path } = values;
-  await connectToMongoDB();
-
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    return { success: false, message: 'You are not logged in', status: 403 };
-  }
-
-  const permissions = createServerPermissionService(current_user.role);
-  
-  if (!permissions.canApproveVerifications()) {
-    return { success: false,  message: 'You are not authorized to verify agents',  status: 403 };
-  }
-
-  const currentAgent = await Agent.findOne({ _id: agentId });
-
-  if (!currentAgent) {
-    return { success: false, message: 'Agent does not exist', status: 404 };
-  }
-
-  try {
-    await Agent.findOneAndUpdate({ _id: agentId }, { verificationStatus: 'verified'});
-
-    const newNotification = await Notification.create({
-      type: 'verification',
-      title: 'Your agency is verified',
-      content: 'Your agency details have been verified. Now you can go ahead and create apartment for rent or sale and start getting clients through this app.',
-      recipient: currentAgent.userId,
-    });
-    await newNotification.save();
-
-    await User.findOneAndUpdate({ _id: currentAgent.userId }, { $push: { notifications: newNotification._id }});
-
-    revalidatePath(path);
-    return { success: true, message: 'Agent details verified', status: 200 };
-  } catch (error) {
-    console.error('Error verifying agent:', error);
-    return { success: false, message: 'Internal server error', status: 500 };
-  }
-};
-
-export const rejectAgent = async (values: rejectionDetails) => {
-  const { agentId, path, reason } = values;
-
-  await connectToMongoDB();
-
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    return { success: false, message: 'You are not logged in', status: 403 };
-  }
-
-  const permissions = createServerPermissionService(current_user.role);
-  
-  if (!permissions.canApproveVerifications()) {
-    return { success: false, message: 'You are not authorized to reject agents',  status: 403 };
-  }
-
-  const currentAgent = await Agent.findById(agentId);
-
-  if (!currentAgent) {
-    return { success: false, message: 'Agent does not exist', status: 404 };
-  }
-
-  try {
-    const newNotification = await Notification.create({
-      type: 'verification',
-      title: 'Your agency verification failed',
-      content: `Your agency details verification failed. This is due to the reasons: ${reason}. Fix these issues as soon as possible so that you can start adding properties that clients can see.`,
-      recipient: currentAgent.userId,
-    });
-
-    await User.findOneAndUpdate({ _id: currentAgent.userId }, { $push: { notifications: newNotification._id }});
-
-    revalidatePath(path);
-    return { success: true, message: 'Rejection notification sent to agent.', status: 200 };
-  } catch (error) {
-    console.error('Error rejecting agent:', error);
-    return { success: false, message: 'Internal server error', status: 500 };
-  }
 };
 
 export const suspendAccount = async (values: userDetails) => {

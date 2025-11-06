@@ -2,63 +2,73 @@
 
 import React from "react";
 import Modal from "../ui/modal";
-import { useRejectAgentModal } from "@/hooks/general-store";
 import { usePathname } from "next/navigation";
-import { Loader2, Check, Eye, Edit, MapPin, Phone, DollarSign, Building, FileText, User, Shield } from "lucide-react";
+import { Loader2, Check, Eye, Edit, MapPin, Landmark, Image, Ruler, DollarSign, FileText, Flag, Home } from "lucide-react";
 import { toast } from "sonner";
-import { rejectAgent } from "@/actions/verification-actions";
+import { rejectApartment } from "@/actions/verification-actions";
+import { useRejectPropertyModal } from "@/hooks/general-store";
 
-// Predefined rejection reasons with icons for agency verification
+// Predefined rejection reasons with icons for property verification
 const PREDEFINED_REASONS = [
   {
-    id: "invalid-address",
-    text: "Agency physical address is invalid or cannot be verified",
+    id: "address-not-verified",
+    text: "Property address cannot be verified or is invalid",
     icon: MapPin
   },
   {
-    id: "invalid-phone",
-    text: "Phone number is invalid or not in service",
-    icon: Phone
+    id: "false-landmark",
+    text: "Closest landmark information is false or inaccurate",
+    icon: Landmark
   },
   {
-    id: "high-fees",
-    text: "Inspection/registration fees are too high or unreasonable",
+    id: "blurry-photos",
+    text: "Property photos are blurry, low quality, or insufficient",
+    icon: Image
+  },
+  {
+    id: "unreasonable-sqft",
+    text: "Square footage seems unreasonable for the property type",
+    icon: Ruler
+  },
+  {
+    id: "missing-rent",
+    text: "Monthly rent price is missing or not specified",
     icon: DollarSign
   },
   {
-    id: "not-registered",
-    text: "Agency is not properly registered with authorities",
-    icon: Building
-  },
-  {
-    id: "missing-documents",
-    text: "Required business registration documents are missing",
+    id: "poor-description",
+    text: "Property description is poor, incomplete, or misleading",
     icon: FileText
   },
   {
-    id: "invalid-license",
-    text: "Real estate license is invalid or expired",
-    icon: Shield
+    id: "property-flagged",
+    text: "Property has been flagged for suspicious activity",
+    icon: Flag
   },
   {
-    id: "poor-reputation",
-    text: "Agency has poor reputation or negative reviews",
-    icon: User
+    id: "incorrect-type",
+    text: "Property type classification is incorrect",
+    icon: Home
   },
   {
-    id: "suspicious-activity",
-    text: "Suspicious activity or fraudulent information detected",
-    icon: Shield
+    id: "amenities-missing",
+    text: "Key amenities information is missing or inaccurate",
+    icon: Home
   },
   {
-    id: "incomplete-profile",
-    text: "Agency profile information is incomplete",
-    icon: User
+    id: "contact-unreachable",
+    text: "Listing contact information is unreachable",
+    icon: MapPin
   },
   {
-    id: "unverified-bank",
-    text: "Bank account information could not be verified",
+    id: "price-unreasonable",
+    text: "Asking price is unreasonable for the property",
     icon: DollarSign
+  },
+  {
+    id: "duplicate-listing",
+    text: "Duplicate or repetitive listing detected",
+    icon: FileText
   },
   {
     id: "other",
@@ -77,7 +87,7 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
   const [sending, setSending] = React.useState(false);
   const [isPreview, setIsPreview] = React.useState(false);
   const pathname = usePathname();
-  const agentId = localStorage.getItem("rejection-agentId") || "";
+  const propertyId = localStorage.getItem("rejection-propertyId") || "";
 
   // Toggle predefined reason selection
   const toggleReason = (reasonText: string) => {
@@ -96,7 +106,7 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
     let message = "";
     
     if (predefined.length > 0) {
-      message += "Agency Verification Rejection Reasons:\n" + predefined.map(reason => `• ${reason}`).join("\n");
+      message += "Property Listing Rejection Reasons:\n" + predefined.map(reason => `• ${reason}`).join("\n");
     }
     
     if (custom) {
@@ -107,7 +117,7 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
     return message;
   };
 
-  const handleRejectAgent = async () => {
+  const handleRejectProperty = async () => {
     if (!isPreview) {
       setIsPreview(true);
       return;
@@ -116,8 +126,8 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
     setSending(true);
     const finalMessage = getFinalRejectionMessage();
     
-    const response = await rejectAgent({
-      agentId: agentId!,
+    const response = await rejectApartment({
+      apartmentId: propertyId!,
       reason: finalMessage,
       path: pathname,
     });
@@ -153,13 +163,13 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
             </p>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            This message will be sent to the agency. They will see all the selected reasons for rejection.
+            This message will be sent to the property lister. They will see all the selected reasons for rejection.
           </p>
         </div>
         
         <div className="w-full flex flex-row gap-2 justify-end">
           <button 
-            className="w-fit px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-md text-xs md:text-sm flex items-center gap-2 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+            className="w-fit px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-md text-xs lg:text-sm flex items-center gap-2 hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
             onClick={() => setIsPreview(false)}
             disabled={sending}
           >
@@ -167,8 +177,8 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
             Edit Reasons
           </button>
           <button
-            className="flex items-center gap-3 w-fit px-4 py-2 bg-red-600 text-white rounded-md text-xs md:text-sm disabled:opacity-50 hover:bg-red-700 transition-colors"
-            onClick={handleRejectAgent}
+            className="flex items-center gap-3 w-fit px-4 py-2 bg-red-600 text-white rounded-md text-xs lg:text-sm disabled:opacity-50 hover:bg-red-700 transition-colors"
+            onClick={handleRejectProperty}
             disabled={sending || !canProceed}
           >
             {sending ? "Sending Rejection..." : "Confirm & Send Rejection"}
@@ -188,7 +198,7 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
             Select Rejection Reasons
           </label>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Select all issues found during agency verification
+            Select all issues found with this property listing
           </p>
           <div className="space-y-2 max-h-52 overflow-y-auto pr-2">
             {PREDEFINED_REASONS.map((reason) => {
@@ -228,12 +238,12 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
           <textarea
             id="customReason"
             className="w-full lg:p-2.5 p-2 border border-gray-300 dark:border-gray-600 rounded-md h-28 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 text-xs lg:text-sm"
-            placeholder="Provide specific feedback about verification issues, instructions for correction, or additional details that will help the agency resolve the issues..."
+            placeholder="Provide specific feedback about the property listing issues, instructions for correction, or additional details that will help improve the listing..."
             value={customReason}
             onChange={(e) => setCustomReason(e.target.value)}
           />
           <p className="text-xs text-gray-500 mt-1">
-            Be specific about what documentation or information needs to be corrected for successful verification.
+            Be specific about what needs to be corrected for the property listing to be approved.
           </p>
         </div>
 
@@ -247,7 +257,7 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
                   Ready for Preview
                 </h4>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                  {selectedReasons.length} verification issue{selectedReasons.length !== 1 ? 's' : ''} found
+                  {selectedReasons.length} issue{selectedReasons.length !== 1 ? 's' : ''} found
                   {customReason.trim() && " + additional comments"}
                 </p>
               </div>
@@ -265,15 +275,15 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
 
       <div className="w-full flex flex-row gap-2 justify-end mt-6">
         <button 
-          className="w-fit px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-md text-xs md:text-sm hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+          className="w-fit px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-md text-xs lg:text-sm hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
           onClick={onClose}
           disabled={sending}
         >
           Cancel
         </button>
         <button
-          className="flex items-center gap-3 w-fit px-4 py-2 bg-secondary-blue text-white rounded-md text-xs md:text-sm disabled:opacity-50 hover:bg-blue-700 transition-colors"
-          onClick={handleRejectAgent}
+          className="flex items-center gap-3 w-fit px-4 py-2 bg-secondary-blue text-white rounded-md text-xs lg:text-sm disabled:opacity-50 hover:bg-blue-700 transition-colors"
+          onClick={handleRejectProperty}
           disabled={sending || !canProceed}
         >
           {sending ? "Processing..." : "Continue to Preview"}
@@ -284,19 +294,19 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-const AgentRejectionModal = () => {
-  const agentRejectionControl = useRejectAgentModal();
+const PropertyRejectionModal = () => {
+  const propertyRejectionControl = useRejectPropertyModal();
 
   const handleClose = () => {
-    agentRejectionControl.onClose();
+    propertyRejectionControl.onClose();
   };
 
   return (
     <Modal
-      isOpen={agentRejectionControl.isOpen}
+      isOpen={propertyRejectionControl.isOpen}
       onClose={handleClose}
       useCloseButton
-      title="Reject Agency Verification"
+      title="Reject Property Listing"
       useSeparator
       width="xl:w-[650px] lg:w-[600px] md:w-[550px]"
     >
@@ -305,4 +315,4 @@ const AgentRejectionModal = () => {
   );
 };
 
-export default AgentRejectionModal;
+export default PropertyRejectionModal;

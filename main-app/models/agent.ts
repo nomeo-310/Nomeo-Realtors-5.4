@@ -15,7 +15,7 @@ interface IAgent extends mongoose.Document {
   agencyName: string;
   agencyWebsite?: string;
   agentVerified: boolean;
-  verificationStatus: 'verified' | 'pending' | 'unverified';
+  verificationStatus: 'verified' | 'pending' | 'unverified' | 'rejected';
   inspectionFeePerHour: number;
   coverImage?: image;
   getListings: boolean;

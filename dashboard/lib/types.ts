@@ -108,43 +108,6 @@ export interface VerificationPropertyProps {
   updatedAt: string;
 };
 
-{
-    "_id": "6902175a32db6b526366259d",
-    "user": {
-        "_id": "68c2769bcc44d66269abe100",
-        "email": "olatayomakinde@gmail.com",
-        "placeholderColor": "#7D7A81",
-        "lastName": "Olatayo",
-        "profilePicture": "https://res.cloudinary.com/dqj9nko02/image/upload/v1757577875/profileImages/cszlpgzwxk436woax0er.jpg",
-        "surName": "Makinde"
-    },
-    "apartment": {
-        "_id": "68f62e643dbece5fe90bd197",
-        "propertyTag": "for-rent",
-        "propertyIdTag": "apartment-0c5274",
-        "city": "Abeokuta-South",
-        "state": "Ogun",
-        "propertyPrice": 0
-    },
-    "agent": {
-        "_id": "68c394d6d78636f5c6c88029",
-        "userId": {
-            "_id": "68c394d5d78636f5c6c88027",
-            "email": "onomesalomi@gmail.com",
-            "placeholderColor": "#D71AB0",
-            "lastName": "Onome",
-            "profilePicture": "https://res.cloudinary.com/dqj9nko02/image/upload/v1757648182/profileImages/ljkgbxrovdbwlmazvvtd.jpg",
-            "surName": "Salomi"
-        },
-        "agencyName": "Salbio Realtors Inc"
-    },
-    "sold": false,
-    "status": "pending",
-    "createdAt": "2025-10-29T13:32:10.514Z",
-    "updatedAt": "2025-10-29T13:32:10.514Z",
-    "__v": 0
-}
-
 export interface VerificationRentalProps {
   _id: string;
   user: {
@@ -222,3 +185,75 @@ export interface VerificationSalesProps {
   updatedAt: string;
   __v: number;
 }
+
+type Fee = {
+  name: string;
+  amount: number;
+};
+
+type Landmark = {
+  name: string;
+  distanceAway: string;
+};
+
+export interface PropertyProps {
+  _id: string;
+  propertyTag: string;
+  propertyIdTag: string;
+  propertyTypeTag: string;
+  title: string;
+  description: string;
+  address: string;
+  city: string;
+  state: string;
+  monthlyRent: number;
+  propertyPrice: number;
+  annualRent: number;
+  bedrooms: number;
+  bathrooms: number;
+  toilets: number;
+  mainAmenities: string[];
+  optionalAmenities: string[];
+  squareFootage: number;
+  hideProperty: boolean;
+  mainFees: Fee[];
+  optionalFees: Fee[];
+  closestLandmarks: Landmark[];
+  apartmentImages: {
+    _id: string;
+    images: string[];
+  };
+  agent: {
+    _id: string;
+    licenseNumber: string; 
+    coverPicture: string; 
+    officeNumber: string; 
+    officeAddress: string; 
+    agencyName: string; 
+    agentRatings: string; 
+    agentVerified: boolean; 
+    verificationStatus: string; 
+    inspectionFeePerHour: number; 
+    apartments: string[];
+    userId: {
+      _id: string;
+      username: string; 
+      email: string; 
+      surName: string; 
+      lastName: string; 
+      profilePicture: string; 
+      bio: string; 
+      address: string; 
+      city: string; 
+      state: string; 
+      phoneNumber: string; 
+      additionalPhoneNumber: string; 
+      role: string;
+    }
+  };
+  availabilityStatus: string;
+  furnitureStatus: string;
+  facilityStatus: string;
+  likes: string[];
+  bookmarks: string[];
+};

@@ -1,6 +1,5 @@
 'use server'
 
-
 import Notification from "@/models/notification";
 import User from "@/models/user";
 import { connectToMongoDB } from "@/utils/connectToMongoDB";

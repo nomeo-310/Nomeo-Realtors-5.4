@@ -14,10 +14,10 @@ import { useRejectAgentModal } from '@/hooks/general-store';
 import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { formatDate } from '@/utils/formatDate';
-import { verifyAgent } from '@/actions/admin-actions';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import VerificationsWrapper from './verifications-wrapper';
 import { AdminDetailsProps } from '@/lib/types';
+import { verifyAgent } from '@/actions/verification-actions';
 
 type mobileItemProps = {
   open: boolean;
@@ -192,12 +192,12 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
             }
             {status === 'error' &&
               <div className='w-full h-full items-center'>
-                <ErrorState message='An error occurred while fetching agent details. Try again later.'/>
+                <ErrorState message='An error occurred while fetching agents. Try again later.'/>
               </div>
             }
             {status === 'success' && agents.length === 0 &&
               <div className='w-full h-full items-center'>
-                <EmptyState message='No pending agents at the moment.'/>
+                <EmptyState message='No unverified agents at the moment.'/>
               </div>
             }
             {status === 'success' && agents.length > 0 &&
@@ -229,7 +229,7 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
             }
             {status === 'success' && agents.length === 0 &&
               <div className='w-full h-full items-center'>
-                <EmptyState message='No pending agents at the moment.'/>
+                <EmptyState message='No unverified agents at the moment.'/>
               </div>
             }
             {status === 'success' &&

@@ -92,7 +92,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         <TableCell className="text-xs md:text-sm text-center">{data.state}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{data.city}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
-          <Menu/>
+          <Menu data={data}/>
         </TableCell>
       </TableRow>
     )
@@ -104,7 +104,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         <div className="flex items-center justify-between">
           <p className="text-sm">{capitalizeName(data.agent.userId.surName)} {capitalizeName(data.agent.userId.lastName)}</p>
           <p className="text-sm">
-            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data.propertyIdTag}`}>
+            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data.propertyIdTag}`} prefetch>
               {data.propertyIdTag}
             </Link>
           </p>
@@ -130,7 +130,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const Menu = () => {
+  const Menu = ({data}:{data: VerificationPropertyProps}) => {
     return (
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
@@ -138,7 +138,9 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem>
-            Full Details
+            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data.propertyIdTag}`} prefetch>
+              View Details
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
             Accept Property
@@ -169,7 +171,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
             }
             {status === 'success' && apartments.length === 0 &&
               <div className='w-full h-full items-center'>
-                <EmptyState message='No pending apartments at the moment.'/>
+                <EmptyState message='No unverified apartments at the moment.'/>
               </div>
             }
             {status === 'success' && apartments.length > 0 &&
@@ -202,7 +204,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
               }
               {status === 'success' && apartments.length === 0 &&
                 <div className='w-full h-full items-center'>
-                  <EmptyState message='No pending apartments at the moment.'/>
+                  <EmptyState message='No unverified apartments at the moment.'/>
                 </div>
               }
               {status === 'success' && apartments.length > 0 &&
