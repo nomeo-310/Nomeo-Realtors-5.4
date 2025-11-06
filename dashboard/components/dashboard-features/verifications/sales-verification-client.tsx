@@ -7,18 +7,19 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import Pagination from '@/components/ui/pagination'
 import { Loader2, MoreHorizontalIcon } from 'lucide-react'
 import VerificationsWrapper from './verifications-wrapper'
-import { AdminDetailsProps, VerificationRentalProps } from '@/lib/types'
+import { AdminDetailsProps, VerificationSalesProps } from '@/lib/types'
 import axios from 'axios'
 import { useQuery } from '@tanstack/react-query'
 import { apiRequestHandler } from '@/utils/apiRequestHandler'
 import { capitalizeName } from '@/utils/capitalizeName'
 import ErrorState from '@/components/ui/error-state'
 import EmptyState from '@/components/ui/empty-state'
+import { formatDate } from '@/utils/formatDate'
 
 type mobileItemProps = {
   open: boolean;
   toggleTable: () => void;
-  data: VerificationRentalProps;
+  data: VerificationSalesProps;
 };
 
 interface dataProps {
@@ -29,10 +30,10 @@ interface dataProps {
     hasNextPage: boolean,
     hasPrevPage: boolean,
   },
-  rentouts: VerificationRentalProps[]
+  sellouts: VerificationSalesProps[]
 }
 
-const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
+const SalesVerificationClient = ({user}:{user:AdminDetailsProps}) => {
 
   const [currentIndex, setCurrentIndex] = React.useState(-1);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -41,16 +42,18 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     setCurrentIndex((currentValue) => (currentValue !== index ? index : -1));
   },[]);
 
-  const requestUnverifiedRentals = () => axios.get(`/api/admin/unverified-rentals?page=${currentPage}`);
+  const requestUnverifiedRentals = () => axios.get(`/api/admin/unverified-sales?page=${currentPage}`);
 
   const { data, status } = useQuery({
-    queryKey: ['unverified-rentals', currentPage],
+    queryKey: ['unverified-sales', currentPage],
     queryFn: () => apiRequestHandler(requestUnverifiedRentals),
     refetchOnWindowFocus: false
   });
+
+  console.log(data)
   
   const unverifiedApartmentsData = data?.data as dataProps
-  const apartments = unverifiedApartmentsData?.rentouts || [];
+  const apartments = unverifiedApartmentsData?.sellouts || [];
   const pagination = unverifiedApartmentsData?.pagination || null;
 
   const handlePageChange = (page:number) => {
@@ -65,28 +68,26 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
           <TableHead className="text-center font-semibold uppercase">Agent Name</TableHead>
           <TableHead className="text-center font-semibold uppercase">Agency Name</TableHead>
           <TableHead className="text-center font-semibold uppercase">Occupant</TableHead>
-          <TableHead className="text-center font-semibold uppercase">Annual Rent</TableHead>
+          <TableHead className="text-center font-semibold uppercase">Property Price</TableHead>
           <TableHead className="text-center font-semibold uppercase">Total Amount Paid</TableHead>
-          <TableHead className="text-center font-semibold uppercase">Rental Status</TableHead>
-          <TableHead className="text-center font-semibold uppercase">Start Date</TableHead>
-          <TableHead className="text-center font-semibold uppercase">End Date</TableHead>
+          <TableHead className="text-center font-semibold uppercase">Sales Status</TableHead>
+          <TableHead className="text-center font-semibold uppercase">Date</TableHead>
           <TableHead className="text-center font-semibold uppercase">Action</TableHead>
         </TableRow>
       </TableHeader>
     )
   };
 
-  const VerificationItem = ({data}:{data:VerificationRentalProps}) => {
+  const VerificationItem = ({data}:{data:VerificationSalesProps}) => {
     return (
       <TableRow>
         <TableCell className="text-xs md:text-sm text-center">{capitalizeName(data?.agent.userId.surName)} {capitalizeName(data?.agent.userId.lastName)}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{data?.agent.agencyName}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{capitalizeName(data?.user.surName)} {capitalizeName(data?.user.lastName)}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center capitalize">{nairaSign}{data?.apartment.annualRent.toLocaleString()}</TableCell>
+        <TableCell className="text-xs md:text-sm text-center capitalize">{nairaSign}{data?.apartment.propertyPrice.toLocaleString()}</TableCell>
         <TableCell className="text-xs md:text-sm text-center capitalize">{nairaSign}{data?.totalAmount?.toLocaleString() ?? 0}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{data?.status}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center">{data?.startDate}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center">{data?.endDate}</TableCell>
+        <TableCell className="text-xs md:text-sm text-center">{formatDate(data?.createdAt)}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
           <Menu/>
         </TableCell>
@@ -107,8 +108,8 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         </div>
         <div className="border-b border-black my-3"/>
         <div className="flex items-center justify-between">
-          <p className="text-sm">Annual Rent</p>
-          <p className="text-sm">{nairaSign} {nairaSign}{data?.apartment.annualRent.toLocaleString()}</p>
+          <p className="text-sm">Property Price</p>
+          <p className="text-sm">{nairaSign} {nairaSign}{data?.apartment.propertyPrice.toLocaleString()}</p>
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm">Total Amount Paid</p>
@@ -116,7 +117,7 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm">Date</p>
-          <p className="text-sm capitalize">{data?.startDate}</p>
+          <p className="text-sm capitalize">{formatDate(data?.createdAt)}</p>
         </div>
       </div>
     )
@@ -169,7 +170,7 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
                 <Table className='w-full border'>
                   <VerificationHeader/>
                   <TableBody>
-                    {apartments && apartments.length > 0 && apartments.map((apartment:VerificationRentalProps) => (
+                    {apartments && apartments.length > 0 && apartments.map((apartment:VerificationSalesProps) => (
                       <VerificationItem data={apartment}/>
                     ))}
                   </TableBody>
@@ -199,7 +200,7 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
               }
               {status === 'success' && apartments.length > 0 &&
                 <React.Fragment>
-                  {apartments && apartments.length > 0 && apartments.map((apartment:VerificationRentalProps) => (
+                  {apartments && apartments.length > 0 && apartments.map((apartment:VerificationSalesProps) => (
                     <MobileItem
                       key={apartment._id}
                       open={currentIndex === apartments.indexOf(apartment)}
@@ -225,4 +226,4 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
   )
 }
 
-export default RentalVerificationClient
+export default SalesVerificationClient

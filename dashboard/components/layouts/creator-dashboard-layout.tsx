@@ -4,8 +4,12 @@ import { ThemeToggler } from '@/components/ui/theme-toggler'
 import React from 'react'
 import { ImageAvatar } from '../ui/image-avatar'
 import { CreatorDashBoardSideBar } from '../dashboard-features/dashboard-sidebar'
+import { getCurrentUser } from '@/actions/auth-actions'
+import LogoutButton from '../auth-features/logout-button'
 
 const CreatorDashboardLayout = async ({children}:{children:React.ReactNode}) => {
+  const current_user = await getCurrentUser();
+  
   return (
     <div className='w-full min-h-screen flex flex-col'>
       {/* Fixed Header */}
@@ -18,7 +22,7 @@ const CreatorDashboardLayout = async ({children}:{children:React.ReactNode}) => 
               <p className='text-sm md:text-base'>Nomeo Realtors Dashboard</p>
             </div>
           </div>
-          <ImageAvatar username='onome_310'/>
+          <LogoutButton current_user={current_user}/>
         </div>
       </header>
 

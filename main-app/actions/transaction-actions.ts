@@ -6,6 +6,8 @@ import Apartment from "@/models/apartment";
 import Transaction from "@/models/transaction";
 import { revalidatePath } from "next/cache";
 import Notification from "@/models/notification";
+import Rentout from "@/models/rentout";
+import Sellout from "@/models/sellout";
 
 
 type transactionProps = {
@@ -61,6 +63,13 @@ export const initiateTransaction = async ({values}:{values: transactionProps}) =
     
     const newTransaction = await Transaction.create(newTransactionData);
     newTransaction.save();
+
+    if (property.propertyTag === 'for-rent') {
+      await Rentout.findOneAndUpdate({user: current_user._id, agent: agentUserDetails.agentId, apartment: property._id, status: 'initiated'}, {status: 'pending', totalAmount: amount})
+    } else {
+      await Sellout.findOneAndUpdate({user: current_user._id, agent: agentUserDetails.agentId, apartment: property._id, status: 'initiated'}, {status: 'pending', totalAmount: amount})
+      
+    }
 
     const notificationData = {
       title: 'Transaction Initiated',

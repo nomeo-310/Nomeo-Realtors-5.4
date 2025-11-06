@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 type AnimationType = 'fade' | 'slide' | 'scale'
 
@@ -31,12 +31,24 @@ const animationVariants = {
   }
 }
 
-const AnimationWrapper = ({ className, children, keyValue, duration = 0.6, type = 'fade'}: AnimationWrapperProps) => {
+const AnimationWrapper = ({ 
+  className, 
+  children, 
+  keyValue, 
+  duration = 0.6, 
+  type = 'fade'
+}: AnimationWrapperProps) => {
+  const [isFirstRender, setIsFirstRender] = useState(true)
+
+  useEffect(() => {
+    setIsFirstRender(false)
+  }, [])
+
   return (
     <AnimatePresence mode="wait">
       <motion.div
         variants={animationVariants[type]}
-        initial="initial"
+        initial={isFirstRender ? false : "initial"}
         animate="animate"
         exit="exit"
         transition={{ duration, ease: "easeInOut" }}

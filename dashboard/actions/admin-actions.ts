@@ -109,11 +109,7 @@ export const rejectAgent = async (values: rejectionDetails) => {
   const permissions = createServerPermissionService(current_user.role);
   
   if (!permissions.canApproveVerifications()) {
-    return { 
-      success: false, 
-      message: 'You are not authorized to reject agents', 
-      status: 403 
-    };
+    return { success: false, message: 'You are not authorized to reject agents',  status: 403 };
   }
 
   const currentAgent = await Agent.findById(agentId);
@@ -130,10 +126,7 @@ export const rejectAgent = async (values: rejectionDetails) => {
       recipient: currentAgent.userId,
     });
 
-    await User.findOneAndUpdate(
-      { _id: currentAgent.userId }, 
-      { $push: { notifications: newNotification._id } }
-    );
+    await User.findOneAndUpdate({ _id: currentAgent.userId }, { $push: { notifications: newNotification._id }});
 
     revalidatePath(path);
     return { success: true, message: 'Rejection notification sent to agent.', status: 200 };

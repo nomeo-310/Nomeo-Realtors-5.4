@@ -8,6 +8,7 @@ interface IRentout extends Document {
   status: string;
   startDate?: string;
   endDate?: string;
+  totalAmount?: number;
 }
 
 const rentoutSchema: Schema<IRentout> = new Schema(
@@ -19,6 +20,7 @@ const rentoutSchema: Schema<IRentout> = new Schema(
     endDate: { type: String, default: undefined},
     rented: { type: Boolean, default: false },
     status: { type: String, enum: ['initiated', 'completed', 'cancelled', 'pending'], default: 'initiated' },
+    totalAmount: { type: Number, default: undefined }
   },
   { timestamps: true });
 

@@ -6,6 +6,7 @@ interface ISellout extends Document {
   agent: Types.ObjectId;
   sold: boolean;
   status: string;
+  totalAmount?: number;
 }
 
 const selloutSchema: Schema<ISellout> = new Schema(
@@ -15,6 +16,7 @@ const selloutSchema: Schema<ISellout> = new Schema(
     agent: { type: Schema.Types.ObjectId, ref: 'Agent' },
     sold: { type: Boolean, default: false },
     status: { type: String, enum: ['initiated', 'completed', 'cancelled', 'pending'], default: 'initiated' },
+    totalAmount: { type: Number, default: undefined }
   },
   { timestamps: true });
 

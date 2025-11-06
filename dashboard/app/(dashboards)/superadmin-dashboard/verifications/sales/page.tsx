@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import RentalVerificationClient from '@/components/dashboard-features/verifications/rental-verification-client'
+import SalesVerificationClient from '@/components/dashboard-features/verifications/sales-verification-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'Verifications'
 };
 
-const RentalsVerifications = async () => {
+const SalesVerifications = async () => {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -19,7 +19,7 @@ const RentalsVerifications = async () => {
     return notFound();
   };
   
-  return <RentalVerificationClient user={user}/>
+  return <SalesVerificationClient user={user}/>
 }
 
-export default RentalsVerifications
+export default SalesVerifications

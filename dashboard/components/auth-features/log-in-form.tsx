@@ -38,7 +38,7 @@ const LoginForm = () => {
         toast.error(result.error);
       } else if (result?.ok) {
         toast.success("Login Successful");
-        router.refresh();
+        window.location.href = "/";
       }
     } catch (error) {
       console.error('Login error:', error);

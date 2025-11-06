@@ -27,28 +27,25 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
       return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
     }
 
-    if (text === "Saves") {
-      const agentSavesBaseLink = "/agent-dashboard/saves";
-      const userSavesBaseLink = "/user-dashboard/saves";
-      return pathname.startsWith(agentSavesBaseLink) || pathname.startsWith(userSavesBaseLink);
-    }
-
     if (text === "Transactions") {
-      const agentTransactionBaseLink = "/agent-dashboard/transactions";
-      const userTransactionBaseLink = "/user-dashboard/transactions";
-      return pathname.startsWith(agentTransactionBaseLink) || pathname.startsWith(userTransactionBaseLink);
+      const superAdminBaseLink = "/superadmin-dashboard/transactions";
+      const adminBaseLink = "/admin-dashboard/transactions";
+      const creatorBaseLink = "/creator-dashboard/transactions";
+      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
     }
 
     if (text === "Created Blogs" || text === "Blogs") {
-      const agentCreatedBlogsBaseLink = "/agent-dashboard/created-blogs";
-      const userCreatedBlogsBaseLink = "/user-dashboard/created-blogs";
-      return pathname.startsWith(agentCreatedBlogsBaseLink) || pathname.startsWith(userCreatedBlogsBaseLink);
+      const superAdminBaseLink = "/superadmin-dashboard/created-blogs";
+      const adminBaseLink = "/admin-dashboard/created-blogs";
+      const creatorBaseLink = "/creator-dashboard/created-blogs";
+      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
     }
     
     if (text === "Create Blog") {
-      const agentCreateBlogBaseLink = "/agent-dashboard/create-blog";
-      const userCreateBlogsBaseLink = "/user-dashboard/create-blogs";
-      return pathname.startsWith(agentCreateBlogBaseLink) || pathname.startsWith(userCreateBlogsBaseLink);
+      const superAdminBaseLink = "/superadmin-dashboard/create-blog";
+      const adminBaseLink = "/admin-dashboard/create-blog";
+      const creatorBaseLink = "/creator-dashboard/create-blog";
+      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
     }
 
     return false;
@@ -59,6 +56,7 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
   return (
     <React.Fragment>
       <Link
+        prefetch
         href={path}
         className={cn(
           "group hidden lg:py-3 w-full lg:flex items-center lg:gap-2 rounded-r-lg lg:pl-3 hover:bg-secondary-blue/30 dark:hover:bg-secondary-blue hover:rounded-lg",

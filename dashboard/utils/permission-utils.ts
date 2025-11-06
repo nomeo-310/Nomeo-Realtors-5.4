@@ -1,35 +1,235 @@
 // utils/permission-utils.ts
-export type Permission = string;
-export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'CREATOR';
+export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'CREATOR' | 'USER';
 
-// Your permissions structure
+// All Available Permissions
+export const ADMIN_PERMISSIONS = [
+  // ===== VERIFICATION PERMISSIONS =====
+  'verifications.view',
+  'verifications.approve',
+  'verifications.reject', 
+  'verifications.manage',
+
+  // ===== INSPECTION PERMISSIONS =====
+  'inspections.view',
+  'inspections.manage',
+
+  // ===== TRANSACTION PERMISSIONS =====
+  'transactions.view',
+  'transactions.manage',
+  'transactions.process',
+
+  // ===== APARTMENT PERMISSIONS =====
+  'apartments.view',
+  'apartments.create',
+  'apartments.edit',
+  'apartments.delete',
+  'apartments.manage',
+
+  // ===== BLOG PERMISSIONS =====
+  'blogs.view',
+  'blogs.view.all',
+  'blogs.create',
+  'blogs.edit.own',
+  'blogs.edit.all',
+  'blogs.delete.own',
+  'blogs.delete.all',
+  'blogs.manage',
+
+  // ===== NEWSLETTER PERMISSIONS =====
+  'newsletters.view',
+  'newsletters.create',
+  'newsletters.send',
+  'newsletters.manage',
+
+  // ===== APP SETTINGS PERMISSIONS =====
+  'app_settings.view',
+  'app_settings.edit',
+  'app_settings.manage',
+
+  // ===== USER MANAGEMENT PERMISSIONS =====
+  'users.view',
+  'users.create',
+  'users.edit',
+  'users.delete',
+  'users.manage',
+  'user.suspend',
+  'user.deactivate',
+  'user.reactivate',
+
+  // ===== ADMIN MANAGEMENT PERMISSIONS =====
+  'admins.view',
+  'admins.create',
+  'admins.edit',
+  'admins.delete',
+  'admins.manage',
+  'admin.suspend',
+  'admin.deactivate',
+  'admin.reactivate',
+
+  // ===== SYSTEM PERMISSIONS =====
+  'system.audit_logs',
+  'system.backup',
+  'system.restore',
+  'system.maintenance'
+];
+
+// Role-based Permission Sets (Fixed and Complete)
 export const ROLE_PERMISSIONS = {
   SUPERADMIN: [
-    'verifications.view', 'verifications.approve', 'verifications.reject', 'verifications.manage',
-    'inspections.view', 'inspections.manage', 'apartments.view', 'apartments.delete', 'apartments.manage',
-    'blogs.create', 'blogs.edit.own', 'blogs.delete.own', 'users.view', 'user.delete', 'users.manage',
-    'blogs.view.all', 'blogs.manage', 'newsletters.view', 'newsletters.create', 'newsletters.send', 'newsletters.manage',
+    // All verification permissions
+    'verifications.view',
+    'verifications.approve',
+    'verifications.reject',
+    'verifications.manage',
+
+    // All inspection permissions
+    'inspections.view',
+    'inspections.manage',
+
+    // All transaction permissions
+    'transactions.view',
+    'transactions.manage',
+    'transactions.process',
+
+    // All apartment permissions
+    'apartments.view',
+    'apartments.create',
+    'apartments.edit',
+    'apartments.delete',
+    'apartments.manage',
+
+    // All blog permissions
+    'blogs.view',
+    'blogs.view.all',
+    'blogs.create',
+    'blogs.edit.own',
+    'blogs.edit.all',
+    'blogs.delete.own',
+    'blogs.delete.all',
+    'blogs.manage',
+
+    // All newsletter permissions
+    'newsletters.view',
+    'newsletters.create',
+    'newsletters.send',
+    'newsletters.manage',
+
+    // All app settings permissions
+    'app_settings.view',
+    'app_settings.edit',
+    'app_settings.manage',
+
+    // All user management permissions
+    'users.view',
+    'users.create',
+    'users.edit',
+    'users.delete',
+    'users.manage',
+    'user.suspend',
+    'user.deactivate',
+    'user.reactivate',
+
+    // All admin management permissions
+    'admins.view',
+    'admins.create',
+    'admins.edit',
+    'admins.delete',
+    'admins.manage',
+    'admin.suspend',
+    'admin.deactivate',
+    'admin.reactivate',
+
+    // All system permissions
+    'system.audit_logs',
+    'system.backup',
+    'system.restore',
+    'system.maintenance'
   ],
+
   ADMIN: [
-    'verifications.view', 'verifications.approve', 'verifications.reject', 'verifications.manage',
-    'inspections.view', 'inspections.manage', 'apartments.view', 'apartments.delete', 'apartments.manage',
-    'blogs.create', 'blogs.edit.own', 'blogs.delete.own', 'users.view', 'user.delete', 'users.manage',
+    // Verification permissions
+    'verifications.view',
+    'verifications.approve',
+    'verifications.reject',
+    'verifications.manage',
+    
+    // Inspection permissions
+    'inspections.view',
+    'inspections.manage',
+    
+    // Transaction permissions
+    'transactions.view',
+    'transactions.manage',
+    'transactions.process',
+    
+    // Apartment permissions
+    'apartments.view',
+    'apartments.create',
+    'apartments.edit',
+    'apartments.delete',
+    'apartments.manage',
+    
+    // Blog permissions (limited)
+    'blogs.view',
+    'blogs.view.all',
+    'blogs.create',
+    'blogs.edit.own',
+    'blogs.delete.own',
+
+    // Newsletter permissions (view only)
+    'newsletters.view',
+
+    // App settings permissions (view only)
+    'app_settings.view',
+
+    // User management permissions
+    'users.view',
+    'users.edit',
+    'users.delete',
+    'users.manage',
+    'user.suspend',
+    'user.deactivate',
+    'user.reactivate',
+
+    // Admin management (view only, no modifications)
+    'admins.view'
   ],
+
   CREATOR: [
-    'blogs.create', 'blogs.edit.own', 'blogs.delete.own', 'blogs.view.all', 'blogs.manage',
-    'newsletters.view', 'newsletters.create', 'newsletters.send', 'newsletters.manage',
+    // Blog permissions (full control)
+    'blogs.view',
+    'blogs.view.all',
+    'blogs.create',
+    'blogs.edit.own',
+    'blogs.delete.own',
+    'blogs.manage',
+    
+    // Newsletter permissions (full control)
+    'newsletters.view',
+    'newsletters.create',
+    'newsletters.send',
+    'newsletters.manage',
+
+    // Limited apartment viewing
+    'apartments.view'
+  ],
+
+  USER: [
+    // Basic viewing permissions only
+    'apartments.view',
+    'blogs.view'
   ]
 };
 
-// Core permission functions
-export const hasPermission = (userRole: UserRole, permission: Permission): boolean => {
-  if (userRole === 'SUPERADMIN') return true;
+// Permission Check Functions
+export const hasPermission = (userRole: UserRole, permission: string): boolean => {
   const rolePermissions = ROLE_PERMISSIONS[userRole] || [];
   return rolePermissions.includes(permission);
 };
 
+// Generic Resource Permissions
 export const canView = (userRole: UserRole, resource: string): boolean => {
-  return hasPermission(userRole, `${resource}.view`) || hasPermission(userRole, `${resource}.manage`);
+  return hasPermission(userRole, `${resource}.view`);
 };
 
 export const canManage = (userRole: UserRole, resource: string): boolean => {
@@ -37,25 +237,20 @@ export const canManage = (userRole: UserRole, resource: string): boolean => {
 };
 
 export const canCreate = (userRole: UserRole, resource: string): boolean => {
-  return hasPermission(userRole, `${resource}.create`) || hasPermission(userRole, `${resource}.manage`);
+  return hasPermission(userRole, `${resource}.create`);
 };
 
-// ADD THESE MISSING FUNCTIONS:
 export const canEdit = (userRole: UserRole, resource: string): boolean => {
-  return hasPermission(userRole, `${resource}.edit`) || 
-         hasPermission(userRole, `${resource}.edit.own`) ||
-         hasPermission(userRole, `${resource}.manage`);
+  return hasPermission(userRole, `${resource}.edit`);
 };
 
 export const canDelete = (userRole: UserRole, resource: string): boolean => {
-  return hasPermission(userRole, `${resource}.delete`) || 
-         hasPermission(userRole, `${resource}.delete.own`) ||
-         hasPermission(userRole, `${resource}.manage`);
+  return hasPermission(userRole, `${resource}.delete`);
 };
 
-// Specific permission checks
+// Specific Resource Permissions
 export const canViewVerifications = (userRole: UserRole): boolean => {
-  return hasPermission(userRole, 'verifications.view') || hasPermission(userRole, 'verifications.manage');
+  return hasPermission(userRole, 'verifications.view');
 };
 
 export const canManageVerifications = (userRole: UserRole): boolean => {
@@ -63,11 +258,11 @@ export const canManageVerifications = (userRole: UserRole): boolean => {
 };
 
 export const canApproveVerifications = (userRole: UserRole): boolean => {
-  return hasPermission(userRole, 'verifications.approve') || hasPermission(userRole, 'verifications.manage');
+  return hasPermission(userRole, 'verifications.approve');
 };
 
 export const canViewApartments = (userRole: UserRole): boolean => {
-  return hasPermission(userRole, 'apartments.view') || hasPermission(userRole, 'apartments.manage');
+  return hasPermission(userRole, 'apartments.view');
 };
 
 export const canManageApartments = (userRole: UserRole): boolean => {
@@ -75,15 +270,19 @@ export const canManageApartments = (userRole: UserRole): boolean => {
 };
 
 export const canViewUsers = (userRole: UserRole): boolean => {
-  return hasPermission(userRole, 'users.view') || hasPermission(userRole, 'users.manage');
+  return hasPermission(userRole, 'users.view');
 };
 
 export const canManageUsers = (userRole: UserRole): boolean => {
   return hasPermission(userRole, 'users.manage');
 };
 
+export const canDeleteUsers = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'users.delete');
+};
+
 export const canViewBlogs = (userRole: UserRole): boolean => {
-  return hasPermission(userRole, 'blogs.view') || hasPermission(userRole, 'blogs.view.all') || hasPermission(userRole, 'blogs.manage');
+  return hasPermission(userRole, 'blogs.view');
 };
 
 export const canManageBlogs = (userRole: UserRole): boolean => {
@@ -91,58 +290,9 @@ export const canManageBlogs = (userRole: UserRole): boolean => {
 };
 
 export const canViewNewsletters = (userRole: UserRole): boolean => {
-  return hasPermission(userRole, 'newsletters.view') || hasPermission(userRole, 'newsletters.manage');
+  return hasPermission(userRole, 'newsletters.view');
 };
 
 export const canManageNewsletters = (userRole: UserRole): boolean => {
   return hasPermission(userRole, 'newsletters.manage');
-};
-
-// Main hook that works with any user object
-interface User {
-  role: 'superAdmin' | 'admin' | 'creator' | 'user' | 'agent';
-  id: string;
-  email: string;
-  name: string;
-}
-
-export const usePermissionsWithUser = (user: User | null) => {
-  const userRole = user?.role ? user.role.toUpperCase() as UserRole : null;
-
-  return {
-    // Basic permission checks
-    hasPermission: (permission: Permission) => userRole ? hasPermission(userRole, permission) : false,
-    
-    // Generic resource checks
-    canView: (resource: string) => userRole ? canView(userRole, resource) : false,
-    canManage: (resource: string) => userRole ? canManage(userRole, resource) : false,
-    canCreate: (resource: string) => userRole ? canCreate(userRole, resource) : false,
-    canEdit: (resource: string) => userRole ? canEdit(userRole, resource) : false, // Now this will work
-    canDelete: (resource: string) => userRole ? canDelete(userRole, resource) : false, // Now this will work
-    
-    // Specific resource checks
-    canViewVerifications: userRole ? canViewVerifications(userRole) : false,
-    canManageVerifications: userRole ? canManageVerifications(userRole) : false,
-    canApproveVerifications: userRole ? canApproveVerifications(userRole) : false,
-    
-    canViewApartments: userRole ? canViewApartments(userRole) : false,
-    canManageApartments: userRole ? canManageApartments(userRole) : false,
-    
-    canViewUsers: userRole ? canViewUsers(userRole) : false,
-    canManageUsers: userRole ? canManageUsers(userRole) : false,
-    
-    canViewBlogs: userRole ? canViewBlogs(userRole) : false,
-    canManageBlogs: userRole ? canManageBlogs(userRole) : false,
-    
-    canViewNewsletters: userRole ? canViewNewsletters(userRole) : false,
-    canManageNewsletters: userRole ? canManageNewsletters(userRole) : false,
-    
-    // User role info
-    userRole,
-    isSuperAdmin: userRole === 'SUPERADMIN',
-    isAdmin: userRole === 'ADMIN',
-    isCreator: userRole === 'CREATOR',
-    isAuthenticated: !!user,
-    user,
-  };
 };

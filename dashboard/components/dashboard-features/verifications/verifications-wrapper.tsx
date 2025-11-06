@@ -14,12 +14,14 @@ type buttonProps = {
   tab: string; 
   counts: number
   label: string;
+  className?: string;
 }
 
 type countProps = {
   unverifiedAgents: number;
   pendingProperties: number;
   pendingRentals: number;
+  pendingSales: number;
 }
 
 const VerificationsWrapper = ({children, user}:{children:React.ReactNode, user: AdminDetailsProps}) => {
@@ -37,9 +39,9 @@ const VerificationsWrapper = ({children, user}:{children:React.ReactNode, user: 
 
   const totalCounts = data?.data as countProps;
 
-  const TabButton = ({tab, counts, label}:buttonProps) => {
+  const TabButton = ({tab, counts, label, className}:buttonProps) => {
     return (
-      <Link className={cn("cursor-pointer lg:w-[164px] md:w-[140px] w-[130px] text-xs lg:text-sm uppercase flex items-center justify-center gap-4", tab === pathname ? 'border-b-2 border-black dark:border-red-500 font-semibold': 'border-b dark:border-b-white/80 text-black/60 dark:text-white/70')} href={tab}>{label} { counts > 0 && <span className='tabular-nums text-sm bg-red-500 text-white size-6 rounded-full flex items-center justify-center'>{counts}</span>}
+      <Link className={cn("cursor-pointer lg:w-[164px] md:w-[140px] w-[130px] text-xs lg:text-sm uppercase flex items-center justify-center gap-4", tab === pathname ? 'border-b-2 border-black dark:border-red-500 font-semibold': 'border-b dark:border-b-white/80 text-black/60 dark:text-white/70', className)} href={tab} prefetch>{label} { counts > 0 && <span className='tabular-nums text-sm bg-red-500 text-white size-6 rounded-full flex items-center justify-center'>{counts}</span>}
       </Link>
     )
   };
@@ -53,6 +55,7 @@ const VerificationsWrapper = ({children, user}:{children:React.ReactNode, user: 
         <div className="h-10 w-full flex">
           <TabButton label='Agents' counts={totalCounts?.unverifiedAgents} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/verifications`}/>
           <TabButton label='Rentals' tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/verifications/rentals`} counts={totalCounts?.pendingRentals}/>
+          <TabButton label='Sales' counts={totalCounts?.pendingSales} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/verifications/sales`} className='hidden lg:flex'/>
           <TabButton label='Apartments' counts={totalCounts?.pendingProperties} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/verifications/apartments`}/>
           <div className="flex-1 border-b dark:border-b-white/80"/>
         </div>

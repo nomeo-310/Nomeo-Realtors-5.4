@@ -1,4 +1,4 @@
-// lib/permission-service.ts - NO "use server" here
+// lib/permission-service.ts
 import { 
   UserRole, 
   canViewVerifications, 
@@ -20,9 +20,6 @@ import {
   hasPermission
 } from '@/utils/permission-utils';
 
-/**
- * Server-side permission service for API routes and server actions
- */
 export class ServerPermissionService {
   constructor(private userRole: UserRole) {}
 
@@ -83,6 +80,11 @@ export class ServerPermissionService {
     return canManageUsers(this.userRole);
   }
 
+  canDeleteUsers(): boolean {
+    // Use the generic canDelete method since canDeleteUsers doesn't exist
+    return this.canDelete('users');
+  }
+
   // Blog permissions
   canViewBlogs(): boolean {
     return canViewBlogs(this.userRole);
@@ -101,6 +103,15 @@ export class ServerPermissionService {
     return canManageNewsletters(this.userRole);
   }
 
+  // System permissions
+  canViewAuditLogs(): boolean {
+    return this.hasPermission('system.audit_logs');
+  }
+
+  canManageSystem(): boolean {
+    return this.hasPermission('system.maintenance');
+  }
+
   // User role checks
   get isSuperAdmin(): boolean {
     return this.userRole === 'SUPERADMIN';
@@ -113,11 +124,12 @@ export class ServerPermissionService {
   get isCreator(): boolean {
     return this.userRole === 'CREATOR';
   }
+
+  get isUser(): boolean {
+    return this.userRole === 'USER';
+  }
 }
 
-/**
- * Create permission service from user role
- */
 export const createServerPermissionService = (role: string): ServerPermissionService => {
   return new ServerPermissionService(role.toUpperCase() as UserRole);
 };

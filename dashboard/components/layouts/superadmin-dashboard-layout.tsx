@@ -2,11 +2,14 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { EntranceStairsIcon } from '@hugeicons/core-free-icons'
 import { ThemeToggler } from '@/components/ui/theme-toggler'
 import React from 'react'
-import { ImageAvatar } from '../ui/image-avatar'
 import { SuperAdminDashBoardSideBar } from '../dashboard-features/dashboard-sidebar'
 import BreadCrumbs from '../ui/bread-crumbs'
+import { getCurrentUser } from '@/actions/auth-actions'
+import LogoutButton from '../auth-features/logout-button'
 
 const SuperAdminDashboardLayout = async ({children}:{children:React.ReactNode}) => {
+   const current_user = await getCurrentUser();
+
   return (
     <div className='w-full min-h-screen flex flex-col'>
       {/* Fixed Header */}
@@ -20,7 +23,7 @@ const SuperAdminDashboardLayout = async ({children}:{children:React.ReactNode}) 
             <HugeiconsIcon icon={EntranceStairsIcon} className='size-5 md:size-6'/>
             <p className='text-sm md:text-base font-semibold'>Nomeo Realtors Dashboard</p>
           </div>
-          <ImageAvatar username='onome_310'/>
+          <LogoutButton current_user={current_user}/>
         </div>
       </header>
 
