@@ -160,7 +160,7 @@ export const verifyApartment = async (values:apartmentDetails) => {
 
 
     revalidatePath(path);
-    return { success: true, message: 'Apartment verified', status: 200 }
+    return { success: true, message: 'Apartment approved', status: 200 }
   } catch (error) {
     console.error('Error verifying property:', error);
     return { success: false, message: 'Internal server error', status: 500 };

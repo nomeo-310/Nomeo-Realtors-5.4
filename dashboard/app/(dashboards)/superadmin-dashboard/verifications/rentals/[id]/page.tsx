@@ -1,3 +1,4 @@
+import { getCurrentUser } from '@/actions/auth-actions';
 import { getSingleProperty } from '@/actions/resource-actions';
 import SingleApartmentClient from '@/components/dashboard-features/verifications/single-apartment-client';
 import { Metadata } from 'next'
@@ -9,14 +10,21 @@ export const metadata: Metadata = {
 };
 
 const SingleApartment = async ({params}:{params:{id:string}}) => {
+  try {
+    const [property, user] = await Promise.all([
+      getSingleProperty(params.id),
+      getCurrentUser(),
+    ]);
 
-  const property = await getSingleProperty(params.id);
+    if (!property || !user) {
+      return notFound();
+    }
 
-  if (!property) {
+    return <SingleApartmentClient property={property} type='apartment-verification' user={user}/>
+  } catch (error) {
+    console.error('Error fetching data:', error);
     return notFound();
-  };
-
-  return <SingleApartmentClient property={property}/>
+  }
 }
 
 export default SingleApartment

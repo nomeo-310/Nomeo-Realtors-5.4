@@ -12,7 +12,6 @@ export const getSingleProperty = async (id:string) => {
 
   try {
     const property = await Apartment.findOne({propertyIdTag: id})
-    .select('-propertyApproval')
     .populate({
       path: 'agent',
       model: Agent,

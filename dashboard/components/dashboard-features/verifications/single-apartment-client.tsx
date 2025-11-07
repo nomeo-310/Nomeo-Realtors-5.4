@@ -1,18 +1,29 @@
 "use client";
 
-import { Bathtub01Icon, BedIcon, Building03Icon, Cancel01Icon, CenterFocusIcon, ArrowRight01Icon, ArrowLeft01Icon, MapsIcon, TelephoneIcon, Toilet01Icon, User03Icon } from "@hugeicons/core-free-icons";
+import { Bathtub01Icon, BedIcon, Building03Icon, Cancel01Icon, CenterFocusIcon, ArrowRight01Icon, ArrowLeft01Icon, MapsIcon, TelephoneIcon, Toilet01Icon, User03Icon, ArrowLeft02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from '@hugeicons/react'
-import { nairaSign } from "@/lib/utils";
+import { getUserRole, nairaSign } from "@/lib/utils";
 import Image from "next/image";
 import React from "react";
-import { PropertyProps } from "@/lib/types";
+import { AdminDetailsProps, PropertyProps } from "@/lib/types";
 import { formatMoney } from "@/utils/formatMoney";
+import { usePathname, useRouter } from "next/navigation";
+import { canManageApartments } from "@/utils/permission-utils";
+import { verifyApartment } from "@/actions/verification-actions";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
-type Props = {
+interface Props {
   property: Partial<PropertyProps>;
 };
 
-const SingleApartmentClient = ({ property}: Props) => {
+interface singleApartmentProps extends Props {
+  type: 'rent-verification' | 'sale-verification' | 'apartment-verification';
+  user: AdminDetailsProps;
+ }
+
+const SingleApartmentClient = ({property, type, user}: singleApartmentProps) => {
 
   const {
     title,
@@ -36,6 +47,7 @@ const SingleApartmentClient = ({ property}: Props) => {
     optionalFees,
     closestLandmarks,
     agent,
+    propertyApproval
   } = property;
 
   const [openSlider, setOpenSlider] = React.useState(false);
@@ -43,7 +55,7 @@ const SingleApartmentClient = ({ property}: Props) => {
   const Header = () => {
     return (
       <div className="flex flex-col gap-1">
-        <h2 className="md:text-lg text-base font-semibold uppercase">
+        <h2 className="lg:text-lg md:text-base text-sm font-semibold uppercase">
           {title}.
         </h2>
         <div className="flex w-full md:justify-between flex-col md:flex-row gap-1.5">
@@ -423,8 +435,68 @@ const SingleApartmentClient = ({ property}: Props) => {
     );
   };
 
+  const router = useRouter();
+  
+  const [approving, setApproving] = React.useState(false);
+  
+  const canApprove = canManageApartments(getUserRole(user.role));
+  const path = usePathname();
+  const queryClient = useQueryClient();
+
+  const handleApproval = async () => {
+
+    if (!property._id) {
+      console.error('Property ID is missing');
+      return;
+    }
+
+    setApproving(true);
+
+    const values = {
+      apartmentId: property._id,
+      path: path
+    };
+
+    try {
+      await verifyApartment(values)
+      .then((response) => {
+        if (response.success) {
+          toast.success(response.message);
+          queryClient.invalidateQueries({queryKey: ['unverified-apartments']})
+        } else {
+          toast.error(response.message)
+        }
+      })
+    } catch (error) {
+      toast.error('Something went wrong. Try again later')
+      console.error('Error approving apartment:', error);
+    } finally {
+      setApproving(false);
+    }
+  };
+
   return (
     <div className="lg:px-10 md:px-6 min-h-screen xl:pb-16 pb-12">
+      <div className="w-full flex items-center justify-between">
+        <button type="button" className='flex items-center gap-3 text-xs md:text-sm' onClick={() => router.back()}>
+          <HugeiconsIcon icon={ArrowLeft02Icon} className='size-5 md:size-6'/>
+          <span>Go Back</span>
+        </button>
+        { canApprove && type === 'apartment-verification' && 
+          <React.Fragment>
+            { propertyApproval === 'pending' &&
+              <button 
+                onClick={handleApproval}
+                disabled={approving}
+                className="text-xs md:text-sm bg-secondary-blue text-white rounded-md py-1.5 px-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+              >
+                {approving && <Loader2 className="animate-spin size-5"/>}
+                {approving ? 'Approving...' : 'Approve Apartment'}
+              </button>
+            }
+          </React.Fragment>
+        }
+      </div>
       <div className="xl:py-6 lg:py-5 py-4 flex flex-col xl:gap-6 lg:gap-5 gap-4">
         <Header />
         <ImageGrid />

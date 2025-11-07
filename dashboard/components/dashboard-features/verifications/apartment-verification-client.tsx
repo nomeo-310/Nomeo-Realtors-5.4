@@ -2,19 +2,23 @@
 
 import React from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
+import { cn, getUserRole } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Pagination from '@/components/ui/pagination'
 import { Loader2, MoreHorizontalIcon } from 'lucide-react'
 import VerificationsWrapper from './verifications-wrapper'
 import { AdminDetailsProps, VerificationPropertyProps } from '@/lib/types'
 import axios from 'axios'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequestHandler } from '@/utils/apiRequestHandler'
 import ErrorState from '@/components/ui/error-state'
 import EmptyState from '@/components/ui/empty-state'
 import { capitalizeName } from '@/utils/capitalizeName'
 import Link from 'next/link'
+import { canManageApartments } from '@/utils/permission-utils'
+import { usePathname } from 'next/navigation'
+import { verifyApartment } from '@/actions/verification-actions'
+import { toast } from 'sonner'
 
 type mobileItemProps = {
   open: boolean;
@@ -78,10 +82,10 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
 
   const VerificationItem = ({data}:{data: VerificationPropertyProps}) => {
     return (
-      <TableRow className='cursor-pointer'>
+      <TableRow className='cursor-pointer group'>
         <TableCell className="text-xs md:text-sm text-center">{capitalizeName(data.agent.userId.surName)} {capitalizeName(data.agent.userId.lastName)}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center capitalize">
-          <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data.propertyIdTag}`}>
+        <TableCell className="text-xs md:text-sm text-center capitalize group">
+          <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data.propertyIdTag}`} className='group-hover:underline'>
             {data.propertyIdTag}
           </Link>
         </TableCell>
@@ -130,6 +134,38 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
+  const canApprove = canManageApartments(getUserRole(user.role));
+  const path = usePathname();
+  const queryClient = useQueryClient();
+
+  const handleApproval = async (id:string) => {
+
+    if (!id) {
+      console.error('Property ID is missing');
+      return;
+    }
+
+    const values = {
+      apartmentId: id,
+      path: path
+    };
+
+    try {
+      await verifyApartment(values)
+      .then((response) => {
+        if (response.success) {
+          toast.success(response.message);
+          queryClient.invalidateQueries({queryKey: ['unverified-apartments']})
+        } else {
+          toast.error(response.message)
+        }
+      })
+    } catch (error) {
+      toast.error('Something went wrong. Try again later')
+      console.error('Error approving apartment:', error);
+    }
+  };
+
   const Menu = ({data}:{data: VerificationPropertyProps}) => {
     return (
       <DropdownMenu modal={false}>
@@ -142,12 +178,16 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
               View Details
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            Accept Property
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Reject Property
-          </DropdownMenuItem>
+          { canApprove && 
+            <React.Fragment>
+              <DropdownMenuItem onClick={() => handleApproval(data._id)}>
+                Approve Property
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                Reject Property
+              </DropdownMenuItem>
+            </React.Fragment>
+          }
         </DropdownMenuContent>
       </DropdownMenu>
     )

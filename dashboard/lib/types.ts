@@ -255,5 +255,6 @@ export interface PropertyProps {
   furnitureStatus: string;
   facilityStatus: string;
   likes: string[];
+  propertyApproval: string;
   bookmarks: string[];
 };
