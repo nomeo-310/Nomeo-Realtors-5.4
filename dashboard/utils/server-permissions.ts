@@ -30,6 +30,33 @@ export const guardVerificationApproval = async (userRole: string): Promise<void>
   }
 };
 
+// ===== PENDING TRANSACTION GUARDS =====
+export const requirePendingAccess = async (userRole: string): Promise<boolean> => {
+  const permissions = createServerPermissionService(userRole);
+  return permissions.canViewPendings();
+};
+
+export const guardPendingAccess = async (userRole: string): Promise<void> => {
+  const hasAccess = await requirePendingAccess(userRole);
+  if (!hasAccess) {
+    throw new Error('You are not authorized to access pending transaction data');
+  }
+};
+
+export const guardPendingManagement = async (userRole: string): Promise<void> => {
+  const permissions = createServerPermissionService(userRole);
+  if (!permissions.canManagePendings()) {
+    throw new Error('You are not authorized to manage pending transactions');
+  }
+};
+
+export const guardPendingApproval = async (userRole: string): Promise<void> => {
+  const permissions = createServerPermissionService(userRole);
+  if (!permissions.canApprovePendings()) {
+    throw new Error('You are not authorized to approve verifications');
+  }
+};
+
 // ===== INSPECTION GUARDS =====
 export const guardInspectionAccess = async (userRole: string): Promise<void> => {
   const permissions = createServerPermissionService(userRole);

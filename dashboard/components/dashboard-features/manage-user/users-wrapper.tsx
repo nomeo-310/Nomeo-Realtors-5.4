@@ -1,7 +1,7 @@
 'use client'
 
 
-import { useVerificationCount } from '@/hooks/use-counts';
+import { usePendingCount } from '@/hooks/use-counts';
 import { AdminDetailsProps } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -15,11 +15,9 @@ type buttonProps = {
   className?: string;
 }
 
-
-const VerificationsWrapper = ({children, user}:{children:React.ReactNode, user: AdminDetailsProps}) => {
+const UsersWrapper = ({children, user}:{children:React.ReactNode, user: AdminDetailsProps}) => {
 
   const pathname = usePathname();
-  const { data:counts } = useVerificationCount();
 
   const TabButton = ({tab, counts, label, className}:buttonProps) => {
     return (
@@ -31,12 +29,12 @@ const VerificationsWrapper = ({children, user}:{children:React.ReactNode, user: 
   return (
     <div className='w-full h-full flex flex-col gap-6 md:gap-8 lg:gap-10 pb-6'>
       <div className="items-center flex justify-between w-full">
-        <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>Verifications</h2>
+        <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>Manage Users & Agents</h2>
       </div>
       <div className="flex flex-col gap-4">
         <div className="h-10 w-full flex">
-          <TabButton label='Agents' counts={counts?.unverifiedAgents || 0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/verifications`}/>
-          <TabButton label='Apartments' counts={counts?.unverifiedProperties || 0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/verifications/apartments`}/>
+          <TabButton label='Users' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users`}/>
+          <TabButton label='Agents' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/agents`}/>
           <div className="flex-1 border-b dark:border-b-white/80"/>
         </div>
         <div>
@@ -47,4 +45,4 @@ const VerificationsWrapper = ({children, user}:{children:React.ReactNode, user: 
   )
 }
 
-export default VerificationsWrapper
+export default UsersWrapper

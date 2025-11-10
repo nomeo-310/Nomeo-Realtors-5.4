@@ -6,15 +6,18 @@ import { cn, nairaSign } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Pagination from '@/components/ui/pagination'
 import { Loader2, MoreHorizontalIcon } from 'lucide-react'
-import VerificationsWrapper from './verifications-wrapper'
 import { AdminDetailsProps, VerificationRentalProps } from '@/lib/types'
 import axios from 'axios'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequestHandler } from '@/utils/apiRequestHandler'
 import { capitalizeName } from '@/utils/capitalizeName'
 import ErrorState from '@/components/ui/error-state'
 import EmptyState from '@/components/ui/empty-state'
 import Link from 'next/link'
+import PendingsWrapper from './pendings-wrapper'
+import { usePathname } from 'next/navigation'
+import { toast } from 'sonner'
+import { verifyRentout } from '@/actions/pending-action'
 
 type mobileItemProps = {
   open: boolean;
@@ -33,7 +36,7 @@ interface dataProps {
   rentouts: VerificationRentalProps[]
 }
 
-const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
+const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
 
   const [currentIndex, setCurrentIndex] = React.useState(-1);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -42,7 +45,7 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     setCurrentIndex((currentValue) => (currentValue !== index ? index : -1));
   },[]);
 
-  const requestUnverifiedRentals = () => axios.get(`/api/admin/unverified-rentals?page=${currentPage}`);
+  const requestUnverifiedRentals = () => axios.get(`/api/admin/pendings/rentals?page=${currentPage}`);
 
   const { data, status } = useQuery({
     queryKey: ['unverified-rentals', currentPage],
@@ -58,6 +61,60 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     setCurrentPage(page)
   };
 
+  const getDates = () => {
+    const today = new Date();
+    const oneYearFromNow = new Date();
+    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+    
+    return {
+      today,
+      oneYearFromNow
+    };
+  }
+
+  const { today, oneYearFromNow } = getDates();
+  const pathname = usePathname();
+
+  const queryClient = useQueryClient();
+
+  const handleCompleteRental = async (id:string) => {
+
+    if (!id) {
+      console.error('Property ID is missing');
+      return;
+    }
+
+    const values = {
+      startDate: today,
+      endDate: oneYearFromNow,
+      rentoutId: id,
+      path: pathname
+    };
+
+    try {
+      await toast.promise(verifyRentout(values), {
+        loading: 'Completing rentout...',
+        success: (response) => {
+          if (response.success) {
+            queryClient.invalidateQueries({queryKey: ['unverified-rentals']})
+            queryClient.invalidateQueries({queryKey: ['unread-pending-count']})
+            return response.message;
+          } else {
+            throw new Error(response.message);
+          }
+        },
+        error: (error) => {
+          if (error instanceof Error) {
+            return error.message;
+          }
+          return 'Something went wrong. Try again later';
+        }
+      });
+    } catch (error) {
+      toast.error('Something went wrong. Try again later')
+      console.error('Error approving apartment:', error);
+    }
+  };
 
   const VerificationHeader = () => {
     return (
@@ -69,8 +126,6 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
           <TableHead className="text-center font-semibold uppercase">Annual Rent</TableHead>
           <TableHead className="text-center font-semibold uppercase">Total Amount Paid</TableHead>
           <TableHead className="text-center font-semibold uppercase">Rental Status</TableHead>
-          <TableHead className="text-center font-semibold uppercase">Start Date</TableHead>
-          <TableHead className="text-center font-semibold uppercase">End Date</TableHead>
           <TableHead className="text-center font-semibold uppercase">Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -86,8 +141,6 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         <TableCell className="text-xs md:text-sm text-center capitalize">{nairaSign}{data?.apartment.annualRent.toLocaleString()}</TableCell>
         <TableCell className="text-xs md:text-sm text-center capitalize">{nairaSign}{data?.totalAmount?.toLocaleString() ?? 0}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{data?.status}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center">{data?.startDate}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center">{data?.endDate}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
           <Menu data={data}/>
         </TableCell>
@@ -131,12 +184,12 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem>
-            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data?.apartment.propertyIdTag}`} prefetch>
-              View Details
+            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/${data?.apartment.propertyIdTag}`} prefetch>
+              View Apartment
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            Start Rental
+          <DropdownMenuItem onClick={() => handleCompleteRental(data._id)}>
+            Complete Rental
           </DropdownMenuItem>
           <DropdownMenuItem>
             Cancel Rental
@@ -222,10 +275,10 @@ const RentalVerificationClient = ({user}:{user:AdminDetailsProps}) => {
   };
 
   return (
-    <VerificationsWrapper user={user}>
+    <PendingsWrapper user={user}>
       <VerificationHistory/>
-    </VerificationsWrapper>
+    </PendingsWrapper>
   )
-}
+};
 
-export default RentalVerificationClient
+export default PendingRentalClient

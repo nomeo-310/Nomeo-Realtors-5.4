@@ -71,7 +71,7 @@ export const GET = async (req: Request) => {
     }
     
     query.propertyTag = 'for-sale';
-    query.propertyApproval = 'pending';
+    query.propertyApproval = 'approved';
     
     return query;
   };

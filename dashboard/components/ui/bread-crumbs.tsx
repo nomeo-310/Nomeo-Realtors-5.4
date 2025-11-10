@@ -23,10 +23,6 @@ const BreadCrumbs = () => {
     const isLast = index === pathSegments.length - 1;
     const href = '/' + pathSegments.slice(0, index + 1).join('/');
 
-    console.log(href)
-    console.log(pathSegments)
-    console.log(index)
-
     const isBlogId = index === 2 && pathSegments[index - 1] === 'create-blog';
     const isApartmentId = index === 3 && pathSegments[index - 1] === 'apartments';
 
@@ -34,8 +30,8 @@ const BreadCrumbs = () => {
 
     return (
       <React.Fragment key={href}>
-        <HugeiconsIcon icon={ArrowRight01Icon} className='size-5'/>
-        {isLast ? (
+        { index > 0 && <HugeiconsIcon icon={ArrowRight01Icon} className='size-5'/> }
+        { isLast ? (
           <span className="font-bold text-gray-800 dark:text-gray-200">
             {text}
           </span>
@@ -50,9 +46,6 @@ const BreadCrumbs = () => {
 
   return (
     <div className="hidden md:flex items-center gap-2 font-semibold tracking-wider text-sm uppercase">
-      <Link href={'/'}>
-        <HugeiconsIcon icon={Home04Icon} />
-      </Link>
       {breadcrumbItems}
     </div> 
   );

@@ -1,6 +1,6 @@
 import { getCurrentUser } from '@/actions/auth-actions';
 import { getSingleProperty } from '@/actions/resource-actions';
-import SingleApartmentClient from '@/components/dashboard-features/verifications/single-apartment-client';
+import SingleApartmentClient from '@/components/dashboard-features/single-apartment-client';
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation';
 import React from 'react'

@@ -1,14 +1,15 @@
+
 import { getCurrentUser } from '@/actions/auth-actions';
-import RentalVerificationClient from '@/components/dashboard-features/pendings/pending-rental-client'
+import PendingRentalClient from '@/components/dashboard-features/pendings/pending-rental-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
 
 export const metadata: Metadata = {
-  title: 'Verifications'
+  title: 'Pendings'
 };
 
-const RentalsVerifications = async () => {
+const PendingRentals = async () => {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -19,7 +20,7 @@ const RentalsVerifications = async () => {
     return notFound();
   };
   
-  return <RentalVerificationClient user={user}/>
+  return <PendingRentalClient user={user}/>;
 }
 
-export default RentalsVerifications
+export default PendingRentals

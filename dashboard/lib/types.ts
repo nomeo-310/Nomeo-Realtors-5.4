@@ -92,6 +92,7 @@ export interface VerificationPropertyProps {
   bedrooms: number;
   bathrooms: number;
   toilets: number;
+  propertyApproval: boolean
   agent: {
     _id: string;
     userId: {

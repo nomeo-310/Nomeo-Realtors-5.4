@@ -14,7 +14,6 @@ const NotificationPage = async () => {
     notFound();
   };
 
-  console.log(current_user)
   return <NotificationClient user={current_user}/>
 }
 

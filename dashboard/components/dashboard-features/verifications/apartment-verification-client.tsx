@@ -19,6 +19,7 @@ import { canManageApartments } from '@/utils/permission-utils'
 import { usePathname } from 'next/navigation'
 import { verifyApartment } from '@/actions/verification-actions'
 import { toast } from 'sonner'
+import { useRejectPropertyModal } from '@/hooks/general-store'
 
 type mobileItemProps = {
   open: boolean;
@@ -42,7 +43,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
   const [currentIndex, setCurrentIndex] = React.useState(-1);
   const [currentPage, setCurrentPage] = React.useState(1);
 
-  const requestUnverifiedAgents = () => axios.get(`/api/admin/unverified-apartments?page=${currentPage}`);
+  const requestUnverifiedAgents = () => axios.get(`/api/admin/verifications/apartments?page=${currentPage}`);
 
   const { data, status } = useQuery({
     queryKey: ['unverified-apartments', currentPage],
@@ -151,20 +152,35 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     };
 
     try {
-      await verifyApartment(values)
-      .then((response) => {
-        if (response.success) {
-          toast.success(response.message);
-          queryClient.invalidateQueries({queryKey: ['unverified-apartments']})
-        } else {
-          toast.error(response.message)
+      await toast.promise(verifyApartment(values), {
+        loading: 'Approving Apartment...',
+        success: (response) => {
+          if (response.success) {
+            queryClient.invalidateQueries({queryKey: ['unverified-apartments']})
+            return response.message;
+          } else {
+            throw new Error(response.message);
+          }
+        },
+        error: (error) => {
+          if (error instanceof Error) {
+            return error.message;
+          }
+          return 'Something went wrong. Try again later';
         }
-      })
+      });
     } catch (error) {
       toast.error('Something went wrong. Try again later')
       console.error('Error approving apartment:', error);
     }
   };
+
+  const { onOpen } = useRejectPropertyModal();
+
+  const handleRejection = (id:string) => {
+    localStorage.setItem('rejection-propertyId', id);
+    onOpen();
+  }
 
   const Menu = ({data}:{data: VerificationPropertyProps}) => {
     return (
@@ -183,7 +199,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
               <DropdownMenuItem onClick={() => handleApproval(data._id)}>
                 Approve Property
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleRejection(data._id)}>
                 Reject Property
               </DropdownMenuItem>
             </React.Fragment>

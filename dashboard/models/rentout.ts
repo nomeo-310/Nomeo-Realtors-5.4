@@ -6,8 +6,8 @@ interface IRentout extends Document {
   agent: Types.ObjectId;
   rented: boolean;
   status: string;
-  startDate?: string;
-  endDate?: string;
+  startDate?: Date;
+  endDate?: Date;
   totalAmount?: number;
 }
 
@@ -16,8 +16,8 @@ const rentoutSchema: Schema<IRentout> = new Schema(
     user: { type: Schema.Types.ObjectId, ref: 'User' },
     apartment: { type: Schema.Types.ObjectId, ref: 'Apartment' },
     agent: { type: Schema.Types.ObjectId, ref: 'Agent' },
-    startDate: { type: String, default: undefined },
-    endDate: { type: String, default: undefined},
+    startDate: { type: Date, default: undefined },
+    endDate: { type: Date, default: undefined},
     rented: { type: Boolean, default: false },
     status: { type: String, enum: ['initiated', 'completed', 'cancelled', 'pending'], default: 'initiated' },
     totalAmount: { type: Number, default: undefined }

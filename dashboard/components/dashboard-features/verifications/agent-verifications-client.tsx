@@ -52,7 +52,7 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [currentIndex, setCurrentIndex] = React.useState(-1);
 
-  const requestUnverifiedAgents = () => axios.get(`/api/admin/unverified-agents?page=${currentPage}`);
+  const requestUnverifiedAgents = () => axios.get(`/api/admin/verifications/agents?page=${currentPage}`);
 
   const { data, status } = useQuery({
     queryKey: ['unverified-agents', currentPage],

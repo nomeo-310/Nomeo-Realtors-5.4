@@ -24,7 +24,7 @@ export const GET = async (req: Request) => {
     await guardVerificationAccess(current_user.role);
 
     const apartments = await Apartment.find({ propertyApproval: "pending" })
-      .select('propertyTypeTag propertyIdTag propertyTag city state toilets bathrooms bedrooms annualRent propertyPrice agent createdAt updatedAt')
+      .select('propertyTypeTag propertyIdTag propertyTag city state toilets bathrooms bedrooms annualRent propertyPrice agent propertyApproval createdAt updatedAt')
       .populate({
         path: 'agent',
         model: Agent,

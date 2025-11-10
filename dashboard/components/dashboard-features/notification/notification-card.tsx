@@ -24,10 +24,7 @@ type notificationTypes = 'notification' | 'inspection' | 'rentouts' | 'verificat
 const NotificationCard = ({notification, user }:notificationCardProps) => {
   const { seen, type, _id, createdAt, title, content, issuer, propertyId, blogId, agentId, inspectionId } = notification;
 
-  const pathName = usePathname();
   const queryClient = useQueryClient();
-
-  const fullUserName = `${capitalizeName(user.userId.surName || '')} ${capitalizeName(user.userId.lastName || '')}`
 
   const generateIcon = (type:notificationTypes) => {
     let icon:React.ReactElement = <HugeiconsIcon icon={AlertCircleIcon} className='md:size-5 size-4' />;
@@ -78,8 +75,6 @@ const NotificationCard = ({notification, user }:notificationCardProps) => {
   const { icon, bg_color } = generateIcon(type);
 
   const { mutate } = useDeleteNotification(_id, true);
-
-  const  path = usePathname();
 
   const [showDetails, setShowDetails] = React.useState(false);
 

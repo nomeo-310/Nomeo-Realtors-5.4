@@ -67,10 +67,6 @@ const PREDEFINED_REASONS = [
   }
 ];
 
-interface RejectionFormProps {
-  onClose: () => void;
-}
-
 const RejectionForm = ({ onClose }: { onClose: () => void }) => {
   const [selectedReasons, setSelectedReasons] = React.useState<string[]>([]);
   const [customReason, setCustomReason] = React.useState("");

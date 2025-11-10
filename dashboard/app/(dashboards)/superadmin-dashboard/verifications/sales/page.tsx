@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import SalesVerificationClient from '@/components/dashboard-features/verifications/sales-verification-client';
+import SalesVerificationClient from '@/components/dashboard-features/pendings/pending-sales-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'

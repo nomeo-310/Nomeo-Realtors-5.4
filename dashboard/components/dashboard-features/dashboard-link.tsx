@@ -27,6 +27,13 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
       return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
     }
 
+    if (text === "Pendings") {
+      const superAdminBaseLink = "/superadmin-dashboard/pendings";
+      const adminBaseLink = "/admin-dashboard/pendings";
+      const creatorBaseLink = "/creator-dashboard/pendings";
+      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
+    }
+
     if (text === "Transactions") {
       const superAdminBaseLink = "/superadmin-dashboard/transactions";
       const adminBaseLink = "/admin-dashboard/transactions";

@@ -6,6 +6,12 @@ export const ADMIN_PERMISSIONS = [
   'verifications.reject',
   'verifications.manage',
 
+  //Pending Permissions
+  'pendings.view',
+  'pendings.approve',
+  'pendings.reject',
+  'pendings.manage',
+  
   // Inspection Permissions
   'inspections.view',
   'inspections.manage',

@@ -4,8 +4,11 @@ import {
   canViewVerifications, 
   canManageVerifications, 
   canApproveVerifications,
-  canViewApartments,
+  canViewPendings,
+  canApprovePendings,
+  canManagePendings,
   canManageApartments,
+  canViewApartments,
   canViewUsers,
   canManageUsers,
   canViewBlogs,
@@ -47,6 +50,16 @@ export class ServerPermissionService {
 
   canDelete(resource: string): boolean {
     return canDelete(this.userRole, resource);
+  }
+  // Pending permissions
+  canViewPendings(): boolean {
+    return canViewPendings(this.userRole);
+  }
+  canManagePendings(): boolean {
+    return canManagePendings(this.userRole);
+  }
+  canApprovePendings(): boolean {
+    return canApprovePendings(this.userRole);
   }
 
   // Verification permissions

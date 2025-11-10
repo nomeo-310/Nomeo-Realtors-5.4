@@ -21,8 +21,6 @@ const NotificationClient = ({user}:{user:AdminDetailsProps}) => {
   const [showDelete, setShowDelete] = React.useState(false);
   const [clearing, setClearing] = React.useState(false);
 
-  console.log(user)
-
   const fetchNotifications = async ({pageParam}:{pageParam: number}) => {
     const response = await axios.post('/api/admin/notification/user-notifications', { page: pageParam })
 

@@ -13,6 +13,12 @@ export const ADMIN_PERMISSIONS = [
   'inspections.view',
   'inspections.manage',
 
+ // ===== PENDINGS PERMISSIONS =====
+  'pendings.view',
+  'pendings.approve',
+  'pendings.reject',
+  'pendings.manage',
+
   // ===== TRANSACTION PERMISSIONS =====
   'transactions.view',
   'transactions.manage',
@@ -85,6 +91,11 @@ export const ROLE_PERMISSIONS = {
     // All inspection permissions
     'inspections.view',
     'inspections.manage',
+
+    // All pendings permissions
+    'pendings.view',
+    'pendings.approve',
+    'pendings.manage',
 
     // All transaction permissions
     'transactions.view',
@@ -259,6 +270,18 @@ export const canManageVerifications = (userRole: UserRole): boolean => {
 
 export const canApproveVerifications = (userRole: UserRole): boolean => {
   return hasPermission(userRole, 'verifications.approve');
+};
+
+export const canViewPendings = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'pendings.view');
+};
+
+export const canManagePendings = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'pendings.manage');
+};
+
+export const canApprovePendings = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'pendings.approve');
 };
 
 export const canViewApartments = (userRole: UserRole): boolean => {

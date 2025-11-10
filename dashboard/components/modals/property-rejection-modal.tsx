@@ -77,10 +77,6 @@ const PREDEFINED_REASONS = [
   }
 ];
 
-interface RejectionFormProps {
-  onClose: () => void;
-}
-
 const RejectionForm = ({ onClose }: { onClose: () => void }) => {
   const [selectedReasons, setSelectedReasons] = React.useState<string[]>([]);
   const [customReason, setCustomReason] = React.useState("");
@@ -105,13 +101,24 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
     
     let message = "";
     
+    //use this method when sending email 
+    // if (predefined.length > 0) {
+    //   message += "Property Listing Rejection Reasons:\n" + predefined.map(reason => `• ${reason}`).join("\n");
+    // }
+
     if (predefined.length > 0) {
-      message += "Property Listing Rejection Reasons:\n" + predefined.map(reason => `• ${reason}`).join("\n");
+      message += "Property Listing Rejection Reasons:" + predefined.map((reason, index) => `${index+1}• ${reason}`).join(", ");
     }
     
+    //use this when sending mail
+    // if (custom) {
+    //   if (message) message += "\n\n";
+    //   message += "Additional Comments:\n" + custom;
+    // }
+
     if (custom) {
-      if (message) message += "\n\n";
-      message += "Additional Comments:\n" + custom;
+      if (message) message += ". ";
+      message += "In addition : " + custom;
     }
     
     return message;
@@ -125,7 +132,6 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
 
     setSending(true);
     const finalMessage = getFinalRejectionMessage();
-    
     const response = await rejectApartment({
       apartmentId: propertyId!,
       reason: finalMessage,
@@ -136,7 +142,6 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
       toast.success(response.message);
       setSending(false);
       onClose();
-      // Reset form
       setSelectedReasons([]);
       setCustomReason("");
       setIsPreview(false);
@@ -248,7 +253,7 @@ const RejectionForm = ({ onClose }: { onClose: () => void }) => {
         </div>
 
         {/* Selection Summary */}
-        {canProceed && (
+        { canProceed && (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
             <div className="flex items-center justify-between">
               <div>

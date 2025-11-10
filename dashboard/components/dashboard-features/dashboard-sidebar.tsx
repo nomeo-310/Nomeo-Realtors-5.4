@@ -1,29 +1,9 @@
 'use client'
 
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { superadmin_nav_links, creator_nav_links, admin_nav_links } from "@/assets/constants/nav_lists";
 import DashboardLink from "./dashboard-link";
-
-const BASE_URL = "/api/admin/notification/counts";
-
-// Custom hook for notification count
-const useNotificationCount = () => {
-  const fetchNotification = async () => {
-    const response = await axios.get(BASE_URL);
-    if (response.status !== 200) {
-      throw new Error("Something went wrong, try again later");
-    }
-    return response.data as { count: number };
-  };
-
-  return useQuery({
-    queryKey: ["unread-notification-count"],
-    queryFn: fetchNotification,
-    refetchInterval: 5000,
-  });
-};
+import { useNotificationCount, usePendingCount, useVerificationCount } from "@/hooks/use-counts";
 
 // Role-based sidebar component
 interface RoleBasedSidebarProps {
@@ -32,6 +12,8 @@ interface RoleBasedSidebarProps {
 
 const RoleBasedSidebar: React.FC<RoleBasedSidebarProps> = ({ role }) => {
   const { data: notificationCount } = useNotificationCount();
+  const { data: verificationCount } = useVerificationCount();
+  const { data: pendingCount } = usePendingCount();
 
   const getNavLinks = () => {
     switch (role) {
@@ -49,7 +31,7 @@ const RoleBasedSidebar: React.FC<RoleBasedSidebarProps> = ({ role }) => {
 
   return (
     <div className="flex flex-col lg:gap-2 gap-3">
-      {navLinks.map((link, index) => (
+      { navLinks.map((link, index) => (
         <DashboardLink
           currentPage={link.page}
           key={`${link.path}-${index}`}
@@ -57,7 +39,9 @@ const RoleBasedSidebar: React.FC<RoleBasedSidebarProps> = ({ role }) => {
           text={link.text}
           path={link.path}
           notification={
-            link.text === "Notifications" ? notificationCount?.count || 0 : 0
+            link.text === "Notifications" ? notificationCount?.count || 0 : 
+            link.text === "Verifications" ? verificationCount?.totalUnverified || 0 : 
+            link.text === "Pendings" ? pendingCount?.totalPending || 0 : 0
           }
         />
       ))}

@@ -13,7 +13,7 @@ export const GET = async (req: Request) => {
 
     if (!cachedFeatured.length || now - lastFetchTime > CACHE_DURATION) {
       cachedFeatured = await Apartment.aggregate([
-        { $match: { propertyApproval: "pending" } },
+        { $match: { propertyApproval: "approved" } },
         { $sample: { size: 4 } },
         {
           $lookup: {

@@ -6,16 +6,19 @@ import { cn, nairaSign } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Pagination from '@/components/ui/pagination'
 import { Loader2, MoreHorizontalIcon } from 'lucide-react'
-import VerificationsWrapper from './verifications-wrapper'
 import { AdminDetailsProps, VerificationSalesProps } from '@/lib/types'
 import axios from 'axios'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiRequestHandler } from '@/utils/apiRequestHandler'
 import { capitalizeName } from '@/utils/capitalizeName'
 import ErrorState from '@/components/ui/error-state'
 import EmptyState from '@/components/ui/empty-state'
 import { formatDate } from '@/utils/formatDate'
 import Link from 'next/link'
+import PendingsWrapper from './pendings-wrapper'
+import { verifySellout } from '@/actions/pending-action'
+import { usePathname } from 'next/navigation'
+import { toast } from 'sonner'
 
 type mobileItemProps = {
   open: boolean;
@@ -34,7 +37,7 @@ interface dataProps {
   sellouts: VerificationSalesProps[]
 }
 
-const SalesVerificationClient = ({user}:{user:AdminDetailsProps}) => {
+const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
 
   const [currentIndex, setCurrentIndex] = React.useState(-1);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -43,7 +46,7 @@ const SalesVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     setCurrentIndex((currentValue) => (currentValue !== index ? index : -1));
   },[]);
 
-  const requestUnverifiedRentals = () => axios.get(`/api/admin/unverified-sales?page=${currentPage}`);
+  const requestUnverifiedRentals = () => axios.get(`/api/admin/pendings/sales?page=${currentPage}`);
 
   const { data, status } = useQuery({
     queryKey: ['unverified-sales', currentPage],
@@ -57,6 +60,46 @@ const SalesVerificationClient = ({user}:{user:AdminDetailsProps}) => {
 
   const handlePageChange = (page:number) => {
     setCurrentPage(page)
+  };
+
+  const pathname = usePathname();
+  const queryClient = useQueryClient();
+
+  const handleCompleteSellout = async (id:string) => {
+
+    if (!id) {
+      console.error('Property ID is missing');
+      return;
+    }
+
+    const values = {
+      sellOutId: id,
+      path: pathname
+    };
+
+    try {
+      await toast.promise(verifySellout(values), {
+        loading: 'Confirming purchase...',
+        success: (response) => {
+          if (response.success) {
+            queryClient.invalidateQueries({queryKey: ['unverified-sales']})
+            queryClient.invalidateQueries({queryKey: ['unread-pending-count']})
+            return response.message;
+          } else {
+            throw new Error(response.message);
+          }
+        },
+        error: (error) => {
+          if (error instanceof Error) {
+            return error.message;
+          }
+          return 'Something went wrong. Try again later';
+        }
+      });
+    } catch (error) {
+      toast.error('Something went wrong. Try again later')
+      console.error('Error approving apartment:', error);
+    }
   };
 
 
@@ -130,15 +173,15 @@ const SalesVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem>
-            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data.apartment.propertyIdTag}`} prefetch>
-              View Details
+            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/sellouts/${data.apartment.propertyIdTag}`} prefetch>
+              View Apartment
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            Start Sellout
+          <DropdownMenuItem onClick={() => handleCompleteSellout(data._id)}>
+            Confirm Purchased
           </DropdownMenuItem>
           <DropdownMenuItem>
-            Cancel Rental
+            Cancel Purchase
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -221,10 +264,10 @@ const SalesVerificationClient = ({user}:{user:AdminDetailsProps}) => {
   };
 
   return (
-    <VerificationsWrapper user={user}>
+    <PendingsWrapper user={user}>
       <VerificationHistory/>
-    </VerificationsWrapper>
+    </PendingsWrapper>
   )
 }
 
-export default SalesVerificationClient
+export default PendingSalesClient

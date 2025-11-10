@@ -1,8 +1,6 @@
 import { getCurrentUser } from "@/actions/auth-actions";
 import Agent from "@/models/agent";
 import Apartment from "@/models/apartment";
-import Rentout from "@/models/rentout";
-import Sellout from "@/models/sellout";
 import { connectToMongoDB } from "@/utils/connectToMongoDB";
 import { guardVerificationAccess } from "@/utils/server-permissions";
 
@@ -19,15 +17,12 @@ export const GET = async () => {
     await guardVerificationAccess(current_user.role);
 
     const totalUnverifiedAgents = await Agent.countDocuments({verificationStatus: 'pending'});
-    const totalPendingProperties = await Apartment.countDocuments({propertyApproval: 'pending'});
-    const totalPendingRentals = await Rentout.countDocuments({status: 'pending'});
-    const totalPendingSales = await Sellout.countDocuments({status: 'pending'})
+    const totalPendingProperties = await Apartment.countDocuments({ propertyApproval: 'pending'});
 
     const allVerificationCounts = {
       unverifiedAgents: totalUnverifiedAgents,
-      pendingProperties: totalPendingProperties,
-      pendingRentals: totalPendingRentals,
-      pendingSales: totalPendingSales,
+      unverifiedProperties: totalPendingProperties,
+      totalUnverified: totalUnverifiedAgents + totalPendingProperties
     };
 
     return Response.json(allVerificationCounts);

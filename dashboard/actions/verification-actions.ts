@@ -8,6 +8,7 @@ import Notification from "@/models/notification";
 import { revalidatePath } from "next/cache";
 import User from "@/models/user";
 import Apartment from "@/models/apartment";
+import Rentout from "@/models/rentout";
 
 interface agentDetails {
   agentId: string;
@@ -217,11 +218,3 @@ export const rejectApartment = async (values:propertyRejectionDetails) => {
     return { success: false, message: 'Internal server error', status: 500 };
   }
 };
-
-export const verifyRentout = async () => {};
-
-export const rejectRentout = async () => {};
-
-export const verifySellout = async () => {};
-
-export const rejectSellout= async () => {};
