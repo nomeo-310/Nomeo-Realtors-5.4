@@ -29,12 +29,14 @@ const UsersWrapper = ({children, user}:{children:React.ReactNode, user: AdminDet
   return (
     <div className='w-full h-full flex flex-col gap-6 md:gap-8 lg:gap-10 pb-6'>
       <div className="items-center flex justify-between w-full">
-        <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>Manage Users & Agents</h2>
+        <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>Manage Users</h2>
       </div>
       <div className="flex flex-col gap-4">
         <div className="h-10 w-full flex">
-          <TabButton label='Users' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users`}/>
-          <TabButton label='Agents' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/agents`}/>
+          <TabButton label='Active' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users`}/>
+          <TabButton label='Deactivated' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/deactivated`}/>
+          <TabButton label='Suspended' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/suspended`}/>
+          <TabButton label='Deleted' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/deleted`} className='hidden lg:flex'/>
           <div className="flex-1 border-b dark:border-b-white/80"/>
         </div>
         <div>

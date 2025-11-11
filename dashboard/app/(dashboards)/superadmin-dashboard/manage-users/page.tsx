@@ -1,12 +1,12 @@
 
 import { getCurrentUser } from '@/actions/auth-actions';
-import UserClient from '@/components/dashboard-features/manage-user/user-client';
+import UserClient from '@/components/dashboard-features/manage-user-agent/user-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
 
 export const metadata: Metadata = {
-  title: 'Users & Agents'
+  title: 'Users'
 };
 
 const AllUsers = async () => {

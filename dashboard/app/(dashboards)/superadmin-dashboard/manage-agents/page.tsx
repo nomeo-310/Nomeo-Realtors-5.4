@@ -1,6 +1,6 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import AgentClient from '@/components/dashboard-features/manage-user/agent-client';
-import UserClient from '@/components/dashboard-features/manage-user/user-client';
+import AgentClient from '@/components/dashboard-features/manage-user-agent/agent-client';
+import UserClient from '@/components/dashboard-features/manage-user-agent/user-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'

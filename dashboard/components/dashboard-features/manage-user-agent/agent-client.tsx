@@ -1,12 +1,12 @@
 import React from 'react'
-import UsersWrapper from './users-wrapper'
 import { AdminDetailsProps } from '@/lib/types'
+import AgentsWrapper from './agents-wrapper'
 
 const AgentClient = ({user}:{user:AdminDetailsProps}) => {
   return (
-    <UsersWrapper user={user}>
+    <AgentsWrapper user={user}>
       AgentClient
-    </UsersWrapper>
+    </AgentsWrapper>
   )
 }
 

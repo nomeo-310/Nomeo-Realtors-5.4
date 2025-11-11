@@ -11,9 +11,9 @@ import {
   CheckmarkBadge02Icon, 
   RepairIcon, 
   UserGroup03Icon,
-  User03Icon,
   Clock04Icon,
-  ManagerIcon
+  ManagerIcon,
+  Briefcase07Icon
 } from '@hugeicons/core-free-icons';
 
 const superadmin_nav_links = [
@@ -40,6 +40,12 @@ const superadmin_nav_links = [
     icon: UserGroup03Icon,
     path: '/superadmin-dashboard/manage-users',
     page: 'manage users'
+  },
+  {
+    text: 'Manage Agents',
+    icon: Briefcase07Icon,
+    path: '/superadmin-dashboard/manage-agents',
+    page: 'manage agents'
   },
   {
     text: 'Manage Admins',
