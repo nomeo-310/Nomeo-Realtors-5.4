@@ -39,7 +39,7 @@ interface MobileSkeletonProps {
   items?: number;
 }
 
-export const MobileSkeleton = ({ items = 5 }: MobileSkeletonProps) => {
+export const MobileSkeleton = ({ items = 3 }: MobileSkeletonProps) => {
   return (
     <div className='w-full h-[560px] overflow-hidden'>
       <div className="flex flex-col">

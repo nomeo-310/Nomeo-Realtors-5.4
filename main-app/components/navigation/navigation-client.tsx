@@ -43,7 +43,7 @@ const NavigationClient = ({ user }: { user: userProps }) => {
   const { data } = useQuery({
     queryKey: ['unread-notification-count'],
     queryFn: fetchData,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   })
 
   const MobileNav = () => {

@@ -17,43 +17,33 @@ type dashboardLinkProps = {
 const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkProps) => {
   const pathname = usePathname();
 
-  const getIsActive = () => {
-    if (pathname === path) return true;
+    const getIsActive = (text: string, path: string, pathname: string) => {
+    return React.useMemo(() => {
+      if (pathname === path) return true;
 
-    if (text === "Likes") {
-      const agentLikesBaseLink = "/agent-dashboard/likes";
-      const userLikesBaseLink = "/user-dashboard/likes";
-      return pathname.startsWith(agentLikesBaseLink) || pathname.startsWith(userLikesBaseLink);
-    }
+      const routeConfig = {
+        "Likes": "likes",
+        "Saves": "saves", 
+        "Transactions": "transactions",
+        "Created Blogs": "created-blogs",
+        "Blogs": "created-blogs",
+        "Create Blog": "create-blog",
+        "Apartments": "apartments"
+      };
 
-    if (text === "Saves") {
-      const agentSavesBaseLink = "/agent-dashboard/saves";
-      const userSavesBaseLink = "/user-dashboard/saves";
-      return pathname.startsWith(agentSavesBaseLink) || pathname.startsWith(userSavesBaseLink);
-    }
+      const route = routeConfig[text as keyof typeof routeConfig];
+      if (!route) return false;
 
-    if (text === "Transactions") {
-      const agentTransactionBaseLink = "/agent-dashboard/transactions";
-      const userTransactionBaseLink = "/user-dashboard/transactions";
-      return pathname.startsWith(agentTransactionBaseLink) || pathname.startsWith(userTransactionBaseLink);
-    }
+      const routes = [
+        `/agent-dashboard/${route}`,
+        `/user-dashboard/${route}`,
+      ];
 
-    if (text === "Created Blogs" || text === "Blogs") {
-      const agentCreatedBlogsBaseLink = "/agent-dashboard/created-blogs";
-      const userCreatedBlogsBaseLink = "/user-dashboard/created-blogs";
-      return pathname.startsWith(agentCreatedBlogsBaseLink) || pathname.startsWith(userCreatedBlogsBaseLink);
-    }
-    
-    if (text === "Create Blog") {
-      const agentCreateBlogBaseLink = "/agent-dashboard/create-blog";
-      const userCreateBlogsBaseLink = "/user-dashboard/create-blogs";
-      return pathname.startsWith(agentCreateBlogBaseLink) || pathname.startsWith(userCreateBlogsBaseLink);
-    }
-
-    return false;
+      return routes.some(r => pathname.startsWith(r));
+    }, [text, path, pathname]);
   };
 
-  const isActive = getIsActive();
+  const isActive = getIsActive(text, path, pathname);
 
   return (
     <React.Fragment>

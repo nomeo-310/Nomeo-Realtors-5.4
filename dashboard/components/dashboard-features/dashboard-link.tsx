@@ -17,48 +17,35 @@ type dashboardLinkProps = {
 const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkProps) => {
   const pathname = usePathname();
 
-  const getIsActive = () => {
-    if (pathname === path) return true;
+  const useIsActive = (text: string, path: string, pathname: string) => {
+    return React.useMemo(() => {
+      if (pathname === path) return true;
 
-    if (text === "Verifications") {
-      const superAdminBaseLink = "/superadmin-dashboard/verifications";
-      const adminBaseLink = "/admin-dashboard/verifications";
-      const creatorBaseLink = "/creator-dashboard/verifications";
-      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
-    }
+      const routeConfig = {
+        "Verifications": "verifications",
+        "Pendings": "pendings", 
+        "Transactions": "transactions",
+        "Created Blogs": "created-blogs",
+        "Blogs": "created-blogs",
+        "Create Blog": "create-blog",
+        "Manage Users": "manage-users"
+      };
 
-    if (text === "Pendings") {
-      const superAdminBaseLink = "/superadmin-dashboard/pendings";
-      const adminBaseLink = "/admin-dashboard/pendings";
-      const creatorBaseLink = "/creator-dashboard/pendings";
-      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
-    }
+      const route = routeConfig[text as keyof typeof routeConfig];
+      if (!route) return false;
 
-    if (text === "Transactions") {
-      const superAdminBaseLink = "/superadmin-dashboard/transactions";
-      const adminBaseLink = "/admin-dashboard/transactions";
-      const creatorBaseLink = "/creator-dashboard/transactions";
-      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
-    }
+      const routes = [
+        `/superadmin-dashboard/${route}`,
+        `/admin-dashboard/${route}`,
+        `/creator-dashboard/${route}`
+      ];
 
-    if (text === "Created Blogs" || text === "Blogs") {
-      const superAdminBaseLink = "/superadmin-dashboard/created-blogs";
-      const adminBaseLink = "/admin-dashboard/created-blogs";
-      const creatorBaseLink = "/creator-dashboard/created-blogs";
-      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
-    }
-    
-    if (text === "Create Blog") {
-      const superAdminBaseLink = "/superadmin-dashboard/create-blog";
-      const adminBaseLink = "/admin-dashboard/create-blog";
-      const creatorBaseLink = "/creator-dashboard/create-blog";
-      return pathname.startsWith(superAdminBaseLink) || pathname.startsWith(adminBaseLink) || pathname.startsWith(creatorBaseLink) ;
-    }
-
-    return false;
+      return routes.some(r => pathname.startsWith(r));
+    }, [text, path, pathname]);
   };
 
-  const isActive = getIsActive();
+  // Usage in component:
+  const isActive = useIsActive(text, path, pathname);
 
   return (
     <React.Fragment>

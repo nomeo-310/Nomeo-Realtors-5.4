@@ -1,4 +1,4 @@
-export type BasicUserProps = {
+export interface BasicUserProps {
   _id: string;
   password: string;
   email: string;
@@ -8,7 +8,15 @@ export type BasicUserProps = {
   role: 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin';
 }
 
-export type AdminDetailsProps = {
+export interface ExtendedUserProps extends BasicUserProps {
+  city: string;
+  placeholderColor: string;
+  userVerified: boolean;
+  username: string;
+  createdAt: string;
+}
+
+export interface AdminDetailsProps {
   _id: string;
   userId: {
     _id: string;

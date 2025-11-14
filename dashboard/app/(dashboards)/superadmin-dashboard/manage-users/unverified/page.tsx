@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import SuspendedUserClient from '@/components/dashboard-features/manage-app-users/suspended-user-client';
+import UnverifiedUserClient from '@/components/dashboard-features/manage-app-users/unverified-user-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'Users'
 };
 
-const SuspendedUsers = async () => {
+const UnverifiedUsers = async () => {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -19,7 +19,7 @@ const SuspendedUsers = async () => {
     return notFound();
   };
   
-  return <SuspendedUserClient user={user}/>;
+  return <UnverifiedUserClient user={user}/>;
 }
 
-export default SuspendedUsers
+export default UnverifiedUsers

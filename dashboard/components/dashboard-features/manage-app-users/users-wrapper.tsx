@@ -1,12 +1,11 @@
 'use client'
 
-
-import { usePendingCount } from '@/hooks/use-counts';
 import { AdminDetailsProps } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React from 'react'
+import { SearchSort } from '../search-sort';
 
 type buttonProps = {
   tab: string; 
@@ -15,7 +14,19 @@ type buttonProps = {
   className?: string;
 }
 
-const UsersWrapper = ({children, user}:{children:React.ReactNode, user: AdminDetailsProps}) => {
+interface wrapperProps {
+  children:React.ReactNode, 
+  user: AdminDetailsProps
+}
+
+interface userWrapperProps extends wrapperProps {
+  placeholder?: string;
+  searchDelay?: number;
+  namespace?: string;
+  maxWidth?: string; 
+}
+
+const UsersWrapper = ({children, user, placeholder, searchDelay, namespace, maxWidth}:userWrapperProps) => {
 
   const pathname = usePathname();
 
@@ -34,11 +45,17 @@ const UsersWrapper = ({children, user}:{children:React.ReactNode, user: AdminDet
       <div className="flex flex-col gap-4">
         <div className="h-10 w-full flex">
           <TabButton label='Active' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users`}/>
-          <TabButton label='Deactivated' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/deactivated`}/>
+          <TabButton label='Unverified' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/unverified`}/>
           <TabButton label='Suspended' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/suspended`}/>
           <TabButton label='Deleted' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-users/deleted`} className='hidden lg:flex'/>
           <div className="flex-1 border-b dark:border-b-white/80"/>
         </div>
+        <SearchSort 
+          placeholder={placeholder}
+          namespace={namespace} 
+          maxWidth={maxWidth}
+          searchDelay={searchDelay}
+        />
         <div>
           {children}
         </div>

@@ -1,24 +1,43 @@
 "use server";
 
+// =============================================
+// IMPORTS
+// =============================================
+
+// Authentication & Session
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
-import { connectToMongoDB } from "@/lib/connectToMongoDB";
-import User from "@/models/user";
-import generateOtp from "@/utils/generateOtp";
 import { getServerSession } from "next-auth";
-import { revalidatePath } from "next/cache";
-import { render } from "@react-email/components";
-import { VerificationEmailTemplate } from "@/components/email-templates/verification-email-template";
-import { sendEmail } from "@/lib/send-email";
+
+// Database & Models
+import { connectToMongoDB } from "@/lib/connectToMongoDB";
 import mongoose from "mongoose";
+import User from "@/models/user";
 import Agent from "@/models/agent";
-import bcrypt from "bcryptjs";
-import { deleteCloudinaryImages } from "./delete-cloudinary-image";
 import Notification from "@/models/notification";
-import { agentProps, propertyProps, userProps } from "@/lib/types";
 import Apartment from "@/models/apartment";
 import Rented from "@/models/rentout";
-import { TemporaryDeleteEmailTemplate } from "@/components/email-templates/temporary-delete-email-template";
+
+// Utilities
+import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import generateOtp from "@/utils/generateOtp";
 import { capitalizeName } from "@/lib/utils";
+
+// Email & Templates
+import { render } from "@react-email/components";
+import { sendEmail } from "@/lib/send-email";
+import { VerificationEmailTemplate } from "@/components/email-templates/verification-email-template";
+import { TemporaryDeleteEmailTemplate } from "@/components/email-templates/temporary-delete-email-template";
+
+// Image Management
+import { deleteCloudinaryImages } from "./delete-cloudinary-image";
+
+// Types
+import { agentProps, propertyProps, userProps } from "@/lib/types";
+
+// =============================================
+// TYPE DEFINITIONS
+// =============================================
 
 interface apiResponse {
   success: boolean;
@@ -100,35 +119,9 @@ type editUserProps = {
   isNewImage: boolean;
 };
 
-type imageProps = {
-  public_id: string;
-  secure_url: string;
-};
-
-type singleAttachment = {
-  _id: string;
-  attachments: imageProps[];
-};
-
-type editAgentProfile = {
-  officeNumber: string;
-  officeAddress: string;
-  agencyWebsite?: string;
-  inspectionFeePerHour: number;
-  coverImage?: Image;
-};
-
 type notificationProps = {
   _id: string;
-  type:
-    | "notification"
-    | "inspection"
-    | "rentouts"
-    | "verification"
-    | "pending"
-    | "payment"
-    | "add-clients"
-    | "profile";
+  type: "notification" | "inspection" | "rentouts" | "verification" | "pending" | "payment" | "add-clients" | "profile";
   title: string;
   content: string;
   propertyId?: string;
@@ -138,6 +131,13 @@ type notificationProps = {
   createdAt: string;
 };
 
+// =============================================
+// USER MANAGEMENT FUNCTIONS
+// =============================================
+
+/**
+ * Get user by email address
+ */
 export const getUserByEmail = async (email: string) => {
   await connectToMongoDB();
 
@@ -151,33 +151,38 @@ export const getUserByEmail = async (email: string) => {
   }
 
   const userData = JSON.parse(JSON.stringify(user));
-
   return userData as userProps;
 };
 
+/**
+ * Get agent by ID
+ */
 export const getAgentById = async (id: string) => {
   await connectToMongoDB();
 
   const agent = await Agent.findById(id).exec();
-
   if (!agent) {
     return;
   }
 
   const agentData = JSON.parse(JSON.stringify(agent));
-
   return agentData;
 };
 
+/**
+ * Get current server session
+ */
 export const getUserSession = async () => {
   return await getServerSession(authOptions);
 };
 
+/**
+ * Get current authenticated user with full data
+ */
 export const getCurrentUser = async () => {
   await connectToMongoDB();
 
   const currentUserSession = await getUserSession();
-
   if (!currentUserSession?.user?.email) {
     return;
   }
@@ -193,7 +198,6 @@ export const getCurrentUser = async () => {
     }
 
     const currentUser = JSON.parse(JSON.stringify(user));
-
     revalidatePath("/");
     return currentUser as userProps;
   } catch (error) {
@@ -202,11 +206,13 @@ export const getCurrentUser = async () => {
   }
 };
 
+/**
+ * Get current user with limited profile data
+ */
 export const getCurrentUserDetails = async () => {
   await connectToMongoDB();
 
   const currentUserSession = await getUserSession();
-
   if (!currentUserSession?.user?.email) {
     return;
   }
@@ -216,9 +222,7 @@ export const getCurrentUserDetails = async () => {
       email: currentUserSession.user.email,
       userAccountDeleted: false,
     })
-      .select(
-        "_id profilePicture username surName lastName bio phoneNumber additionalPhoneNumber address city state role userOnboarded profileCreated userVerified placeholderColor email"
-      )
+      .select("_id profilePicture username surName lastName bio phoneNumber additionalPhoneNumber address city state role userOnboarded profileCreated userVerified placeholderColor email")
       .exec();
 
     if (!user) {
@@ -226,7 +230,6 @@ export const getCurrentUserDetails = async () => {
     }
 
     const currentUser = JSON.parse(JSON.stringify(user));
-
     revalidatePath("/");
     return currentUser;
   } catch (error) {
@@ -235,9 +238,15 @@ export const getCurrentUserDetails = async () => {
   }
 };
 
+// =============================================
+// AUTHENTICATION & ACCOUNT FUNCTIONS
+// =============================================
+
+/**
+ * Create a new user account
+ */
 export const createUser = async (value: signUpValues) => {
   const { role, username, email, password } = value;
-
   await connectToMongoDB();
 
   try {
@@ -260,6 +269,7 @@ export const createUser = async (value: signUpValues) => {
 
     const otp = generateOtp();
     const otpExpiresIn = Date.now() + 24 * 60 * 60 * 100;
+    
     const newUser = await User.create({
       email,
       password,
@@ -270,6 +280,7 @@ export const createUser = async (value: signUpValues) => {
     });
     newUser.save();
 
+    // Send verification email
     const emailTemplate = await render(
       VerificationEmailTemplate({
         username,
@@ -287,13 +298,13 @@ export const createUser = async (value: signUpValues) => {
 
     try {
       await sendEmail(sendOption);
-
       return {
         success: true,
         message: "User created! OTP has been sent to your email",
         status: 201,
       };
     } catch (error) {
+      // Rollback user creation if email fails
       await User.findOneAndDelete({ _id: newUser._id });
       return {
         success: false,
@@ -310,9 +321,11 @@ export const createUser = async (value: signUpValues) => {
   }
 };
 
+/**
+ * Restore a previously deleted user account
+ */
 export const restoreUser = async (value: restoreUserValues) => {
   const { username, email, password } = value;
-
   await connectToMongoDB();
 
   try {
@@ -326,11 +339,7 @@ export const restoreUser = async (value: restoreUserValues) => {
         return { success: false, message: "Invalid account data", status: 500 };
       }
 
-      const passwordMatch = await bcrypt.compare(
-        password,
-        existingUser.password
-      );
-
+      const passwordMatch = await bcrypt.compare(password, existingUser.password);
       if (!passwordMatch) {
         return { success: false, message: "Invalid credentials", status: 401 };
       }
@@ -339,7 +348,7 @@ export const restoreUser = async (value: restoreUserValues) => {
         const otp = generateOtp();
         const otpExpiresIn = Date.now() + 24 * 60 * 60 * 1000;
 
-        // Restore the existing account instead of creating a new one
+        // Restore the existing account
         await User.findOneAndUpdate(
           { _id: existingUser._id },
           {
@@ -355,8 +364,7 @@ export const restoreUser = async (value: restoreUserValues) => {
             username: existingUser.username,
             title: "Account Restored - Email Verification OTP",
             otp,
-            message:
-              "Your account has been restored. Your one-time password (OTP) for account verification is: ",
+            message: "Your account has been restored. Your one-time password (OTP) for account verification is: ",
           })
         );
 
@@ -368,15 +376,13 @@ export const restoreUser = async (value: restoreUserValues) => {
 
         try {
           await sendEmail(sendOption);
-
           return {
             success: true,
-            message:
-              "Account restored! OTP has been sent to your email for verification",
+            message: "Account restored! OTP has been sent to your email for verification",
             status: 200,
           };
         } catch (error) {
-          // Revert the restoration if email fails
+          // Revert restoration if email fails
           await User.findOneAndUpdate(
             { _id: existingUser._id },
             { userAccountDeleted: true, otp: null, otpExpiresIn: null }
@@ -409,6 +415,162 @@ export const restoreUser = async (value: restoreUserValues) => {
   }
 };
 
+/**
+ * Create a new agent account
+ */
+export const createAgent = async (value: signUpValues): Promise<apiResponse> => {
+  const { email, password, username, role } = value;
+
+  // Validate role early
+  if (role !== "agent") {
+    return {
+      success: false,
+      message: "Role must be agent to create account.",
+      status: 400,
+    };
+  }
+
+  try {
+    await connectToMongoDB();
+
+    // Check for existing user
+    if (await User.findOne({ email }).lean()) {
+      return {
+        success: false,
+        message: "Email already used by an account!",
+        status: 409,
+      };
+    }
+
+    const otp = generateOtp();
+    const otpExpiresIn = Date.now() + 24 * 60 * 60 * 1000;
+
+    const userData = {
+      email,
+      password,
+      username,
+      otp,
+      otpExpiresIn,
+      role,
+      userIsAnAgent: true,
+    };
+
+    const newUser = await User.create(userData);
+
+    try {
+      // Create associated agent profile
+      const newAgent = await Agent.create({ userId: newUser._id });
+      newUser.agentId = newAgent._id as mongoose.Types.ObjectId;
+      await newUser.save();
+
+      // Send verification email
+      const emailTemplate = await render(
+        VerificationEmailTemplate({
+          username,
+          title: "Email Verification OTP",
+          otp,
+          message: "Your one-time password (OTP) for account verification is: ",
+        })
+      );
+
+      await sendEmail({
+        email,
+        subject: "Email Account Verification",
+        html: emailTemplate,
+      });
+
+      return {
+        success: true,
+        message: "Account created! OTP has been sent to your email",
+        status: 201,
+      };
+    } catch (error) {
+      // Rollback if agent creation fails
+      await User.findByIdAndDelete(newUser._id);
+      await Agent.findOneAndDelete({ userId: newUser._id });
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error creating agent:", error);
+    return {
+      success: false,
+      message: "Internal server error, try again later!",
+      status: 500,
+    };
+  }
+};
+
+/**
+ * Verify user account with OTP
+ */
+export const verifyAccount = async (value: verifyValues) => {
+  const { otp, email } = value;
+
+  if (!otp) {
+    return {
+      success: false,
+      message: "OTP is required for account verification.",
+      status: 400,
+    };
+  }
+
+  await connectToMongoDB();
+  const user = await User.findOne({ email: email });
+
+  if (!user) {
+    return { success: false, message: "User does not exist", status: 404 };
+  }
+
+  try {
+    if (user.otp !== otp) {
+      return { success: false, message: "OTP sent is invalid", status: 403 };
+    }
+
+    if (user.otpExpiresIn && Date.now() > user.otpExpiresIn) {
+      return {
+        success: false,
+        message: "OTP sent has expired. Please request a new OTP.",
+        status: 403,
+      };
+    }
+
+    await User.findOneAndUpdate(
+      { _id: user._id, email: user.email, role: user.role },
+      { userVerified: true, otp: null, otpExpiresIn: null }
+    );
+
+    // Create welcome notification
+    const createNotification = {
+      type: "notification",
+      title: "Email Verified!!!",
+      content: "Welcome to Nomeo Realtors. We are glad to have you, either you are just a user or an agent. When you login, there will be a prompt to create your profile. This will not take much time after which your membership will be fully verified.",
+      recipient: user._id,
+    };
+
+    const notification = await Notification.create(createNotification);
+    notification.save();
+
+    return {
+      success: true,
+      message: "Email verified!! Welcome to Nomeo Realtors!",
+      status: 200,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Email verification failed, try again later!",
+      status: 500,
+    };
+  }
+};
+
+// =============================================
+// PROFILE MANAGEMENT FUNCTIONS
+// =============================================
+
+/**
+ * Create user profile after account verification
+ */
 export const createUserProfile = async (values: createUserProfile) => {
   const {
     profileImage,
@@ -423,7 +585,6 @@ export const createUserProfile = async (values: createUserProfile) => {
   } = values;
 
   const current_user = await getCurrentUser();
-
   await connectToMongoDB();
 
   if (!current_user) {
@@ -469,7 +630,6 @@ export const createUserProfile = async (values: createUserProfile) => {
 
   try {
     await User.findOneAndUpdate({ _id: current_user._id }, userUpdate);
-
     const notification = await Notification.create(createNotification);
     notification.save();
 
@@ -484,160 +644,9 @@ export const createUserProfile = async (values: createUserProfile) => {
   }
 };
 
-export const editUserProfile = async (values: editUserProps) => {
-  const {
-    profileImage,
-    phoneNumber,
-    city,
-    state,
-    bio,
-    additionalPhoneNumber,
-    username,
-    userId,
-    profilePicture,
-    address,
-    firstName,
-    lastName,
-    isNewImage,
-    path,
-  } = values;
-
-  await connectToMongoDB();
-
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (current_user._id !== userId) {
-    return {
-      success: false,
-      message: "You are not authorized to access this feature",
-      status: 403,
-    };
-  }
-
-  if (
-    isNewImage &&
-    current_user.profileImage &&
-    current_user.profileImage.public_id
-  ) {
-    deleteCloudinaryImages(current_user.profileImage.public_id);
-  }
-
-  try {
-    await User.findOneAndUpdate(
-      { _id: userId },
-      {
-        profileImage,
-        profilePicture,
-        phoneNumber,
-        city,
-        state,
-        bio,
-        additionalPhoneNumber,
-        username,
-        firstName,
-        lastName,
-        address,
-      }
-    );
-
-    revalidatePath(path);
-    return {
-      success: true,
-      message: "Profile successfully updated!",
-      status: 200,
-    };
-  } catch (error) {
-    return { success: false, message: "Internal server error", status: 500 };
-  }
-};
-
-export const createAgent = async (
-  value: signUpValues
-): Promise<apiResponse> => {
-  const { email, password, username, role } = value;
-
-  // Validate role early
-  if (role !== "agent") {
-    return {
-      success: false,
-      message: "Role must be agent to create account.",
-      status: 400,
-    };
-  }
-
-  try {
-    await connectToMongoDB();
-
-    // Check for existing user
-    if (await User.findOne({ email }).lean()) {
-      return {
-        success: false,
-        message: "Email already used by an account!",
-        status: 409,
-      };
-    }
-
-    const otp = generateOtp();
-    const otpExpiresIn = Date.now() + 24 * 60 * 60 * 1000;
-
-    const userData = {
-      email,
-      password,
-      username,
-      otp,
-      otpExpiresIn,
-      role,
-      userIsAnAgent: true,
-    };
-
-    const newUser = await User.create(userData);
-
-    try {
-      const newAgent = await Agent.create({userId: newUser._id,});
-
-      newUser.agentId = newAgent._id as mongoose.Types.ObjectId;
-      await newUser.save();
-
-      const emailTemplate = await render(
-        VerificationEmailTemplate({
-          username,
-          title: "Email Verification OTP",
-          otp,
-          message: "Your one-time password (OTP) for account verification is: ",
-        })
-      );
-
-      await sendEmail({
-        email,
-        subject: "Email Account Verification",
-        html: emailTemplate,
-      });
-
-      return {
-        success: true,
-        message: "Account created! OTP has been sent to your email",
-        status: 201,
-      };
-    } catch (error) {
-      
-      await User.findByIdAndDelete(newUser._id);
-      await Agent.findOneAndDelete({ userId: newUser._id });
-      throw error;
-    }
-  } catch (error) {
-    console.error("Error creating agent:", error);
-    return {
-      success: false,
-      message: "Internal server error, try again later!",
-      status: 500,
-    };
-  }
-};
-
+/**
+ * Create agent profile after account verification
+ */
 export const createAgentProfile = async (values: createAgentProfile) => {
   const {
     profileImage,
@@ -656,7 +665,6 @@ export const createAgentProfile = async (values: createAgentProfile) => {
   } = values;
 
   await connectToMongoDB();
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -727,78 +735,84 @@ export const createAgentProfile = async (values: createAgentProfile) => {
   }
 };
 
-export const verifyAccount = async (value: verifyValues) => {
-  const { otp, email } = value;
+/**
+ * Edit existing user profile
+ */
+export const editUserProfile = async (values: editUserProps) => {
+  const {
+    profileImage,
+    phoneNumber,
+    city,
+    state,
+    bio,
+    additionalPhoneNumber,
+    username,
+    userId,
+    profilePicture,
+    address,
+    firstName,
+    lastName,
+    isNewImage,
+    path,
+  } = values;
 
-  if (!otp) {
+  await connectToMongoDB();
+  const current_user = await getCurrentUser();
+
+  if (!current_user) {
+    return { success: false, message: "You are not logged in", status: 403 };
+  }
+
+  if (current_user._id !== userId) {
     return {
       success: false,
-      message: "OTP is required for account verification.",
-      status: 400,
+      message: "You are not authorized to access this feature",
+      status: 403,
     };
   }
 
-  await connectToMongoDB();
-
-  const user = await User.findOne({ email: email });
-
-  if (!user) {
-    return { success: false, message: "User does not exist", status: 404 };
+  // Delete old image if new one is uploaded
+  if (isNewImage && current_user.profileImage && current_user.profileImage.public_id) {
+    deleteCloudinaryImages(current_user.profileImage.public_id);
   }
 
   try {
-    if (user.otp !== otp) {
-      return { success: false, message: "OTP sent is invalid", status: 403 };
-    }
-
-    if (user.otpExpiresIn && Date.now() > user.otpExpiresIn) {
-      return {
-        success: false,
-        message: "OTP sent has expired. Please request a new OTP.",
-        status: 403,
-      };
-    }
-
     await User.findOneAndUpdate(
-      { _id: user._id, email: user.email, role: user.role },
-      { userVerified: true, otp: null, otpExpiresIn: null }
+      { _id: userId },
+      {
+        profileImage,
+        profilePicture,
+        phoneNumber,
+        city,
+        state,
+        bio,
+        additionalPhoneNumber,
+        username,
+        firstName,
+        lastName,
+        address,
+      }
     );
 
-    const createNotification = {
-      type: "notification",
-      title: "Email Verified!!!",
-      content:
-        "Welcome to Nomeo Realtors. We are glad to have you, either you are just a user or an agent. When you login, there will be a prompt to create your profile. This will not take much time after which your membership will be fully verified.",
-      recipient: user._id,
-    };
-
-    const notification = await Notification.create(createNotification);
-    notification.save();
-
+    revalidatePath(path);
     return {
       success: true,
-      message: "Email verified!! Welcome to Nomeo Realtors!",
+      message: "Profile successfully updated!",
       status: 200,
     };
   } catch (error) {
-    return {
-      success: false,
-      message: "Email verification failed, try again later!",
-      status: 500,
-    };
+    return { success: false, message: "Internal server error", status: 500 };
   }
 };
 
-export const resendOtp = async (email: string) => {
-  let verificationDetails:
-    | {
-        username: string;
-        title: string;
-        otp: string;
-        message: string;
-      }
-    | undefined;
+// =============================================
+// PASSWORD & SECURITY FUNCTIONS
+// =============================================
 
+/**
+ * Resend OTP for verification
+ */
+export const resendOtp = async (email: string) => {
   if (!email) {
     return {
       success: false,
@@ -808,7 +822,6 @@ export const resendOtp = async (email: string) => {
   }
 
   const user = await User.findOne({ email: email });
-
   if (!user) {
     return { success: false, message: "User does not exist!", status: 404 };
   }
@@ -822,26 +835,21 @@ export const resendOtp = async (email: string) => {
   }
 
   await connectToMongoDB();
-
   const otp = generateOtp();
   const otpExpiresIn = Date.now() + 24 * 60 * 60 * 1000;
 
+  let verificationDetails;
+
   if (user.userIsAnAgent && user.agentId) {
     const agent = await Agent.findOne({ _id: user.agentId });
-
     if (agent) {
       verificationDetails = {
         username: agent.licenseNumber,
         title: "New OTP Verification Code",
         otp: otp,
-        message:
-          "Your new one-time password (OTP) for account verification is: ",
+        message: "Your new one-time password (OTP) for account verification is: ",
       };
-
-      await User.findOneAndUpdate(
-        { email: email },
-        { otp: otp, otpExpiresIn: otpExpiresIn }
-      );
+      await User.findOneAndUpdate({ email: email }, { otp: otp, otpExpiresIn: otpExpiresIn });
     } else {
       return {
         success: false,
@@ -856,11 +864,7 @@ export const resendOtp = async (email: string) => {
       otp: otp,
       message: "Your new one-time password (OTP) for account verification is: ",
     };
-
-    await User.findOneAndUpdate(
-      { email: email },
-      { otp: otp, otpExpiresIn: otpExpiresIn }
-    );
+    await User.findOneAndUpdate({ email: email }, { otp: otp, otpExpiresIn: otpExpiresIn });
   }
 
   if (!verificationDetails) {
@@ -871,10 +875,7 @@ export const resendOtp = async (email: string) => {
     };
   }
 
-  const emailTemplate = await render(
-    VerificationEmailTemplate(verificationDetails)
-  );
-
+  const emailTemplate = await render(VerificationEmailTemplate(verificationDetails));
   const sendOption = {
     email: email,
     subject: "New Verification Code",
@@ -883,7 +884,6 @@ export const resendOtp = async (email: string) => {
 
   try {
     await sendEmail(sendOption);
-
     return {
       success: true,
       message: "New OTP has been sent to your email",
@@ -898,15 +898,16 @@ export const resendOtp = async (email: string) => {
   }
 };
 
+/**
+ * Initiate password reset process
+ */
 export const forgotPassword = async (email: string) => {
   const user = await User.findOne({ email: email });
-
   if (!user) {
     return { success: false, message: "User not found!", status: 404 };
   }
 
   await connectToMongoDB();
-
   const otp = generateOtp();
   const resetOtpExpiresIn = Date.now() + 30000;
 
@@ -933,10 +934,9 @@ export const forgotPassword = async (email: string) => {
 
     try {
       await sendEmail(sendOption);
-
       return {
         success: true,
-        message: "Password resetOTP has been sent to your email",
+        message: "Password reset OTP has been sent to your email",
         status: 200,
       };
     } catch (error) {
@@ -956,9 +956,11 @@ export const forgotPassword = async (email: string) => {
   }
 };
 
+/**
+ * Reset password with OTP verification
+ */
 export const resetPassword = async (value: resetPasswordValues) => {
   const { email, password, otp } = value;
-
   const user = await User.findOne({ email: email, resetPasswordOtp: otp });
 
   if (!user) {
@@ -966,7 +968,6 @@ export const resetPassword = async (value: resetPasswordValues) => {
   }
 
   await connectToMongoDB();
-
   const new_password = await bcrypt.hash(password, 10);
 
   try {
@@ -993,6 +994,13 @@ export const resetPassword = async (value: resetPasswordValues) => {
   }
 };
 
+// =============================================
+// PROFILE UPDATE FUNCTIONS
+// =============================================
+
+/**
+ * Change user profile image
+ */
 export const changeProfileImage = async (value: {
   secure_url: string;
   public_id: string;
@@ -1001,9 +1009,7 @@ export const changeProfileImage = async (value: {
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { secure_url, public_id, userId, isNewImage, path } = value;
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1020,6 +1026,7 @@ export const changeProfileImage = async (value: {
 
   const oldProfileImage = current_user.profileImage;
 
+  // Delete old image from Cloudinary if new one is uploaded
   if (isNewImage && oldProfileImage && oldProfileImage.public_id) {
     deleteCloudinaryImages(oldProfileImage.public_id);
   }
@@ -1039,11 +1046,13 @@ export const changeProfileImage = async (value: {
       status: 200,
     };
   } catch (error) {
-
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
 
+/**
+ * Change user password
+ */
 export const changePassword = async (value: {
   oldPassword: string;
   newPassword: string;
@@ -1051,9 +1060,7 @@ export const changePassword = async (value: {
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { oldPassword, newPassword, userId, path } = value;
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1069,19 +1076,16 @@ export const changePassword = async (value: {
   }
 
   const rawUserData = await User.findOne({ _id: userId });
-
   if (!rawUserData) {
     return;
   }
 
   const oldHashedPassword = rawUserData.password;
-
   if (!oldHashedPassword) {
     return;
   }
 
   const oldpasswordMatch = await bcrypt.compare(oldPassword, oldHashedPassword);
-
   if (!oldpasswordMatch) {
     return {
       success: false,
@@ -1101,11 +1105,7 @@ export const changePassword = async (value: {
   const newHashedPassword = await bcrypt.hash(newPassword, 10);
 
   try {
-    await User.findOneAndUpdate(
-      { _id: userId },
-      { password: newHashedPassword }
-    );
-
+    await User.findOneAndUpdate({ _id: userId }, { password: newHashedPassword });
     revalidatePath(path);
     return {
       success: true,
@@ -1114,20 +1114,20 @@ export const changePassword = async (value: {
     };
   } catch (error) {
     console.error(error);
-
     return { success: false, message: "Internal server error", status: 500 };
   }
 };
 
+/**
+ * Initiate email change process
+ */
 export const changeEmailStart = async (value: {
   newEmail: string;
   userId: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { newEmail, userId, path } = value;
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1151,7 +1151,6 @@ export const changeEmailStart = async (value: {
   }
 
   const emailExists = await User.findOne({ email: newEmail });
-
   if (emailExists) {
     return {
       success: false,
@@ -1167,19 +1166,12 @@ export const changeEmailStart = async (value: {
     username: current_user.username,
     title: "OTP Verification Code",
     otp: otp,
-    message:
-      "Your new one-time password (OTP) for email change verification is: ",
+    message: "Your new one-time password (OTP) for email change verification is: ",
   };
 
-  await User.findOneAndUpdate(
-    { _id: userId },
-    { otp: otp, otpExpiresIn: otpExpiresIn }
-  );
+  await User.findOneAndUpdate({ _id: userId }, { otp: otp, otpExpiresIn: otpExpiresIn });
 
-  const emailTemplate = await render(
-    VerificationEmailTemplate(verificationDetails)
-  );
-
+  const emailTemplate = await render(VerificationEmailTemplate(verificationDetails));
   const sendOption = {
     email: newEmail,
     subject: "Email Change Verification",
@@ -1188,7 +1180,6 @@ export const changeEmailStart = async (value: {
 
   try {
     await sendEmail(sendOption);
-
     revalidatePath(path);
     return {
       success: true,
@@ -1204,6 +1195,9 @@ export const changeEmailStart = async (value: {
   }
 };
 
+/**
+ * Complete email change with OTP verification
+ */
 export const changeEmail = async (value: {
   email: string;
   otp: string;
@@ -1211,9 +1205,7 @@ export const changeEmail = async (value: {
   userId: string;
 }) => {
   await connectToMongoDB();
-
   const { email, userId, path, otp } = value;
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1257,16 +1249,21 @@ export const changeEmail = async (value: {
   }
 };
 
+// =============================================
+// AGENT-SPECIFIC FUNCTIONS
+// =============================================
+
+/**
+ * Change agent's office address
+ */
 export const changeAgencyAddress = async (values: {
   agentId: string;
   newAddress: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { agentId, newAddress, path } = values;
   const current_user = await getCurrentUser();
-
   const agent = await getAgentById(agentId);
 
   if (!agent) {
@@ -1278,11 +1275,7 @@ export const changeAgencyAddress = async (values: {
   }
 
   try {
-    await Agent.findOneAndUpdate(
-      { _id: agentId },
-      { officeAddress: newAddress }
-    );
-
+    await Agent.findOneAndUpdate({ _id: agentId }, { officeAddress: newAddress });
     revalidatePath(path);
     return {
       success: true,
@@ -1290,7 +1283,6 @@ export const changeAgencyAddress = async (values: {
       status: 200,
     };
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to update office address.",
@@ -1299,16 +1291,17 @@ export const changeAgencyAddress = async (values: {
   }
 };
 
+/**
+ * Change agent's inspection fee
+ */
 export const changeInspectionFee = async (values: {
   agentId: string;
   newFee: number;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { agentId, newFee, path } = values;
   const current_user = await getCurrentUser();
-
   const agent = await getAgentById(agentId);
 
   if (!agent) {
@@ -1320,11 +1313,7 @@ export const changeInspectionFee = async (values: {
   }
 
   try {
-    await Agent.findOneAndUpdate(
-      { _id: agentId },
-      { inspectionFeePerHour: newFee }
-    );
-
+    await Agent.findOneAndUpdate({ _id: agentId }, { inspectionFeePerHour: newFee });
     revalidatePath(path);
     return {
       success: true,
@@ -1332,7 +1321,6 @@ export const changeInspectionFee = async (values: {
       status: 200,
     };
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to update inspection fee.",
@@ -1341,16 +1329,17 @@ export const changeInspectionFee = async (values: {
   }
 };
 
+/**
+ * Change agent's office number
+ */
 export const changeOfficeNumber = async (values: {
   agentId: string;
   newNumber: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { agentId, newNumber, path } = values;
   const current_user = await getCurrentUser();
-
   const agent = await getAgentById(agentId);
 
   if (!agent) {
@@ -1363,7 +1352,6 @@ export const changeOfficeNumber = async (values: {
 
   try {
     await Agent.findOneAndUpdate({ _id: agentId }, { officeNumber: newNumber });
-
     revalidatePath(path);
     return {
       success: true,
@@ -1371,7 +1359,6 @@ export const changeOfficeNumber = async (values: {
       status: 200,
     };
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to update office number.",
@@ -1380,48 +1367,16 @@ export const changeOfficeNumber = async (values: {
   }
 };
 
-export const changePhoneNumber = async (values: {
-  userId: string;
-  newNumber: string;
-  path: string;
-}) => {
-  await connectToMongoDB();
-
-  const { userId, newNumber, path } = values;
-  const current_user = await getCurrentUser();
-
-  if (!current_user || current_user._id !== userId) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  try {
-    await User.findOneAndUpdate({ _id: userId }, { phoneNumber: newNumber });
-
-    revalidatePath(path);
-    return {
-      success: true,
-      message: "Phone number successfully changed",
-      status: 200,
-    };
-  } catch (error) {
-
-    return {
-      success: false,
-      message: "Something went wrong while trying to update phone number.",
-      status: 403,
-    };
-  }
-};
-
+/**
+ * Toggle agent's listing preferences
+ */
 export const toggleListings = async (values: {
   agentId: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { agentId, path } = values;
   const agent = await Agent.findById(agentId);
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1437,7 +1392,6 @@ export const toggleListings = async (values: {
   try {
     if (alreadyToggled) {
       await Agent.findOneAndUpdate({ _id: agentId }, { getListings: false });
-
       revalidatePath(path);
       return {
         success: true,
@@ -1446,7 +1400,6 @@ export const toggleListings = async (values: {
       };
     } else {
       await Agent.findOneAndUpdate({ _id: agentId }, { getListings: true });
-
       revalidatePath(path);
       return {
         success: true,
@@ -1455,7 +1408,6 @@ export const toggleListings = async (values: {
       };
     }
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to update listings.",
@@ -1464,15 +1416,53 @@ export const toggleListings = async (values: {
   }
 };
 
+// =============================================
+// USER PREFERENCE FUNCTIONS
+// =============================================
+
+/**
+ * Change user's phone number
+ */
+export const changePhoneNumber = async (values: {
+  userId: string;
+  newNumber: string;
+  path: string;
+}) => {
+  await connectToMongoDB();
+  const { userId, newNumber, path } = values;
+  const current_user = await getCurrentUser();
+
+  if (!current_user || current_user._id !== userId) {
+    return { success: false, message: "You are not logged in", status: 403 };
+  }
+
+  try {
+    await User.findOneAndUpdate({ _id: userId }, { phoneNumber: newNumber });
+    revalidatePath(path);
+    return {
+      success: true,
+      message: "Phone number successfully changed",
+      status: 200,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: "Something went wrong while trying to update phone number.",
+      status: 403,
+    };
+  }
+};
+
+/**
+ * Toggle liked apartments visibility
+ */
 export const toggleLikedApartments = async (values: {
   userId: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { userId, path } = values;
   const user = await User.findById(userId);
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1487,11 +1477,7 @@ export const toggleLikedApartments = async (values: {
 
   try {
     if (alreadyToggled) {
-      await User.findOneAndUpdate(
-        { _id: userId },
-        { showLikedApartments: false }
-      );
-
+      await User.findOneAndUpdate({ _id: userId }, { showLikedApartments: false });
       revalidatePath(path);
       return {
         success: true,
@@ -1504,7 +1490,6 @@ export const toggleLikedApartments = async (values: {
         { showLikedApartments: true },
         { upsert: true }
       );
-
       revalidatePath(path);
       return {
         success: true,
@@ -1513,7 +1498,6 @@ export const toggleLikedApartments = async (values: {
       };
     }
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",
@@ -1522,15 +1506,16 @@ export const toggleLikedApartments = async (values: {
   }
 };
 
+/**
+ * Toggle bookmarked apartments visibility
+ */
 export const toggleBookmarkedApartments = async (values: {
   userId: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { userId, path } = values;
   const user = await User.findById(userId);
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1545,11 +1530,7 @@ export const toggleBookmarkedApartments = async (values: {
 
   try {
     if (alreadyToggled) {
-      await User.findOneAndUpdate(
-        { _id: userId },
-        { showBookmarkedApartments: false }
-      );
-
+      await User.findOneAndUpdate({ _id: userId }, { showBookmarkedApartments: false });
       revalidatePath(path);
       return {
         success: true,
@@ -1562,7 +1543,6 @@ export const toggleBookmarkedApartments = async (values: {
         { showBookmarkedApartments: true },
         { upsert: true }
       );
-
       revalidatePath(path);
       return {
         success: true,
@@ -1571,7 +1551,6 @@ export const toggleBookmarkedApartments = async (values: {
       };
     }
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",
@@ -1580,15 +1559,16 @@ export const toggleBookmarkedApartments = async (values: {
   }
 };
 
+/**
+ * Toggle liked blogs visibility
+ */
 export const toggleLikedBlogs = async (values: {
   userId: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { userId, path } = values;
   const user = await User.findById(userId);
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1604,7 +1584,6 @@ export const toggleLikedBlogs = async (values: {
   try {
     if (alreadyToggled) {
       await User.findOneAndUpdate({ _id: userId }, { showLikedBlogs: false });
-
       revalidatePath(path);
       return {
         success: true,
@@ -1617,7 +1596,6 @@ export const toggleLikedBlogs = async (values: {
         { showLikedBlogs: true },
         { upsert: true }
       );
-
       revalidatePath(path);
       return {
         success: true,
@@ -1626,7 +1604,6 @@ export const toggleLikedBlogs = async (values: {
       };
     }
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",
@@ -1635,15 +1612,16 @@ export const toggleLikedBlogs = async (values: {
   }
 };
 
+/**
+ * Toggle bookmarked blogs visibility
+ */
 export const toggleBookmarkedBlogs = async (values: {
   userId: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { userId, path } = values;
   const user = await User.findById(userId);
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1658,11 +1636,7 @@ export const toggleBookmarkedBlogs = async (values: {
 
   try {
     if (alreadyToggled) {
-      await User.findOneAndUpdate(
-        { _id: userId },
-        { showBookmarkedBlogs: false }
-      );
-
+      await User.findOneAndUpdate({ _id: userId }, { showBookmarkedBlogs: false });
       revalidatePath(path);
       return {
         success: true,
@@ -1675,7 +1649,6 @@ export const toggleBookmarkedBlogs = async (values: {
         { showBookmarkedBlogs: true },
         { upsert: true }
       );
-
       revalidatePath(path);
       return {
         success: true,
@@ -1684,7 +1657,6 @@ export const toggleBookmarkedBlogs = async (values: {
       };
     }
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",
@@ -1693,14 +1665,19 @@ export const toggleBookmarkedBlogs = async (values: {
   }
 };
 
+// =============================================
+// ACCOUNT MANAGEMENT FUNCTIONS
+// =============================================
+
+/**
+ * Delete user account (soft delete)
+ */
 export const deleteAccount = async (values: {
   email: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { email, path } = values;
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1724,7 +1701,6 @@ export const deleteAccount = async (values: {
   const name = `${surname} ${lastname}`;
 
   const emailTemplate = await render(TemporaryDeleteEmailTemplate({ name }));
-
   const sendOption = {
     email: email,
     subject: " Your Account Has Been Temporarily Deleted",
@@ -1733,7 +1709,6 @@ export const deleteAccount = async (values: {
 
   try {
     await sendEmail(sendOption);
-
     await User.findOneAndUpdate(
       { _id: current_user._id, email: email },
       { userAccountDeleted: true }
@@ -1750,13 +1725,15 @@ export const deleteAccount = async (values: {
   }
 };
 
+/**
+ * Transfer agent account to another user
+ */
 export const transferAccount = async (values: {
   oldEmail: string;
   newEmail: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { oldEmail, newEmail, path } = values;
   const current_user = await getCurrentUser();
 
@@ -1790,7 +1767,6 @@ export const transferAccount = async (values: {
   }
 
   const newUser = await getUserByEmail(newEmail);
-
   if (!newUser) {
     return {
       success: false,
@@ -1809,10 +1785,9 @@ export const transferAccount = async (values: {
     }
   }
 
+  // Transfer properties
   const properties = await Apartment.find({ agent: current_user.agentId });
-  const oldAgentProperties = JSON.parse(
-    JSON.stringify(properties)
-  ) as propertyProps[];
+  const oldAgentProperties = JSON.parse(JSON.stringify(properties)) as propertyProps[];
 
   if (oldAgentProperties && oldAgentProperties.length > 0) {
     const propertyId = oldAgentProperties.map((item) => item._id);
@@ -1835,6 +1810,7 @@ export const transferAccount = async (values: {
     }
   }
 
+  // Transfer clients
   if (oldAgentData && oldAgentData.clients.length > 0) {
     oldAgentData.clients.forEach(async (element) => {
       await Agent.findOneAndUpdate(
@@ -1844,6 +1820,7 @@ export const transferAccount = async (values: {
     });
   }
 
+  // Transfer inspections
   if (oldAgentData && oldAgentData.inspections.length > 0) {
     oldAgentData.clients.forEach(async (element) => {
       await Agent.findOneAndUpdate(
@@ -1853,17 +1830,12 @@ export const transferAccount = async (values: {
     });
   }
 
-  const notifications = await Notification.find({
-    recipient: current_user._id,
-  });
-  const oldNotifications = JSON.parse(
-    JSON.stringify(notifications)
-  ) as notificationProps[];
+  // Transfer notifications
+  const notifications = await Notification.find({ recipient: current_user._id });
+  const oldNotifications = JSON.parse(JSON.stringify(notifications)) as notificationProps[];
 
   if (oldNotifications && oldNotifications.length > 0) {
-    const notificationIds = oldNotifications.map(
-      (item) => item._id
-    ) as string[];
+    const notificationIds = oldNotifications.map((item) => item._id) as string[];
     await Notification.updateMany(
       { _id: { $in: notificationIds } },
       { recipient: newUser._id }
@@ -1878,11 +1850,8 @@ export const transferAccount = async (values: {
   }
 
   try {
-    if (
-      current_user &&
-      current_user.profileImage &&
-      current_user.profileImage.public_id !== undefined
-    ) {
+    // Delete old profile image
+    if (current_user && current_user.profileImage && current_user.profileImage.public_id !== undefined) {
       deleteCloudinaryImages(current_user.profileImage.public_id);
     }
 
@@ -1895,7 +1864,6 @@ export const transferAccount = async (values: {
       status: 200,
     };
   } catch (error) {
-
     return {
       success: true,
       message: "Error occurred while transferring account",
@@ -1904,15 +1872,16 @@ export const transferAccount = async (values: {
   }
 };
 
+/**
+ * Toggle blog collaborator status
+ */
 export const toggleCollaborator = async (values: {
   userId: string;
   path: string;
 }) => {
   await connectToMongoDB();
-
   const { userId, path } = values;
   const user = await User.findById(userId);
-
   const current_user = await getCurrentUser();
 
   if (!current_user) {
@@ -1929,14 +1898,9 @@ export const toggleCollaborator = async (values: {
   try {
     if (alreadyToggled) {
       await User.findOneAndUpdate({ _id: userId }, { blogCollaborator: false });
-
       if (isAnAgent) {
-        await Agent.findOneAndUpdate(
-          { _id: user.agentId },
-          { isACollaborator: false }
-        );
+        await Agent.findOneAndUpdate({ _id: user.agentId }, { isACollaborator: false });
       }
-
       revalidatePath(path);
       return {
         success: true,
@@ -1949,14 +1913,9 @@ export const toggleCollaborator = async (values: {
         { blogCollaborator: true },
         { upsert: true }
       );
-
       if (isAnAgent) {
-        await Agent.findOneAndUpdate(
-          { _id: user.agentId },
-          { isACollaborator: true }
-        );
+        await Agent.findOneAndUpdate({ _id: user.agentId }, { isACollaborator: true });
       }
-
       revalidatePath(path);
       return {
         success: true,
@@ -1965,7 +1924,6 @@ export const toggleCollaborator = async (values: {
       };
     }
   } catch (error) {
-
     return {
       success: false,
       message: "Something went wrong while trying to access feature.",

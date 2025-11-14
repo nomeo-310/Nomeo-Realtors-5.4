@@ -1,6 +1,5 @@
-
 import { getCurrentUser } from '@/actions/auth-actions';
-import UserClient from '@/components/dashboard-features/manage-user-agent/user-client';
+import ActiveUserClient from '@/components/dashboard-features/manage-app-users/active-user-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
@@ -9,7 +8,7 @@ export const metadata: Metadata = {
   title: 'Users'
 };
 
-const AllUsers = async () => {
+const ActiveUsers = async () => {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -20,7 +19,7 @@ const AllUsers = async () => {
     return notFound();
   };
   
-  return <UserClient user={user}/>;
+  return <ActiveUserClient user={user}/>;
 }
 
-export default AllUsers
+export default ActiveUsers

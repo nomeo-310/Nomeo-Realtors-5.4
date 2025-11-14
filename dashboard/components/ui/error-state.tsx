@@ -11,7 +11,7 @@ type emptyStateProps = {
 const ErrorState = ({className, message}:emptyStateProps) => {
   return (
     <div>
-      <p className={cn('text-sm md:text-base text-center my-6 bg-red-500 mx-auto px-16 py-2 rounded-full text-white',className )}>
+      <p className={cn('text-sm md:text-base text-center my-6 text-red-500 mx-auto px-16 py-2 rounded-full',className )}>
         {message}
       </p>
     </div>

@@ -18,7 +18,7 @@ const useNotificationCount = () => {
   return useQuery({
     queryKey: ["unread-notification-count"],
     queryFn: fetchNotification,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 };
 
@@ -39,7 +39,7 @@ const useVerificationCount = () => {
   return useQuery({
     queryKey: ["unread-verification-count"],
     queryFn: fetchVerification,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 };
 
@@ -60,7 +60,7 @@ const usePendingCount = () => {
   return useQuery({
     queryKey: ["unread-pending-count"],
     queryFn: fetchPending,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 };
 

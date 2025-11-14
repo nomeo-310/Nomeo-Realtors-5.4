@@ -11,7 +11,7 @@ export const POST = async (request:Request) => {
   };
 
   try {
-    const users = await User.find({blogCollaborator: true, _id:{ $ne: current_user?._id }, $or: [{ firstName: new RegExp(queryText, 'i')}, { lastName: new RegExp(queryText, 'i')},{ username: new RegExp(queryText, 'i') }, { email: new RegExp(queryText, 'i') }]})
+    const users = await User.find({blogCollaborator: true, _id:{ $ne: current_user?._id }, $or: [{ surName: new RegExp(queryText, 'i')}, { lastName: new RegExp(queryText, 'i')},{ username: new RegExp(queryText, 'i') }, { email: new RegExp(queryText, 'i') }]})
     .select('_id username surName lastName role email profilePicture')
     .limit(6).exec();
     

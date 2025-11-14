@@ -191,12 +191,12 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
               </div>
             }
             {status === 'error' &&
-              <div className='w-full h-full items-center'>
+              <div className='w-full h-full items-center lg:w-[80%] xl:w-[70%] md:w-[80%]'>
                 <ErrorState message='An error occurred while fetching agents. Try again later.'/>
               </div>
             }
             {status === 'success' && agents.length === 0 &&
-              <div className='w-full h-full items-center'>
+              <div className='w-full lg:w-[80%] xl:w-[70%] md:w-[80%] h-full items-center'>
                 <EmptyState message='No unverified agents at the moment.'/>
               </div>
             }

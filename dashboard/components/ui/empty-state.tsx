@@ -10,7 +10,7 @@ type emptyStateProps = {
 
 const EmptyState = ({className, message}:emptyStateProps) => {
   return (
-    <p className={cn('text-sm md:text-base text-center my-6 bg-[#d4d4d4] dark:bg-[#42424242] mx-auto px-16 py-2 rounded-full',className )}>
+    <p className={cn('text-sm md:text-base text-center my-6 mx-auto px-16 py-2 rounded-full text-black/70 dark:text-white/80',className )}>
       {message}
     </p>
   )

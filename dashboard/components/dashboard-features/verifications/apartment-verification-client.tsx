@@ -221,12 +221,12 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
               </div>
             }
             {status === 'error' &&
-              <div className='w-full h-full items-center'>
+              <div className='w-full h-full items-center lg:w-[80%] xl:w-[70%] md:w-[80%]'>
                 <ErrorState message='An error occurred while fetching apartments. Try again later.'/>
               </div>
             }
             {status === 'success' && apartments.length === 0 &&
-              <div className='w-full h-full items-center'>
+              <div className='w-full h-full items-center lg:w-[80%] xl:w-[70%] md:w-[80%]'>
                 <EmptyState message='No unverified apartments at the moment.'/>
               </div>
             }

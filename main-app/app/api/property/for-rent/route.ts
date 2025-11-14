@@ -1,3 +1,4 @@
+import { connectToMongoDB } from "@/lib/connectToMongoDB";
 import Agent from "@/models/agent";
 import Apartment from "@/models/apartment";
 import Attachment from "@/models/attachment";
@@ -27,6 +28,8 @@ type paramQuery = {
 };
 
 export const GET = async (req: Request) => {
+  await connectToMongoDB();
+  
   const { searchParams } = new URL(req.url);
 
   const page = parseInt(searchParams.get("page") || "1");

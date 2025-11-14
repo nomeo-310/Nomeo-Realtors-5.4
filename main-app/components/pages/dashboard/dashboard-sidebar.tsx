@@ -50,7 +50,7 @@ export const UserDashBoardSideBar = ({
   const { data: dashboardData } = useQuery({
     queryKey: ["user-dashboard-data"],
     queryFn: fetchDashboardData,
-    refetchInterval: 30000, // Reduced frequency
+    refetchInterval: 15000, // Reduced frequency
     staleTime: 10000, // Cache for 10 seconds
   });
 
@@ -149,7 +149,7 @@ export const AgentDashBoardSideBar = ({
   const { data: counts } = useQuery({
     queryKey: ["dashboard-counts"],
     queryFn: fetchDashboardCounts,
-    refetchInterval: 30000,
+    refetchInterval: 15000,
     staleTime: 10000,
   });
 
@@ -227,7 +227,7 @@ export const AdminDashBoardSideBar = () => {
   const { data: notificationCount } = useQuery({
     queryKey: ["unread-notification-count"],
     queryFn: fetchNotification,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 
   return (
