@@ -54,7 +54,7 @@ export const POST = async (request: Request) => {
 
     const [users, totalUsers] = await Promise.all([
       User.find(searchFilter)
-        .select('-password lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor')
+        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor')
         .limit(RESULTS_PER_PAGE)
         .skip(skip)
         .sort({createdAt: getSortValue(sortOrder) })
@@ -73,6 +73,7 @@ export const POST = async (request: Request) => {
         totalUsers,
         hasNextPage: pageNumber < totalPages,
         hasPrevPage: pageNumber > 1,
+        perPage: RESULTS_PER_PAGE
       },
     };
 

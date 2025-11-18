@@ -42,7 +42,8 @@ export const GET = async (req: Request) => {
       totalAgents: totalAgents,
       agents: agents,
       hasNextPage: page < totalPages,
-      hasPrevPage: page > 1
+      hasPrevPage: page > 1,
+      perPage: limit
     };
 
     return Response.json(data);

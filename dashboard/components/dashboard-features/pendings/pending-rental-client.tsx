@@ -18,6 +18,8 @@ import PendingsWrapper from './pendings-wrapper'
 import { usePathname } from 'next/navigation'
 import { toast } from 'sonner'
 import { verifyRentout } from '@/actions/pending-action'
+import TableLoading from '../table-loading'
+import { formatDate } from '@/utils/formatDate'
 
 type mobileItemProps = {
   open: boolean;
@@ -116,7 +118,7 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
     }
   };
 
-  const VerificationHeader = () => {
+  const PendingRentalHeader = () => {
     return (
       <TableHeader className="rounded-lg h-11 [&_tr]:border-b">
         <TableRow className="bg-white hover:bg-white border-b-0 dark:bg-[#424242]">
@@ -126,13 +128,14 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
           <TableHead className="text-center font-semibold uppercase">Annual Rent</TableHead>
           <TableHead className="text-center font-semibold uppercase">Total Amount Paid</TableHead>
           <TableHead className="text-center font-semibold uppercase">Rental Status</TableHead>
+          <TableHead className="text-center font-semibold uppercase">Date</TableHead>
           <TableHead className="text-center font-semibold uppercase">Action</TableHead>
         </TableRow>
       </TableHeader>
     )
   };
 
-  const VerificationItem = ({data}:{data:VerificationRentalProps}) => {
+  const PendingRentalItem = ({data}:{data:VerificationRentalProps}) => {
     return (
       <TableRow>
         <TableCell className="text-xs md:text-sm text-center">{capitalizeName(data?.agent.userId.surName)} {capitalizeName(data?.agent.userId.lastName)}</TableCell>
@@ -141,6 +144,7 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
         <TableCell className="text-xs md:text-sm text-center capitalize">{nairaSign}{data?.apartment.annualRent.toLocaleString()}</TableCell>
         <TableCell className="text-xs md:text-sm text-center capitalize">{nairaSign}{data?.totalAmount?.toLocaleString() ?? 0}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{data?.status}</TableCell>
+        <TableCell className="text-xs md:text-sm text-center">{formatDate(data?.createdAt)}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
           <Menu data={data}/>
         </TableCell>
@@ -148,7 +152,7 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const MobileItem = ({open, toggleTable, data }:mobileItemProps) => {
+  const MobilePendingRentalItem = ({open, toggleTable, data }:mobileItemProps) => {
     return (
       <div className={cn("shadow-sm border-b last:border-b-0 w-full odd:bg-gray-200 even:bg-inherit h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
         <div className="flex items-center justify-between">
@@ -170,7 +174,7 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
         </div>
         <div className="flex items-center justify-between">
           <p className="text-sm">Date</p>
-          <p className="text-sm capitalize">{data?.startDate}</p>
+          <p className="text-sm capitalize">{data?.createdAt}</p>
         </div>
       </div>
     )
@@ -199,76 +203,53 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const VerificationHistory = () => {
+  const PendingRentalList = () => {
+    const header = ['agent name', 'agency name', 'occupant', 'annual rent', 'total amount paid', 'rental status', 'date', 'action'];
 
     return (
       <div className='w-full flex flex-col gap-6 md:gap-8 lg:gap-10 bg-inherit overflow-hidden'>
-        <div className="hidden md:block">
-          <div className='min-h-[300px] max-h-[490px] '>
-            {status === 'pending' &&
-              <div className='w-full h-full flex items-center justify-center py-24'>
-                <Loader2 className='animate-spin'/>
-              </div>
-            }
-            {status === 'error' &&
-              <div className='w-full h-full items-center'>
-                <ErrorState message='An error occurred while fetching rentouts. Try again later.'/>
-              </div>
-            }
-            {status === 'success' && apartments.length === 0 &&
-              <div className='w-full h-full items-center'>
-                <EmptyState message='No pending rentouts at the moment.'/>
-              </div>
-            }
-            {status === 'success' && apartments.length > 0 &&
-              <React.Fragment>
+        <div className='md:min-h-[300px] md:max-h-[490px] h-[560px]'>
+          {status === 'pending' &&
+            <div className='w-full'>
+              <TableLoading tableHeader={header}/>
+            </div>
+          }
+          {status === 'error' &&
+            <div className='w-full h-full items-center'>
+              <ErrorState message='An error occurred while fetching rentouts. Try again later.'/>
+            </div>
+          }
+          {status === 'success' && apartments.length === 0 &&
+            <div className='w-full h-full items-center'>
+              <EmptyState message='No pending rentouts at the moment.'/>
+            </div>
+          }
+          {status === 'success' && apartments.length > 0 &&
+            <React.Fragment>
+              <div className='hidden md:block'>
                 <Table className='w-full border'>
-                  <VerificationHeader/>
+                  <PendingRentalHeader/>
                   <TableBody>
                     {apartments && apartments.length > 0 && apartments.map((apartment:VerificationRentalProps) => (
-                      <VerificationItem data={apartment}/>
+                      <PendingRentalItem data={apartment}/>
                     ))}
                   </TableBody>
                 </Table>
                 <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
-              </React.Fragment>
-            }
-          </div>
-        </div>
-        <div className='md:hidden'>
-          <div className='w-full h-[560px] overflow-hidden'>
-            <div className="flex flex-col">
-              {status === 'pending' &&
-                <div className='w-full h-full flex items-center justify-center py-24'>
-                  <Loader2 className='animate-spin'/>
-                </div>
-              }
-              {status === 'error' &&
-                <div className='w-full h-full items-center'>
-                  <ErrorState message='An error occurred while fetching rentouts. Try again later.'/>
-                </div>
-              }
-              { status === 'success' && apartments.length === 0 &&
-                <div className='w-full h-full items-center'>
-                  <EmptyState message='No pending rentouts at the moment.'/>
-                </div>
-              }
-              { status === 'success' && apartments.length > 0 &&
-                <React.Fragment>
-                  {apartments && apartments.length > 0 && apartments.map((apartment:VerificationRentalProps) => (
-                    <MobileItem
-                      key={apartment._id}
-                      open={currentIndex === apartments.indexOf(apartment)}
-                      toggleTable={() => toggleItem(apartments.indexOf(apartment))}
-                      data={apartment}
-                    />
-                  ))}
-                  <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
-                </React.Fragment>
-              }
-            </div>
-          </div>
-          <Pagination currentPage={currentPage} totalPages={pagination?.totalPages} onPageChange={handlePageChange} />
+              </div>
+              <div className='flex flex-col md:hidden'>
+                {apartments && apartments.length > 0 && apartments.map((apartment:VerificationRentalProps) => (
+                  <MobilePendingRentalItem
+                    key={apartment._id}
+                    open={currentIndex === apartments.indexOf(apartment)}
+                    toggleTable={() => toggleItem(apartments.indexOf(apartment))}
+                    data={apartment}
+                  />
+                ))}
+                <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
+              </div>
+            </React.Fragment>
+          }
         </div>
       </div>
     )
@@ -276,7 +257,7 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
 
   return (
     <PendingsWrapper user={user}>
-      <VerificationHistory/>
+      <PendingRentalList/>
     </PendingsWrapper>
   )
 };

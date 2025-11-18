@@ -11,7 +11,7 @@ export const GET = async (req: Request) => {
 
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1");
-  const limit = 8;
+  const limit = 10;
   const skip = (page - 1) * limit;
 
   const current_user = await getCurrentUser();
@@ -58,7 +58,8 @@ export const GET = async (req: Request) => {
         totalPages: totalPages, 
         totalApartments: totalRentOuts,
         hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
+        hasPrevPage: page > 1,
+        perPage: limit
       },
       rentouts: apartments,
     };

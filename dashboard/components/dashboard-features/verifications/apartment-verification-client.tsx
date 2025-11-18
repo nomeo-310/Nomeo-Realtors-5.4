@@ -20,6 +20,8 @@ import { usePathname } from 'next/navigation'
 import { verifyApartment } from '@/actions/verification-actions'
 import { toast } from 'sonner'
 import { useRejectPropertyModal } from '@/hooks/general-store'
+import { formatDate } from '@/utils/formatDate'
+import TableLoading from '../table-loading'
 
 type mobileItemProps = {
   open: boolean;
@@ -63,7 +65,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     setCurrentPage(page)
   };
 
-  const VerificationHeader = () => {
+  const ApartmentVerificationHeader = () => {
     return (
       <TableHeader className="rounded-lg h-11 [&_tr]:border-b">
         <TableRow className="bg-white hover:bg-white border-b-0 dark:bg-[#424242] dark:text-white">
@@ -75,13 +77,14 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
           <TableHead className="text-center font-semibold uppercase">No of Toilets</TableHead>
           <TableHead className="text-center font-semibold uppercase">State</TableHead>
           <TableHead className="text-center font-semibold uppercase">City</TableHead>
+          <TableHead className="text-center font-semibold uppercase">Date</TableHead>
           <TableHead className="text-center font-semibold uppercase">Action</TableHead>
         </TableRow>
       </TableHeader>
     )
   };
 
-  const VerificationItem = ({data}:{data: VerificationPropertyProps}) => {
+  const ApartmentVerificationItem = ({data}:{data: VerificationPropertyProps}) => {
     return (
       <TableRow className='cursor-pointer group'>
         <TableCell className="text-xs md:text-sm text-center">{capitalizeName(data.agent.userId.surName)} {capitalizeName(data.agent.userId.lastName)}</TableCell>
@@ -96,6 +99,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         <TableCell className="text-xs md:text-sm text-center capitalize">{data.toilets}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{data.state}</TableCell>
         <TableCell className="text-xs md:text-sm text-center">{data.city}</TableCell>
+        <TableCell className="text-xs md:text-sm text-center">{formatDate(data.createdAt)}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
           <Menu data={data}/>
         </TableCell>
@@ -103,7 +107,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const MobileItem = ({open, toggleTable, data }:mobileItemProps) => {
+  const ApartmentVerificationMobileItem = ({open, toggleTable, data }:mobileItemProps) => {
     return (
       <div className={cn("shadow-sm border-b last:border-b-0 w-full odd:bg-gray-200 even:bg-inherit h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
         <div className="flex items-center justify-between">
@@ -209,76 +213,53 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const VerificationHistory = () => {
+  const ApartmentVerificationList = () => {
+    const header = ['agent name', 'property tag', 'property id', 'no of rooms', 'no of baths', 'no of toilets', 'state', 'city', 'date', 'action'];
 
     return (
       <div className='w-full flex flex-col gap-6 md:gap-8 lg:gap-10 bg-inherit overflow-hidden'>
-        <div className="hidden md:block">
-          <div className='min-h-[300px] max-h-[490px] '>
-            {status === 'pending' &&
-              <div className='w-full h-full flex items-center justify-center py-24'>
-                <Loader2 className='animate-spin'/>
-              </div>
-            }
-            {status === 'error' &&
-              <div className='w-full h-full items-center lg:w-[80%] xl:w-[70%] md:w-[80%]'>
-                <ErrorState message='An error occurred while fetching apartments. Try again later.'/>
-              </div>
-            }
-            {status === 'success' && apartments.length === 0 &&
-              <div className='w-full h-full items-center lg:w-[80%] xl:w-[70%] md:w-[80%]'>
-                <EmptyState message='No unverified apartments at the moment.'/>
-              </div>
-            }
-            {status === 'success' && apartments.length > 0 &&
-              <React.Fragment>
+        <div className='min-h-[300px] max-h-[490px] h-[560px]'>
+          {status === 'pending' &&
+            <div className='w-full'>
+              <TableLoading tableHeader={header}/>
+            </div>
+          }
+          {status === 'error' &&
+            <div className='w-full h-full items-center'>
+              <ErrorState message='An error occurred while fetching apartments. Try again later.'/>
+            </div>
+          }
+          {status === 'success' && apartments.length === 0 &&
+            <div className='w-full h-full items-center'>
+              <EmptyState message='No unverified apartments at the moment.'/>
+            </div>
+          }
+          {status === 'success' && apartments.length > 0 &&
+            <React.Fragment>
+              <div className="hidden md:block">
                 <Table className='w-full border'>
-                  <VerificationHeader/>
+                  <ApartmentVerificationHeader/>
                   <TableBody>
                     {apartments && apartments.length > 0 && apartments.map((apartment:VerificationPropertyProps) => (
-                      <VerificationItem data={apartment} key={apartment._id}/>
+                      <ApartmentVerificationItem data={apartment} key={apartment._id}/>
                     ))}
                   </TableBody>
                 </Table>
                 <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
-              </React.Fragment>
-            }
-          </div>
-        </div>
-        <div className='md:hidden'>
-          <div className='w-full h-[560px] overflow-hidden'>
-            <div className="flex flex-col">
-              {status === 'pending' &&
-                <div className='w-full h-full flex items-center justify-center py-24'>
-                  <Loader2 className='animate-spin'/>
-                </div>
-              }
-              {status === 'error' &&
-                <div className='w-full h-full items-center'>
-                  <ErrorState message='An error occurred while fetching apartments. Try again later.'/>
-                </div>
-              }
-              {status === 'success' && apartments.length === 0 &&
-                <div className='w-full h-full items-center'>
-                  <EmptyState message='No unverified apartments at the moment.'/>
-                </div>
-              }
-              {status === 'success' && apartments.length > 0 &&
-                <React.Fragment>
-                  {apartments && apartments.length > 0 && apartments.map((apartment:VerificationPropertyProps) => (
-                    <MobileItem
-                      key={apartment._id}
-                      open={currentIndex === apartments.indexOf(apartment)}
-                      toggleTable={() => toggleItem(apartments.indexOf(apartment))}
-                      data={apartment}
-                    />
-                  ))}
-                  <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
-                </React.Fragment>
-              }
-            </div>
-          </div>
-          <Pagination currentPage={currentPage} totalPages={pagination?.totalPages} onPageChange={handlePageChange} />
+              </div>
+              <div className="md:hidden flex flex-col">
+                {apartments && apartments.length > 0 && apartments.map((apartment:VerificationPropertyProps) => (
+                  <ApartmentVerificationMobileItem
+                    key={apartment._id}
+                    open={currentIndex === apartments.indexOf(apartment)}
+                    toggleTable={() => toggleItem(apartments.indexOf(apartment))}
+                    data={apartment}
+                  />
+                ))}
+                <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
+              </div>
+            </React.Fragment>
+          }
         </div>
       </div>
     )
@@ -286,7 +267,7 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
   
   return (
     <VerificationsWrapper user={user}>
-      <VerificationHistory/>
+      <ApartmentVerificationList/>
     </VerificationsWrapper>
   )
 }

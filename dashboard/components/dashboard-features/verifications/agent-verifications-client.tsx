@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import VerificationsWrapper from './verifications-wrapper';
 import { AdminDetailsProps } from '@/lib/types';
 import { verifyAgent } from '@/actions/verification-actions';
+import TableLoading from '../table-loading';
 
 type mobileItemProps = {
   open: boolean;
@@ -72,7 +73,7 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
     setCurrentPage(page)
   };
 
-  const VerificationHeader = () => {
+  const AgentVerificationHeader = () => {
     return (
       <TableHeader className="rounded-lg h-11 [&_tr]:border-b">
         <TableRow className="bg-white hover:bg-white border-b-0 dark:bg-[#424242]">
@@ -89,7 +90,7 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const VerificationItem = ({agent}:{agent:agentDataProps}) => {
+  const AgentVerificationItem = ({agent}:{agent:agentDataProps}) => {
     return (
       <TableRow className='border'>
         <TableCell className="text-xs md:text-sm text-center border-r">{agent.userId.surName} {agent.userId.lastName}</TableCell>
@@ -106,7 +107,7 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const MobileItem = ({open, toggleTable, agent }:mobileItemProps) => {
+  const AgentVerificationMobileItem = ({open, toggleTable, agent }:mobileItemProps) => {
     return (
       <div className={cn("shadow-sm border-b last:border-b-0 w-full h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
         <div className="flex items-center justify-between">
@@ -179,74 +180,53 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const VerificationHistory = () => {
-
+  const AgentVerificationList = () => {
+    const header = ['full name', 'agent id', 'email', 'agency name', 'license number', 'verification status', 'joined at', 'action']
     return (
       <div className='w-full flex flex-col gap-6 md:gap-8 lg:gap-10 bg-inherit overflow-hidden'>
-        <div className="hidden md:block">
-          <div className='min-h-[300px] max-h-[490px] '>
-            {status === 'pending' &&
-              <div className='w-full h-full flex items-center justify-center py-24'>
-                <Loader2 className='animate-spin'/>
-              </div>
-            }
-            {status === 'error' &&
-              <div className='w-full h-full items-center lg:w-[80%] xl:w-[70%] md:w-[80%]'>
-                <ErrorState message='An error occurred while fetching agents. Try again later.'/>
-              </div>
-            }
-            {status === 'success' && agents.length === 0 &&
-              <div className='w-full lg:w-[80%] xl:w-[70%] md:w-[80%] h-full items-center'>
-                <EmptyState message='No unverified agents at the moment.'/>
-              </div>
-            }
-            {status === 'success' && agents.length > 0 &&
-              <React.Fragment>
+        <div className='min-h-[300px] max-h-[490px] h-[560px]'>
+          {status === 'pending' &&
+            <div className='w-full'>
+              <TableLoading tableHeader={header}/>
+            </div>
+          }
+          {status === 'error' &&
+            <div className='w-full h-full items-center '>
+              <ErrorState message='An error occurred while fetching agents. Try again later.'/>
+            </div>
+          }
+          {status === 'success' && agents.length === 0 &&
+            <div className='w-full h-full items-center'>
+              <EmptyState message='No unverified agents at the moment.'/>
+            </div>
+          }
+          {status === 'success' && agents && agents.length > 0 &&
+            <React.Fragment>
+              <div className="hidden md:block">
                 <Table className='w-full border'>
-                  <VerificationHeader/>
+                  <AgentVerificationHeader/>
                   <TableBody>
-                    {agents && agents.length > 0 && agents.map((agent:agentDataProps) => (
-                      <VerificationItem agent={agent}/>
+                    {agents.map((agent:agentDataProps) => (
+                      <AgentVerificationItem agent={agent}/>
                     ))}
                   </TableBody>
                 </Table>
                 <Pagination currentPage={currentPage} totalPages={totalPage} onPageChange={handlePageChange} />
-              </React.Fragment>
-            }
-          </div>
-        </div>
-        <div className='md:hidden'>
-          <div className='w-full h-[560px] overflow-hidden'>
-            {status === 'pending' &&
-              <div className='w-full h-full flex items-center justify-center py-24'>
-                <Loader2 className='animate-spin'/>
               </div>
-            }
-            {status === 'error' &&
-              <div className='w-full h-full items-center'>
-                <ErrorState message='An error occurred while fetching agent details. Try again later.'/>
-              </div>
-            }
-            {status === 'success' && agents.length === 0 &&
-              <div className='w-full h-full items-center'>
-                <EmptyState message='No unverified agents at the moment.'/>
-              </div>
-            }
-            {status === 'success' &&
-              <div className="flex flex-col border">
-                {agents && agents.length > 0 && agents.map((agent:agentDataProps, index:number) => (
+              <div className="flex flex-col">
+                {agents.map((agent:agentDataProps, index:number) => (
                   <React.Fragment key={index}>
-                    <MobileItem
+                    <AgentVerificationMobileItem
                       open={currentIndex === index}
                       toggleTable={() => toggleItem(index)}
                       agent={agent}
                     />
                   </React.Fragment>
                 ))}
+                <Pagination currentPage={currentPage} totalPages={totalPage} onPageChange={handlePageChange} />
               </div>
-            }
-          </div>
-          <Pagination currentPage={currentPage} totalPages={totalPage} onPageChange={handlePageChange} />
+            </React.Fragment>
+          }
         </div>
       </div>
     )
@@ -254,7 +234,7 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
 
   return (
     <VerificationsWrapper user={user}>
-      <VerificationHistory/>
+      <AgentVerificationList/>
     </VerificationsWrapper>
   )
 }

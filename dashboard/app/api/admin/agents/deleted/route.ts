@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/actions/auth-actions";
+import Agent from "@/models/agent";
 import User from "@/models/user";
 import { connectToMongoDB } from "@/utils/connectToMongoDB";
 import { guardUserAccess } from "@/utils/server-permissions";
@@ -42,10 +43,8 @@ export const POST = async (request: Request) => {
 
     // Build search filter
     const searchFilter = {
-      role: 'user',
-      userAccountDeleted: false, 
-      userAccountSuspended: false,
-      userVerified: false,
+      role: 'agent',
+      userAccountDeleted: true, 
       _id: { $ne: current_user.userId },
       ...(queryText && {
         $or: [
@@ -62,7 +61,12 @@ export const POST = async (request: Request) => {
     // Execute queries in parallel for better performance
     const [users, totalUsers] = await Promise.all([
       User.find(searchFilter)
-        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor')
+        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor createdAt')
+        .populate({
+          path: 'agentId',
+          model: Agent,
+          select: 'licenseNumber officeAddress agentVerified'
+        })
         .limit(RESULTS_PER_PAGE)
         .skip(skip)
         .sort({ createdAt: getSortValue(sortOrder) })

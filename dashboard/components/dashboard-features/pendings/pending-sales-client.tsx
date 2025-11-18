@@ -19,6 +19,7 @@ import PendingsWrapper from './pendings-wrapper'
 import { verifySellout } from '@/actions/pending-action'
 import { usePathname } from 'next/navigation'
 import { toast } from 'sonner'
+import TableLoading from '../table-loading'
 
 type mobileItemProps = {
   open: boolean;
@@ -102,8 +103,7 @@ const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
     }
   };
 
-
-  const VerificationHeader = () => {
+  const PendingSalesHeader = () => {
     return (
       <TableHeader className="rounded-lg h-11 [&_tr]:border-b">
         <TableRow className="bg-white hover:bg-white border-b-0 dark:bg-[#424242]">
@@ -120,7 +120,7 @@ const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const VerificationItem = ({data}:{data:VerificationSalesProps}) => {
+  const PendingSalesItem = ({data}:{data:VerificationSalesProps}) => {
     return (
       <TableRow>
         <TableCell className="text-xs md:text-sm text-center">{capitalizeName(data?.agent.userId.surName)} {capitalizeName(data?.agent.userId.lastName)}</TableCell>
@@ -137,7 +137,7 @@ const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const MobileItem = ({open, toggleTable, data }:mobileItemProps) => {
+  const PendingSalesMobileItem = ({open, toggleTable, data }:mobileItemProps) => {
     return (
       <div className={cn("shadow-sm border-b last:border-b-0 w-full odd:bg-gray-200 even:bg-inherit h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
         <div className="flex items-center justify-between">
@@ -188,15 +188,16 @@ const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const VerificationHistory = () => {
-
+  const PendingSalesList = () => {
+    const header = ['agent name', 'agency name', 'occupant', 'property price', 'total amount paid', 'sales status', 'date', 'action'];
+    
     return (
       <div className='w-full flex flex-col gap-6 md:gap-8 lg:gap-10 bg-inherit overflow-hidden'>
         <div className="hidden md:block">
-          <div className='min-h-[300px] max-h-[490px] '>
+          <div className='md:min-h-[300px] md:max-h-[490px] h-[560px]'>
             {status === 'pending' &&
-              <div className='w-full h-full flex items-center justify-center py-24'>
-                <Loader2 className='animate-spin'/>
+              <div className='w-full'>
+                <TableLoading tableHeader={header}/>
               </div>
             }
             {status === 'error' &&
@@ -209,43 +210,22 @@ const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
                 <EmptyState message='No pending sellouts at the moment.'/>
               </div>
             }
-            {status === 'success' && apartments.length > 0 &&
+            {status === 'success' && apartments && apartments.length > 0 &&
               <React.Fragment>
-                <Table className='w-full border'>
-                  <VerificationHeader/>
-                  <TableBody>
-                    {apartments && apartments.length > 0 && apartments.map((apartment:VerificationSalesProps) => (
-                      <VerificationItem data={apartment}/>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
-              </React.Fragment>
-            }
-          </div>
-        </div>
-        <div className='md:hidden'>
-          <div className='w-full h-[560px] overflow-hidden'>
-            <div className="flex flex-col">
-              {status === 'pending' &&
-                <div className='w-full h-full flex items-center justify-center py-24'>
-                  <Loader2 className='animate-spin'/>
+                <div className='hidden md:block'>
+                  <Table className='w-full border'>
+                    <PendingSalesHeader/>
+                    <TableBody>
+                      {apartments.map((apartment:VerificationSalesProps) => (
+                        <PendingSalesItem data={apartment}/>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
                 </div>
-              }
-              {status === 'error' &&
-                <div className='w-full h-full items-center'>
-                  <ErrorState message='An error occurred while fetching apartments. Try again later.'/>
-                </div>
-              }
-              {status === 'success' && apartments.length === 0 &&
-                <div className='w-full h-full items-center'>
-                  <EmptyState message='No pending apartments at the moment.'/>
-                </div>
-              }
-              {status === 'success' && apartments.length > 0 &&
-                <React.Fragment>
-                  {apartments && apartments.length > 0 && apartments.map((apartment:VerificationSalesProps) => (
-                    <MobileItem
+                <div className="flex flex-col md:hidden">
+                  {apartments.map((apartment:VerificationSalesProps) => (
+                    <PendingSalesMobileItem
                       key={apartment._id}
                       open={currentIndex === apartments.indexOf(apartment)}
                       toggleTable={() => toggleItem(apartments.indexOf(apartment))}
@@ -253,11 +233,10 @@ const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
                     />
                   ))}
                   <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
-                </React.Fragment>
-              }
-            </div>
+                </div>
+              </React.Fragment>
+            }
           </div>
-          <Pagination currentPage={currentPage} totalPages={pagination?.totalPages} onPageChange={handlePageChange} />
         </div>
       </div>
     )
@@ -265,7 +244,7 @@ const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
 
   return (
     <PendingsWrapper user={user}>
-      <VerificationHistory/>
+      <PendingSalesList/>
     </PendingsWrapper>
   )
 }

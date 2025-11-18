@@ -39,6 +39,7 @@ const AgentsWrapper = ({children, user}:{children:React.ReactNode, user: AdminDe
           <TabButton label='Deleted' counts={0} tab={`/${user.role === 'superAdmin' ? 'superadmin': user.role}-dashboard/manage-agents/deleted`} className='hidden lg:flex'/>
           <div className="flex-1 border-b dark:border-b-white/80"/>
         </div>
+        
         <div>
           {children}
         </div>

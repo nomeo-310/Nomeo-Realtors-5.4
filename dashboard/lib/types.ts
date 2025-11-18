@@ -10,10 +10,15 @@ export interface BasicUserProps {
 
 export interface ExtendedUserProps extends BasicUserProps {
   city: string;
+  state: string;
   placeholderColor: string;
   userVerified: boolean;
   username: string;
   createdAt: string;
+}
+
+export interface BasicAgentProps extends ExtendedUserProps {
+  
 }
 
 export interface AdminDetailsProps {
@@ -204,6 +209,15 @@ type Landmark = {
   name: string;
   distanceAway: string;
 };
+
+export type PaginationProps = {
+  currentPage: number;
+  totalPages: number;
+  totalUsers: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  perPage: number,
+}
 
 export interface PropertyProps {
   _id: string;

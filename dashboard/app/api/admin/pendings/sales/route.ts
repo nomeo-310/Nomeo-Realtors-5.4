@@ -59,7 +59,8 @@ export const GET = async (req: Request) => {
         totalPages: totalPages, 
         totalApartments: totalSellOuts,
         hasNextPage: page < totalPages,
-        hasPrevPage: page > 1
+        hasPrevPage: page > 1,
+        perPage: limit
       },
       sellouts: apartments,
     };

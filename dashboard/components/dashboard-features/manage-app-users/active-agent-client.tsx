@@ -2,7 +2,7 @@ import React from 'react'
 import { AdminDetailsProps } from '@/lib/types'
 import AgentsWrapper from './agents-wrapper'
 
-const AgentClient = ({user}:{user:AdminDetailsProps}) => {
+const ActiveAgentClient = ({user}:{user:AdminDetailsProps}) => {
   return (
     <AgentsWrapper user={user}>
       AgentClient
@@ -10,4 +10,4 @@ const AgentClient = ({user}:{user:AdminDetailsProps}) => {
   )
 }
 
-export default AgentClient
+export default ActiveAgentClient
