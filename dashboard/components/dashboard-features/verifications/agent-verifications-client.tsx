@@ -7,7 +7,7 @@ import React from 'react'
 import Pagination from '@/components/ui/pagination';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, MoreHorizontalIcon } from 'lucide-react';
+import { BadgeCheck, FileText, Loader2, MoreHorizontalIcon, XCircle } from 'lucide-react';
 import ErrorState from '@/components/ui/error-state';
 import EmptyState from '@/components/ui/empty-state';
 import { useRejectAgentModal } from '@/hooks/general-store';
@@ -42,7 +42,7 @@ type agentDataProps = {
 
 type responseDataProps = {
     currentPage: number,
-    totalPage: number,
+    totalPages: number,
     totalAgents: number,
     agents: agentDataProps[],
     hasNextPage: boolean,
@@ -63,7 +63,8 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
 
   const responseData = data as responseDataProps;
   const agents = responseData?.agents as agentDataProps[];
-  const totalPage = responseData?.totalPage as number;
+  const totalPage = responseData?.totalPages as number;
+
 
   const toggleItem = React.useCallback((index: number) => {
     setCurrentIndex((currentValue) => (currentValue !== index ? index : -1));
@@ -78,7 +79,6 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
       <TableHeader className="rounded-lg h-11 [&_tr]:border-b">
         <TableRow className="bg-white hover:bg-white border-b-0 dark:bg-[#424242]">
           <TableHead className="text-center font-semibold uppercase border-r">Full Name</TableHead>
-          <TableHead className="text-center font-semibold uppercase border-r">Agent ID</TableHead>
           <TableHead className="text-center font-semibold uppercase border-r">Email</TableHead>
           <TableHead className="text-center font-semibold uppercase border-r">Agency Name</TableHead>
           <TableHead className="text-center font-semibold uppercase border-r">License Number</TableHead>
@@ -94,10 +94,9 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
     return (
       <TableRow className='border'>
         <TableCell className="text-xs md:text-sm text-center border-r">{agent.userId.surName} {agent.userId.lastName}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center border-r">{agent._id}</TableCell>
         <TableCell className="text-xs md:text-sm text-center border-r">{agent.userId.email}</TableCell>
         <TableCell className="text-xs md:text-sm text-center capitalize border-r">{agent.agencyName}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center uppercase border-r">{agent.licenseNumber}</TableCell>
+        <TableCell className="text-xs md:text-sm text-center capitalize border-r">{agent.licenseNumber}</TableCell>
         <TableCell className="text-xs md:text-sm text-center capitalize border-r">{agent.verificationStatus}</TableCell>
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{formatDate(agent.createdAt)}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
@@ -148,16 +147,28 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
     };
 
     const handleVerification  = async () => {
-      await verifyAgent({agentId, path: pathname})
-      .then((response) => {
-        if (response) {
-          if (response.status === 200) {
-            toast.success(response.message);
-            queryClient.invalidateQueries({queryKey: ['unverified-agents']});
-            setShowMenu(false);
+      try {
+        await toast.promise(verifyAgent({agentId, path: pathname}), {
+          loading: 'Approving Agent...',
+          success: (response) => {
+            if (response.success) {
+              queryClient.invalidateQueries({queryKey: ['unverified-agents']})
+              return response.message;
+            } else {
+              throw new Error(response.message);
+            }
+          },
+          error: (error) => {
+            if (error instanceof Error) {
+              return error.message;
+            }
+            return 'Something went wrong. Try again later';
           }
-        }
-      })
+        });
+      } catch (error) {
+        toast.error('Something went wrong. Try again later')
+        console.error('Error approving agent:', error);
+      }
     }
 
     return (
@@ -165,16 +176,34 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
           <MoreHorizontalIcon/>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem>
-            Full Details
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleVerification}>
-            Verify Agent
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleRejection}>
-            Reject Agent
-          </DropdownMenuItem>
+        <DropdownMenuContent className="w-56 min-w-[200px] p-2" align="end">
+          {/* Information */}
+          <div className="p-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Agent Details</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+              <FileText className="w-4 h-4" />
+              Full Details
+            </DropdownMenuItem>
+          </div>
+
+          {/* Verification Actions */}
+          <div className="p-2 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Verification</p>
+            <DropdownMenuItem 
+              onClick={handleVerification}
+              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1"
+            >
+              <BadgeCheck className="w-4 h-4" />
+              Verify Agent
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={handleRejection}
+              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10"
+            >
+              <XCircle className="w-4 h-4" />
+              Reject Agent
+            </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     )
@@ -213,7 +242,7 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
                 </Table>
                 <Pagination currentPage={currentPage} totalPages={totalPage} onPageChange={handlePageChange} />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col md:hidden">
                 {agents.map((agent:agentDataProps, index:number) => (
                   <React.Fragment key={index}>
                     <AgentVerificationMobileItem

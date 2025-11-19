@@ -11,7 +11,7 @@ import EmptyState from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/formatDate'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Badge, Eye, MessageCircle, MoreHorizontalIcon, Pause, ShieldOff, Trash2 } from 'lucide-react';
+import { Eye, MessageCircle, MoreHorizontalIcon, PlayCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import TableLoading from '../table-loading';
 import Pagination from '@/components/ui/pagination';
@@ -27,7 +27,7 @@ type mobileItemProps = {
   toggleTable: () => void;
 };
 
-const ActiveAgentClient = ({user}:{user:AdminDetailsProps}) => {
+const SuspendedAgentClient = ({user}:{user:AdminDetailsProps}) => {
   const { search, sortOrder } = useFilterStore();
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -41,7 +41,7 @@ const ActiveAgentClient = ({user}:{user:AdminDetailsProps}) => {
 
   const fetchData = async (): Promise<ApiResponse> => {
     try {
-      const response = await axios.post<ApiResponse>('/api/admin/agents/active', queryData);
+      const response = await axios.post<ApiResponse>('/api/admin/agents/suspended', queryData);
 
       if (response.status !== 200) {
         throw new Error(`API returned status: ${response.status}`);
@@ -55,7 +55,7 @@ const ActiveAgentClient = ({user}:{user:AdminDetailsProps}) => {
   };
 
   const { data, status } = useQuery<ApiResponse>({
-    queryKey: ['active-agents', search, sortOrder, currentPage],
+    queryKey: ['suspended-agents', search, sortOrder, currentPage],
     queryFn: fetchData,
     retry: 2,
     staleTime: 1000 * 60 * 5,
@@ -126,38 +126,25 @@ const ActiveAgentClient = ({user}:{user:AdminDetailsProps}) => {
           <MoreHorizontalIcon/>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
-          {/* Profile Actions */}
+          {/* User Management */}
           <div className="p-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Profile</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors mb-1">
-              <Eye className="w-4 h-4 text-gray-600" />
-              View Agent Profile
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1">
+              <PlayCircle className="w-4 h-4" />
+              Revoke Suspension
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
               <MessageCircle className="w-4 h-4" />
               Send Message
             </DropdownMenuItem>
           </div>
 
-          {/* Management Actions */}
+          {/* Information & Danger */}
           <div className="p-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Actions</p>
             <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1">
-              <Badge className="w-4 h-4" />
-              Assign Role
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50 mb-1">
-              <ShieldOff className="w-4 h-4" />
-              Revoke Verification
-            </DropdownMenuItem>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="p-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-amber-600 focus:text-amber-600 focus:bg-amber-50 mb-1">
-              <Pause className="w-4 h-4" />
-              Suspend Agent
+              <Eye className="w-4 h-4" />
+              View Suspension Details
             </DropdownMenuItem>
             <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
               <Trash2 className="w-4 h-4" />
@@ -214,7 +201,7 @@ const ActiveAgentClient = ({user}:{user:AdminDetailsProps}) => {
           }
           {status === 'success' && users.length === 0 &&
             <div className='w-full h-full items-center'>
-              <EmptyState message={ search !== '' ? 'No agent found for the search query' : 'No active agents at the moment.'}/>
+              <EmptyState message={ search !== '' ? 'No agent found for the search query' : 'No suspended agents at the moment.'}/>
             </div>
           }
           {status === 'success' && users && users.length > 0 &&
@@ -253,14 +240,14 @@ const ActiveAgentClient = ({user}:{user:AdminDetailsProps}) => {
   return (
     <AgentsWrapper 
       user={user}
-      placeholder='search active agents...'
+      placeholder='search suspended agents...'
       searchDelay={400}
-      namespace='active_agents'
+      namespace='suspended_agents'
       maxWidth='max-w-4xl'
     >
       <TableList/>
     </AgentsWrapper>
   )
-};
+}
 
-export default ActiveAgentClient
+export default SuspendedAgentClient

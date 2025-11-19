@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn, nairaSign } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Pagination from '@/components/ui/pagination'
-import { Loader2, MoreHorizontalIcon } from 'lucide-react'
+import { CheckCircle, Eye, Loader2, MoreHorizontalIcon, XCircle } from 'lucide-react'
 import { AdminDetailsProps, VerificationSalesProps } from '@/lib/types'
 import axios from 'axios'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -171,18 +171,33 @@ const PendingSalesClient = ({user}:{user:AdminDetailsProps}) => {
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
           <MoreHorizontalIcon/>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem>
-            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/sellouts/${data.apartment.propertyIdTag}`} prefetch>
-              View Apartment
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleCompleteSellout(data._id)}>
-            Confirm Purchased
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Cancel Purchase
-          </DropdownMenuItem>
+        <DropdownMenuContent className="w-56 min-w-[200px] p-2" align="end">
+          {/* Property Details */}
+          <div className="p-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Property</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+              <Eye className="w-4 h-4" />
+              <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/sellouts/${data.apartment.propertyIdTag}`} prefetch className="w-full">
+                View Apartment
+              </Link>
+            </DropdownMenuItem>
+          </div>
+
+          {/* Purchase Management */}
+          <div className="p-2 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Purchase Status</p>
+            <DropdownMenuItem 
+              onClick={() => handleCompleteSellout(data._id)}
+              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Confirm Purchased
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
+              <XCircle className="w-4 h-4" />
+              Cancel Purchase
+            </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     )

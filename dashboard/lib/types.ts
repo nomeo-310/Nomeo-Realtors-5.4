@@ -18,7 +18,14 @@ export interface ExtendedUserProps extends BasicUserProps {
 }
 
 export interface BasicAgentProps extends ExtendedUserProps {
-  
+  agentId : {
+    _id: string;
+    agentVerified: boolean;
+    licenseNumber: string;
+    officeNumber: string;
+    agencyName: string;
+    verificationStatus: string;
+  }
 }
 
 export interface AdminDetailsProps {

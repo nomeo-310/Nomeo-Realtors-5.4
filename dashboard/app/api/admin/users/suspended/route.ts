@@ -61,7 +61,7 @@ export const POST = async (request: Request) => {
     // Execute queries in parallel for better performance
     const [users, totalUsers] = await Promise.all([
       User.find(searchFilter)
-        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor')
+        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor createdAt')
         .limit(RESULTS_PER_PAGE)
         .skip(skip)
         .sort({ createdAt: getSortValue(sortOrder) })

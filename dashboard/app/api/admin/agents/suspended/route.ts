@@ -66,7 +66,7 @@ export const POST = async (request: Request) => {
         .populate({
           path: 'agentId',
           model: Agent,
-          select: 'licenseNumber officeAddress agentVerified'
+          select: 'licenseNumber officeAddress agentVerified agencyName verificationStatus'
         })
         .limit(RESULTS_PER_PAGE)
         .skip(skip)

@@ -11,7 +11,7 @@ import EmptyState from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/formatDate'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { MoreHorizontalIcon } from 'lucide-react'
+import { Eye, MessageCircle, MoreHorizontalIcon, PlayCircle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import TableLoading from '../table-loading'
 import Pagination from '@/components/ui/pagination'
@@ -125,19 +125,32 @@ const SuspendedUserClient = ({user}:{user:AdminDetailsProps}) => {
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
           <MoreHorizontalIcon/>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem className="text-green-600 focus:text-green-700">
-            Revoke Suspension
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Send Message
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            View Suspension Details
-          </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive focus:text-destructive">
-            Delete User
-          </DropdownMenuItem>
+        <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
+          {/* User Management */}
+          <div className="p-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1">
+              <PlayCircle className="w-4 h-4" />
+              Revoke Suspension
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+              <MessageCircle className="w-4 h-4" />
+              Send Message
+            </DropdownMenuItem>
+          </div>
+
+          {/* Information & Danger */}
+          <div className="p-2 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Actions</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1">
+              <Eye className="w-4 h-4" />
+              View Suspension Details
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
+              <Trash2 className="w-4 h-4" />
+              Delete User
+            </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     )

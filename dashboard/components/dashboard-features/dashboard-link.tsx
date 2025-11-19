@@ -28,7 +28,8 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
         "Created Blogs": "created-blogs",
         "Blogs": "created-blogs",
         "Create Blog": "create-blog",
-        "Manage Users": "manage-users"
+        "Manage Users": "manage-users",
+        "Manage Agents": "manage-agents",
       };
 
       const route = routeConfig[text as keyof typeof routeConfig];

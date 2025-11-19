@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn, getUserRole } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Pagination from '@/components/ui/pagination'
-import { Loader2, MoreHorizontalIcon } from 'lucide-react'
+import { CheckCircle, Eye, Loader2, MoreHorizontalIcon, XCircle } from 'lucide-react'
 import VerificationsWrapper from './verifications-wrapper'
 import { AdminDetailsProps, VerificationPropertyProps } from '@/lib/types'
 import axios from 'axios'
@@ -192,22 +192,39 @@ const ApartmentVerificationClient = ({user}:{user:AdminDetailsProps}) => {
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
           <MoreHorizontalIcon/>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem>
-            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data.propertyIdTag}`} prefetch>
-              View Details
-            </Link>
-          </DropdownMenuItem>
-          { canApprove && 
-            <React.Fragment>
-              <DropdownMenuItem onClick={() => handleApproval(data._id)}>
+        <DropdownMenuContent className="w-56 min-w-[200px] p-2" align="end">
+          {/* Property Details */}
+          <div className="p-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Property</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+              <Eye className="w-4 h-4" />
+              <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/verifications/apartments/${data.propertyIdTag}`} prefetch className="w-full">
+                View Details
+              </Link>
+            </DropdownMenuItem>
+          </div>
+
+          {/* Verification Actions */}
+          {canApprove && (
+            <div className="p-2 border-t border-gray-100">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Verification</p>
+              <DropdownMenuItem 
+                onClick={() => handleApproval(data._id)}
+                className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1"
+              >
+                <CheckCircle className="w-4 h-4" />
                 Approve Property
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleRejection(data._id)}>
+              
+              <DropdownMenuItem 
+                onClick={() => handleRejection(data._id)}
+                className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10"
+              >
+                <XCircle className="w-4 h-4" />
                 Reject Property
               </DropdownMenuItem>
-            </React.Fragment>
-          }
+            </div>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     )

@@ -51,7 +51,7 @@ export const verifyAgent = async (values: agentDetails) => {
   }
 
   try {
-    await Agent.findOneAndUpdate({ _id: agentId }, { verificationStatus: 'verified'});
+    await Agent.findOneAndUpdate({ _id: agentId }, {agentVerified: true, verificationStatus: 'verified'});
 
     const newNotification = await Notification.create({
       type: 'verification',

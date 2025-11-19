@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn, nairaSign } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Pagination from '@/components/ui/pagination'
-import { Loader2, MoreHorizontalIcon } from 'lucide-react'
+import { CheckCircle, Eye, Loader2, MoreHorizontalIcon, XCircle } from 'lucide-react'
 import { AdminDetailsProps, VerificationRentalProps } from '@/lib/types'
 import axios from 'axios'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -186,18 +186,33 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
           <MoreHorizontalIcon/>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem>
-            <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/${data?.apartment.propertyIdTag}`} prefetch>
-              View Apartment
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleCompleteRental(data._id)}>
-            Complete Rental
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Cancel Rental
-          </DropdownMenuItem>
+        <DropdownMenuContent className="w-56 min-w-[200px] p-2" align="end">
+          {/* View Actions */}
+          <div className="p-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Apartment</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+              <Eye className="w-4 h-4" />
+              <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/${data?.apartment.propertyIdTag}`} prefetch className="w-full">
+                View Apartment
+              </Link>
+            </DropdownMenuItem>
+          </div>
+
+          {/* Rental Management */}
+          <div className="p-2 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Rental Status</p>
+            <DropdownMenuItem 
+              onClick={() => handleCompleteRental(data._id)}
+              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1"
+            >
+              <CheckCircle className="w-4 h-4" />
+              Complete Rental
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
+              <XCircle className="w-4 h-4" />
+              Cancel Rental
+            </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     )

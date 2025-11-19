@@ -19,14 +19,14 @@ interface wrapperProps {
   user: AdminDetailsProps
 }
 
-interface userWrapperProps extends wrapperProps {
+interface WrapperProps extends wrapperProps {
   placeholder?: string;
   searchDelay?: number;
   namespace?: string;
   maxWidth?: string; 
 }
 
-const UsersWrapper = ({children, user, placeholder, searchDelay, namespace, maxWidth}:userWrapperProps) => {
+const UsersWrapper = ({children, user, placeholder, searchDelay, namespace, maxWidth}:WrapperProps) => {
 
   const pathname = usePathname();
 

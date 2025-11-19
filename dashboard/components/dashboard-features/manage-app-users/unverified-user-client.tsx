@@ -11,7 +11,7 @@ import EmptyState from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/formatDate'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { MoreHorizontalIcon } from 'lucide-react'
+import { BadgeCheck, Ban, Bell, Eye, MessageCircle, MoreHorizontalIcon, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import TableLoading from '../table-loading'
 import Pagination from '@/components/ui/pagination'
@@ -125,25 +125,45 @@ const UnverifiedUserClient = ({user}:{user:AdminDetailsProps}) => {
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
           <MoreHorizontalIcon/>
         </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem className="text-green-600 focus:text-green-700">
-            Verify User
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Send Verification Reminder
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            View Verification Details
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            Send Message
-          </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive focus:text-destructive">
-            Delete User
-          </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive focus:text-destructive">
-            Block User
-          </DropdownMenuItem>
+        <DropdownMenuContent className="w-64 min-w-[220px]" align="end">
+          {/* Verification Actions */}
+          <div className="p-2">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Verification</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1">
+              <BadgeCheck className="w-4 h-4" />
+              Verify User
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50 mb-1">
+              <Bell className="w-4 h-4" />
+              Send Verification Reminder
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50">
+              <Eye className="w-4 h-4" />
+              View Verification Details
+            </DropdownMenuItem>
+          </div>
+
+          {/* Communication */}
+          <div className="p-2 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Communication</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-cyan-600 focus:text-cyan-600 focus:bg-cyan-50">
+              <MessageCircle className="w-4 h-4" />
+              Send Message
+            </DropdownMenuItem>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="p-2 border-t border-gray-100">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10 mb-1">
+              <Trash2 className="w-4 h-4" />
+              Delete User
+            </DropdownMenuItem>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-amber-600 focus:text-amber-600 focus:bg-amber-50">
+              <Ban className="w-4 h-4" />
+              Block User
+            </DropdownMenuItem>
+          </div>
         </DropdownMenuContent>
       </DropdownMenu>
     )
