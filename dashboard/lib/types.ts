@@ -15,6 +15,8 @@ export interface ExtendedUserProps extends BasicUserProps {
   userVerified: boolean;
   username: string;
   createdAt: string;
+  phoneNumber: string;
+  userAccountSuspended: boolean;
 }
 
 export interface BasicAgentProps extends ExtendedUserProps {

@@ -15,6 +15,7 @@ import { Badge, MessageCircle, MoreHorizontalIcon, Pause, ShieldOff, Trash2 } fr
 import { cn } from '@/lib/utils'
 import TableLoading from '../table-loading'
 import Pagination from '@/components/ui/pagination'
+import { MessageRecipient, useDeleteUserModal, useMessageUserModal, useRevokeVerificationModal, UserForRestriction, UserForRoleAssignment, UserForVerificationRevocation, useRoleAssignmentModal, useSuspendUserModal } from '@/hooks/general-store'
 
 interface ApiResponse {
   users: ExtendedUserProps[];
@@ -111,14 +112,95 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{user.state}</TableCell>
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{formatDate(user.createdAt)}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
-          <Menu/>
+          <Menu user={user}/>
         </TableCell>
       </TableRow>
     )
   };
 
-  const Menu = () => {
+  const Menu = ({user}: {user: ExtendedUserProps}) => {
     const [showMenu, setShowMenu] = React.useState(false);
+
+    console.log(user.role)
+
+      const messageModal = useMessageUserModal();
+      const roleAssignmentModal = useRoleAssignmentModal();
+      const revokeVerificationModal = useRevokeVerificationModal();
+      const suspendUserModal = useSuspendUserModal();
+      const deleteUserModal = useDeleteUserModal();
+
+  const handleSuspendUser = (user: ExtendedUserProps) => {
+    const userForSuspension: UserForRestriction = {
+      id: user._id,
+      surName: user.surName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      userType: user.role, // 'user', 'agent', or 'admin'
+      isActive: user.userVerified,
+      isSuspended: !user.userVerified
+    };
+    
+    suspendUserModal.onOpen(userForSuspension);
+  };
+
+  const handleBlockUser = (user: ExtendedUserProps) => {
+    const userForBlocking: UserForRestriction = {
+      id: user._id,
+      surName: user.surName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      userType: user.role, // 'user', 'agent', or 'admin'
+      isActive: user.userVerified,
+      isSuspended: !user.userVerified,
+    };
+    
+    deleteUserModal.onOpen(userForBlocking);
+  };
+
+      const handleRevokeVerification = (user: ExtendedUserProps) => {
+        const userForRevocation: UserForVerificationRevocation = {
+          id: user._id,
+          surName: user.surName,
+          lastName: user.lastName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          role: user.role, // 'user', 'agent', or 'admin'
+          isVerified: user.userVerified,
+        };
+        
+        revokeVerificationModal.onOpen(userForRevocation);
+      };
+
+      const handleAssignRole = (user: ExtendedUserProps) => {
+        const userForRoleAssignment: UserForRoleAssignment = {
+          id: user._id,
+          surName: user.surName,
+          lastName: user.lastName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          currentRole: user.role || 'user',
+          isActive: true, // default to true if not specified
+        };
+        
+        roleAssignmentModal.onOpen(userForRoleAssignment);
+      };
+
+      const handleMessageUser = (user:ExtendedUserProps) => {
+        // Transform your user data to match MessageRecipient type
+        const recipient: MessageRecipient = {
+          id: user._id,
+          surName: user.surName, // Adjust based on your data structure
+          lastName: user.lastName,
+          email: user.email,
+          userType: 'user', // or 'agent' or 'admin'
+          phoneNumber: user.phoneNumber,
+          // propertyAddress and other fields are optional
+        };
+        
+        messageModal.onOpen(recipient);
+      };
 
     return (
       <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
@@ -129,7 +211,7 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
           {/* Communication */}
           <div className="p-2">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Communication</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50" onClick={() => handleMessageUser(user)}>
               <MessageCircle className="w-4 h-4" />
               Send User a Message
             </DropdownMenuItem>
@@ -138,11 +220,11 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
           {/* Management Actions */}
           <div className="p-2 border-t border-gray-100">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1"  onClick={() => handleAssignRole(user)}>
               <Badge className="w-4 h-4" />
               Assign Role
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50" onClick={() => handleRevokeVerification(user)}>
               <ShieldOff className="w-4 h-4" />
               Revoke Verification
             </DropdownMenuItem>
@@ -151,11 +233,11 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
           {/* Danger Zone */}
           <div className="p-2 border-t border-gray-100">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-amber-600 focus:text-amber-600 focus:bg-amber-50 mb-1">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-amber-600 focus:text-amber-600 focus:bg-amber-50 mb-1" onClick={() => handleSuspendUser(user)}>
               <Pause className="w-4 h-4" />
               Suspend User
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleBlockUser(user)}>
               <Trash2 className="w-4 h-4" />
               Delete User
             </DropdownMenuItem>

@@ -8,7 +8,6 @@ import Notification from "@/models/notification";
 import { revalidatePath } from "next/cache";
 import User from "@/models/user";
 import Apartment from "@/models/apartment";
-import Rentout from "@/models/rentout";
 
 interface agentDetails {
   agentId: string;

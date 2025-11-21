@@ -5,6 +5,11 @@ import TermsAndCondition from '@/components/modals/terms-and-condition'
 import TermsOfService from '@/components/modals/terms-of-service'
 import AgentRejectionModal from '@/components/modals/agent-rejection-modal'
 import PropertyRejectionModal from '@/components/modals/property-rejection-modal'
+import MessageUserModal from '@/components/modals/message-user-modal'
+import RoleAssignmentModal from '@/components/modals/role-assignment-modal'
+import RevokeVerificationModal from '@/components/modals/revoke-verification-modal'
+import BlockUserModal from '@/components/modals/block-user-modal'
+import SuspendUserModal from '@/components/modals/suspend-user-modal'
 
 const ModalProvider = async () => {
 
@@ -16,6 +21,11 @@ const ModalProvider = async () => {
       <PrivacyPolicy/>
       <AgentRejectionModal/>
       <PropertyRejectionModal/>
+      <MessageUserModal/>
+      <RoleAssignmentModal/>
+      <RevokeVerificationModal/>
+      <BlockUserModal/>
+      <SuspendUserModal/>
     </React.Fragment>
   )
 }
