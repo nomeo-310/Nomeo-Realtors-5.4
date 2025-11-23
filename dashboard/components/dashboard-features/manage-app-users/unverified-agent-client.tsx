@@ -58,8 +58,6 @@ const UnverifiedAgentClient = ({user}:{user:AdminDetailsProps}) => {
     queryKey: ['unverified-agents', search, sortOrder, currentPage],
     queryFn: fetchData,
     retry: 2,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 10,
   });
 
   React.useEffect(() => {

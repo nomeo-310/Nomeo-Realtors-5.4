@@ -59,8 +59,6 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
     queryKey: ['active-users', search, sortOrder, currentPage],
     queryFn: fetchData,
     retry: 2,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 10,
   });
 
   React.useEffect(() => {
@@ -144,14 +142,14 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
     suspendUserModal.onOpen(userForSuspension);
   };
 
-  const handleBlockUser = (user: ExtendedUserProps) => {
+  const handleDeleteUser = (user: ExtendedUserProps) => {
     const userForBlocking: UserForRestriction = {
       id: user._id,
       surName: user.surName,
       lastName: user.lastName,
       email: user.email,
       phoneNumber: user.phoneNumber,
-      userType: user.role, // 'user', 'agent', or 'admin'
+      userType: user.role, 
       isActive: user.userVerified,
       isSuspended: !user.userVerified,
     };
@@ -166,7 +164,7 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
           lastName: user.lastName,
           email: user.email,
           phoneNumber: user.phoneNumber,
-          role: user.role, // 'user', 'agent', or 'admin'
+          role: user.role,
           isVerified: user.userVerified,
         };
         
@@ -181,22 +179,21 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
           email: user.email,
           phoneNumber: user.phoneNumber,
           currentRole: user.role || 'user',
-          isActive: true, // default to true if not specified
+          isActive: true,
         };
         
         roleAssignmentModal.onOpen(userForRoleAssignment);
       };
 
       const handleMessageUser = (user:ExtendedUserProps) => {
-        // Transform your user data to match MessageRecipient type
+        
         const recipient: MessageRecipient = {
           id: user._id,
-          surName: user.surName, // Adjust based on your data structure
+          surName: user.surName, 
           lastName: user.lastName,
           email: user.email,
-          userType: 'user', // or 'agent' or 'admin'
+          userType: user.role, 
           phoneNumber: user.phoneNumber,
-          // propertyAddress and other fields are optional
         };
         
         messageModal.onOpen(recipient);
@@ -237,7 +234,7 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
               <Pause className="w-4 h-4" />
               Suspend User
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleBlockUser(user)}>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteUser(user)}>
               <Trash2 className="w-4 h-4" />
               Delete User
             </DropdownMenuItem>

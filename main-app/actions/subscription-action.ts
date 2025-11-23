@@ -1,70 +1,48 @@
 "use server";
 
-// =============================================
-// IMPORTS
-// =============================================
-
-// Database & Models
 import { connectToMongoDB } from "@/lib/connectToMongoDB";
 import Subscription from "@/models/subscription";
 import User from "@/models/user";
-
-// Actions & Utilities
 import { getCurrentUser } from "./user-actions";
 import { revalidatePath } from "next/cache";
 
-// =============================================
-// SUBSCRIPTION MANAGEMENT FUNCTIONS
-// =============================================
+// Database connection optimization
+let isConnected = false;
 
-/**
- * Subscribe a user to the newsletter
- * 
- * This function handles:
- * - New subscription creation for both authenticated users and guests
- * - Prevention of duplicate subscriptions
- * - User profile updates for authenticated subscribers
- * 
- * @param email - The email address to subscribe
- * @param path - The path to revalidate after operation
- * @returns API response indicating success or failure
- */
-export const subscribeUser = async ({ email, path }: { email: string; path: string }) => {
-  // Establish database connection
-  await connectToMongoDB();
-
-  // Get current authenticated user (if any)
-  const currentUser = await getCurrentUser();
-
-  // =============================================
-  // PREPARE SUBSCRIPTION DATA
-  // =============================================
-  
-  let subscriptionData;
-
-  if (currentUser && currentUser.email === email) {
-    // User is authenticated and email matches - create user-linked subscription
-    subscriptionData = {
-      email: email,
-      isUser: true,
-      userId: currentUser._id
-    };
-  } else {
-    // User is not authenticated or email doesn't match - create guest subscription
-    subscriptionData = {
-      email: email,
-      isUser: false
-    };
+const ensureConnection = async () => {
+  if (!isConnected) {
+    await connectToMongoDB();
+    isConnected = true;
   }
+};
 
-  // =============================================
-  // CHECK FOR EXISTING SUBSCRIPTION
-  // =============================================
-  
-  const alreadySubscribed = await Subscription.findOne({ email: email });
+// Common validation functions
+interface AuthValidationResult {
+  success: boolean;
+  message?: string;
+  status?: number;
+  currentUser?: any;
+}
+
+const validateUserAuth = async (): Promise<AuthValidationResult> => {
+  const currentUser = await getCurrentUser();
+  return { success: true, currentUser };
+};
+
+// Subscription Actions
+export const subscribeUser = async ({ email, path }: { email: string; path: string }) => {
+  await ensureConnection();
 
   try {
-    // Prevent duplicate subscriptions
+    const authResult = await validateUserAuth();
+    const { currentUser } = authResult;
+
+    // Check for existing subscription
+    const [alreadySubscribed] = await Promise.all([
+      Subscription.findOne({ email }),
+      Promise.resolve()
+    ]);
+
     if (alreadySubscribed) {
       return {
         success: false, 
@@ -73,29 +51,22 @@ export const subscribeUser = async ({ email, path }: { email: string; path: stri
       };
     }
 
-    // =============================================
-    // CREATE SUBSCRIPTION RECORD
-    // =============================================
-    
-    const subscription = await Subscription.create(subscriptionData);
-    subscription.save();
+    // Prepare subscription data
+    const subscriptionData = currentUser && currentUser.email === email
+      ? { email, isUser: true, userId: currentUser._id }
+      : { email, isUser: false };
 
-    // =============================================
-    // UPDATE USER PROFILE IF AUTHENTICATED
-    // =============================================
-    
-    if (currentUser) {
-      await User.findOneAndUpdate(
-        { email: email }, 
-        { subscribedToNewsletter: true }
-      );
-    }
+    // Create subscription and update user in parallel
+    const [subscription] = await Promise.all([
+      Subscription.create(subscriptionData),
+      currentUser 
+        ? User.findOneAndUpdate(
+            { email }, 
+            { subscribedToNewsletter: true }
+          )
+        : Promise.resolve(null)
+    ]);
 
-    // =============================================
-    // FINALIZE OPERATION
-    // =============================================
-    
-    // Revalidate the page to show updated subscription status
     revalidatePath(path);
 
     return {
@@ -105,9 +76,7 @@ export const subscribeUser = async ({ email, path }: { email: string; path: stri
     };
     
   } catch (error) {
-    // Handle any errors that occur during subscription process
     console.error('Subscription error:', error);
-    
     return {
       success: false, 
       message: 'Internal server error, try again later!', 
@@ -116,49 +85,25 @@ export const subscribeUser = async ({ email, path }: { email: string; path: stri
   }
 };
 
-/**
- * Unsubscribe a user from the newsletter
- * 
- * This function handles:
- * - Removing newsletter subscription for authenticated users
- * - Updating user profile subscription status
- * 
- * @param path - The path to revalidate after operation
- * @returns API response indicating success or failure
- */
 export const unSubscribeUser = async (path: string) => {
-  // Establish database connection
-  await connectToMongoDB();
-
-  // =============================================
-  // VALIDATE USER AUTHENTICATION
-  // =============================================
-  
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    return {
-      success: false, 
-      message: 'You are not logged in, login to access this feature!', 
-      status: 403
-    };
-  }
+  await ensureConnection();
 
   try {
-    // =============================================
-    // UPDATE USER SUBSCRIPTION STATUS
-    // =============================================
-    
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return {
+        success: false, 
+        message: 'You are not logged in, login to access this feature!', 
+        status: 403
+      };
+    }
+
     await User.findOneAndUpdate(
       { _id: currentUser._id }, 
       { subscribedToNewsletter: false }
     );
 
-    // =============================================
-    // FINALIZE OPERATION
-    // =============================================
-    
-    // Revalidate the page to show updated subscription status
     revalidatePath(path);
 
     return {
@@ -168,9 +113,7 @@ export const unSubscribeUser = async (path: string) => {
     };
     
   } catch (error) {
-    // Handle any errors that occur during unsubscription process
     console.error('Unsubscription error:', error);
-    
     return {
       success: false, 
       message: 'Internal server error, try again later!', 

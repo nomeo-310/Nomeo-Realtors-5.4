@@ -12,6 +12,7 @@ interface INotification extends Document {
   inspectionId?: Types.ObjectId;
   seen: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const notificationSchema: Schema<INotification> = new Schema(
@@ -20,27 +21,93 @@ const notificationSchema: Schema<INotification> = new Schema(
       type: String,
       enum: ['notification', 'inspection', 'rentouts', 'verification', 'pending', 'payment', 'add-clients', 'profile', 'blog-invitation'],
       default: 'notification',
+      index: true
     },
-    title: { type: String, default: '' },
-    content: { type: String, default: '' },
-    propertyId: { type: String, default: '' },
-    issuer: { type: Schema.Types.ObjectId, ref: 'User' },
-    recipient: { type: Schema.Types.ObjectId, ref: 'User' },
-    blogId: { type: Schema.Types.ObjectId, ref: 'Blog' },
-    agentId: { type: Schema.Types.ObjectId, ref: 'User' },
-    inspectionId: { type: Schema.Types.ObjectId, ref: 'Inspection' },
-    seen: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now() },
+    title: { 
+      type: String, 
+      default: '',
+      index: true 
+    },
+    content: { 
+      type: String, 
+      default: '',
+      index: true 
+    },
+    propertyId: { 
+      type: String, 
+      default: '',
+      index: true 
+    },
+    issuer: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'User',
+      index: true 
+    },
+    recipient: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'User',
+      index: true 
+    },
+    blogId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Blog',
+      index: true 
+    },
+    agentId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'User',
+      index: true 
+    },
+    inspectionId: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Inspection',
+      index: true 
+    },
+    seen: { 
+      type: Boolean, 
+      default: false,
+      index: true 
+    },
+    createdAt: { 
+      type: Date, 
+      default: Date.now,
+      index: true 
+    },
   },
   { timestamps: true }
 );
 
-let Notification: Model<INotification>;
+// Compound indexes for common query patterns
+notificationSchema.index({ recipient: 1, seen: 1 });
+notificationSchema.index({ recipient: 1, createdAt: -1 });
+notificationSchema.index({ recipient: 1, type: 1 });
+notificationSchema.index({ recipient: 1, seen: 1, createdAt: -1 });
+notificationSchema.index({ type: 1, createdAt: -1 });
+notificationSchema.index({ seen: 1, createdAt: -1 });
+notificationSchema.index({ issuer: 1, recipient: 1 });
+notificationSchema.index({ agentId: 1, type: 1 });
+notificationSchema.index({ blogId: 1, type: 1 });
+notificationSchema.index({ inspectionId: 1, type: 1 });
+notificationSchema.index({ propertyId: 1, type: 1 });
 
-try {
-  Notification = mongoose.model<INotification>('Notification');
-} catch (error) {
-  Notification = mongoose.model<INotification>('Notification', notificationSchema);
-}
+// Text search index for notification content
+notificationSchema.index({
+  title: 'text',
+  content: 'text'
+});
+
+// TTL index for automatic notification cleanup (optional - for old notifications)
+// notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 }); // 30 days
+
+// Sparse indexes for optional fields
+notificationSchema.index({ propertyId: 1 }, { sparse: true });
+notificationSchema.index({ blogId: 1 }, { sparse: true });
+notificationSchema.index({ agentId: 1 }, { sparse: true });
+notificationSchema.index({ inspectionId: 1 }, { sparse: true });
+notificationSchema.index({ issuer: 1 }, { sparse: true });
+
+// Fixed model creation
+const Notification: Model<INotification> = mongoose.models.Notification || 
+  mongoose.model<INotification>('Notification', notificationSchema);
 
 export default Notification;

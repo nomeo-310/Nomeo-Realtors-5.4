@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import generateAgentId from '../utils/generateAgentId';
 
-type image = {
+type Image = {
   public_id: string;
   secure_url: string;
 };
@@ -17,7 +17,7 @@ interface IAgent extends mongoose.Document {
   agentVerified: boolean;
   verificationStatus: 'verified' | 'pending' | 'unverified' | 'rejected';
   inspectionFeePerHour: number;
-  coverImage?: image;
+  coverImage?: Image;
   getListings: boolean;
   isACollaborator: boolean;
   userId: mongoose.Types.ObjectId;
@@ -26,51 +26,163 @@ interface IAgent extends mongoose.Document {
   clients: mongoose.Types.ObjectId[];
   potentialClients: mongoose.Types.ObjectId[];
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const agentSchema: mongoose.Schema<IAgent> = new mongoose.Schema(
   {
-    licenseNumber: { type: String, default: undefined },
-    coverPicture: { type: String, default: undefined },
-    officeNumber: { type: String, default: undefined },
-    officeAddress: { type: String, default: undefined },
-    agencyName: { type: String, default: undefined },
-    coverImage: {
-      public_id: { type: String, default: undefined },
-      secure_url: { type: String, default: undefined },
+    licenseNumber: { 
+      type: String, 
+      default: undefined,
+      unique: true,
+      index: true 
     },
-    getListings: {type: Boolean, default: false},
-    isACollaborator: {type: Boolean, default: false},
-    agentRatings: { type: String, default: undefined },
-    agencyWebsite: { type: String, default: undefined },
-    agentVerified: { type: Boolean, default: false },
-    verificationStatus: { type: String, enum: ['verified', 'pending', 'unverified'], default: 'unverified' },
-    inspectionFeePerHour: { type: Number, default: 0 },
-    userId: { type: mongoose.Schema.ObjectId, ref: 'User' },
-    inspections: [{ type: mongoose.Schema.ObjectId, ref: 'Inspection' }],
-    apartments: [{ type: mongoose.Schema.ObjectId, ref: 'Apartment' }],
-    clients: [{ type: mongoose.Schema.ObjectId, ref: 'User' }],
-    potentialClients: [{ type: mongoose.Schema.ObjectId, ref: 'User' }],
-    createdAt: { type: Date, default: Date.now() },
+    coverPicture: { 
+      type: String, 
+      default: undefined 
+    },
+    officeNumber: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    officeAddress: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    agencyName: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    coverImage: {
+      public_id: { 
+        type: String, 
+        default: undefined
+      },
+      secure_url: { 
+        type: String, 
+        default: undefined
+      },
+    },
+    getListings: {
+      type: Boolean, 
+      default: false,
+      index: true 
+    },
+    isACollaborator: {
+      type: Boolean, 
+      default: false,
+      index: true 
+    },
+    agentRatings: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    agencyWebsite: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    agentVerified: { 
+      type: Boolean, 
+      default: false,
+      index: true 
+    },
+    verificationStatus: { 
+      type: String, 
+      enum: ['verified', 'pending', 'unverified', 'rejected'], 
+      default: 'unverified',
+      index: true 
+    },
+    inspectionFeePerHour: { 
+      type: Number, 
+      default: 0,
+      index: true 
+    },
+    userId: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User',
+      required: true,
+      unique: true,
+      index: true 
+    },
+    inspections: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Inspection' 
+    }],
+    apartments: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Apartment' 
+    }],
+    clients: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User' 
+    }],
+    potentialClients: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User' 
+    }],
+    createdAt: { 
+      type: Date, 
+      default: Date.now,
+      index: true 
+    },
   },
   { timestamps: true }
 );
 
-agentSchema.pre<IAgent>('save', async function (next) {
-  const agentIdTag = generateAgentId();
-  this.licenseNumber = agentIdTag;
+// Compound indexes for common query patterns
+agentSchema.index({ verificationStatus: 1, agentVerified: 1 });
+agentSchema.index({ verificationStatus: 1, createdAt: -1 });
+agentSchema.index({ agentVerified: 1, getListings: 1 });
+agentSchema.index({ agencyName: 1, verificationStatus: 1 });
+agentSchema.index({ userId: 1, verificationStatus: 1 });
+agentSchema.index({ createdAt: -1, verificationStatus: 1 });
+agentSchema.index({ inspectionFeePerHour: 1, verificationStatus: 1 });
+agentSchema.index({ isACollaborator: 1, getListings: 1 });
+agentSchema.index({ agentRatings: -1, verificationStatus: 1 });
 
+// Multi-key indexes for array fields
+agentSchema.index({ apartments: 1 });
+agentSchema.index({ inspections: 1 });
+agentSchema.index({ clients: 1 });
+agentSchema.index({ potentialClients: 1 });
+
+// Text search index for agent discovery
+agentSchema.index({
+  agencyName: 'text',
+  officeAddress: 'text',
+  licenseNumber: 'text'
+});
+
+// Sparse indexes for nested optional fields
+agentSchema.index({ 'coverImage.public_id': 1 }, { sparse: true });
+agentSchema.index({ 'coverImage.secure_url': 1 }, { sparse: true });
+agentSchema.index({ agencyWebsite: 1 }, { sparse: true });
+agentSchema.index({ coverPicture: 1 }, { sparse: true });
+
+// Popular agents index (based on portfolio size and ratings)
+agentSchema.index({ 
+  apartments: -1, 
+  clients: -1, 
+  verificationStatus: 1,
+  agentRatings: -1 
+});
+
+agentSchema.pre<IAgent>('save', async function (next) {
+  // Only generate license number if it doesn't exist
+  if (!this.licenseNumber) {
+    const agentIdTag = generateAgentId();
+    this.licenseNumber = agentIdTag;
+  }
   next();
 });
 
-let Agent: mongoose.Model<IAgent>;
-
-try {
-
-  Agent = mongoose.model<IAgent>('Agent');
-} catch (error) {
-
-  Agent = mongoose.model<IAgent>('Agent', agentSchema);
-}
+// Simplified model creation
+const Agent: mongoose.Model<IAgent> = mongoose.models.Agent || 
+  mongoose.model<IAgent>('Agent', agentSchema);
 
 export default Agent;

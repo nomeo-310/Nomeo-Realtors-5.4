@@ -41,50 +41,216 @@ interface IApartment extends Document {
   bookmarks: Types.ObjectId[];
   likes: Types.ObjectId[];
   reviews: Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const apartmentSchema: Schema<IApartment> = new Schema(
   {
-    propertyTag: { type: String, enum: ['for-rent', 'for-sale'], default: 'for-rent' },
-    propertyTypeTag: { type: String, default: undefined },
-    propertyIdTag: { type: String, default: undefined},
-    title: { type: String, default: undefined },
-    description: { type: String, default: undefined },
-    address: { type: String, default: undefined },
-    city: { type: String, default: undefined },
-    state: { type: String, default: undefined },
-    mainAmenities: [{ type: String, default: undefined}],
-    optionalAmenities: [{ type: String, default: undefined },],
-    monthlyRent: { type: Number, default: 0 },
-    propertyPrice:  { type: Number, default: 0 },
-    annualRent:  { type: Number, default: 0 },
-    bedrooms:  { type: Number, default: 0 },
-    bathrooms:  { type: Number, default: 0 },
-    toilets:  { type: Number, default: 0 },
-    squareFootage:  { type: Number, default: 0 },
-    hideProperty: {type: Boolean, default: false},
-    mainFees: [{ name: { type: String, default: undefined }, amount: { type: Number, default: 0 } }],
-    optionalFees: [{ name: { type: String, default: undefined }, amount: { type: Number, default: 0 } }],
-    closestLandmarks: [{ name: { type: String, default: undefined }, distanceAway: { type: String, default: undefined } }],
-    apartmentImages: { type: Schema.Types.ObjectId, ref: 'Attachment'},
-    agent: { type: Schema.Types.ObjectId, ref: 'Agent' },
-    bookmarks: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    reviews: [{ type: Schema.Types.ObjectId, ref: 'Review' }],
-    availabilityStatus: { type: String, enum: ['available', 'rented', 'pending'], default: 'available' },
-    propertyApproval: { type: String, enum: ['approved', 'pending', 'unapproved'], default: 'unapproved' },
-    furnitureStatus: { type: String, enum: ['furnished', 'non furnished'], default: 'non furnished' },
-    facilityStatus: { type: String, enum: ['service', 'non service'], default: 'non service' },
+    propertyTag: { 
+      type: String, 
+      enum: ['for-rent', 'for-sale'], 
+      default: 'for-rent',
+      index: true 
+    },
+    propertyTypeTag: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    propertyIdTag: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    title: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    description: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    address: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    city: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    state: { 
+      type: String, 
+      default: undefined,
+      index: true 
+    },
+    mainAmenities: [{ 
+      type: String, 
+      default: undefined 
+    }],
+    optionalAmenities: [{ 
+      type: String, 
+      default: undefined 
+    }],
+    monthlyRent: { 
+      type: Number, 
+      default: 0,
+      index: true 
+    },
+    propertyPrice: { 
+      type: Number, 
+      default: 0,
+      index: true 
+    },
+    annualRent: { 
+      type: Number, 
+      default: 0,
+      index: true 
+    },
+    bedrooms: { 
+      type: Number, 
+      default: 0,
+      index: true 
+    },
+    bathrooms: { 
+      type: Number, 
+      default: 0,
+      index: true 
+    },
+    toilets: { 
+      type: Number, 
+      default: 0,
+      index: true 
+    },
+    squareFootage: { 
+      type: Number, 
+      default: 0,
+      index: true 
+    },
+    hideProperty: {
+      type: Boolean, 
+      default: false,
+      index: true 
+    },
+    mainFees: [{ 
+      name: { type: String, default: undefined }, 
+      amount: { type: Number, default: 0 } 
+    }],
+    optionalFees: [{ 
+      name: { type: String, default: undefined }, 
+      amount: { type: Number, default: 0 } 
+    }],
+    closestLandmarks: [{ 
+      name: { type: String, default: undefined }, 
+      distanceAway: { type: String, default: undefined } 
+    }],
+    apartmentImages: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Attachment',
+      index: true 
+    },
+    agent: { 
+      type: Schema.Types.ObjectId, 
+      ref: 'Agent',
+      index: true 
+    },
+    bookmarks: [{ 
+      type: Schema.Types.ObjectId, 
+      ref: 'User' 
+    }],
+    likes: [{ 
+      type: Schema.Types.ObjectId, 
+      ref: 'User' 
+    }],
+    reviews: [{ 
+      type: Schema.Types.ObjectId, 
+      ref: 'Review' 
+    }],
+    availabilityStatus: { 
+      type: String, 
+      enum: ['available', 'rented', 'pending'], 
+      default: 'available',
+      index: true 
+    },
+    propertyApproval: { 
+      type: String, 
+      enum: ['approved', 'pending', 'unapproved'], 
+      default: 'unapproved',
+      index: true 
+    },
+    furnitureStatus: { 
+      type: String, 
+      enum: ['furnished', 'non furnished'], 
+      default: 'non furnished',
+      index: true 
+    },
+    facilityStatus: { 
+      type: String, 
+      enum: ['service', 'non service'], 
+      default: 'non service',
+      index: true 
+    },
   },
   { timestamps: true }
 );
 
-let Apartment: Model<IApartment>;
+// Compound indexes for common query patterns
+apartmentSchema.index({ propertyTag: 1, availabilityStatus: 1 });
+apartmentSchema.index({ propertyTag: 1, propertyApproval: 1 });
+apartmentSchema.index({ city: 1, state: 1 });
+apartmentSchema.index({ city: 1, propertyTag: 1 });
+apartmentSchema.index({ state: 1, propertyTag: 1 });
+apartmentSchema.index({ monthlyRent: 1, propertyTag: 1 });
+apartmentSchema.index({ propertyPrice: 1, propertyTag: 1 });
+apartmentSchema.index({ bedrooms: 1, bathrooms: 1 });
+apartmentSchema.index({ squareFootage: 1, propertyTag: 1 });
+apartmentSchema.index({ agent: 1, propertyApproval: 1 });
+apartmentSchema.index({ agent: 1, availabilityStatus: 1 });
+apartmentSchema.index({ availabilityStatus: 1, propertyApproval: 1 });
+apartmentSchema.index({ createdAt: -1, propertyApproval: 1 });
+apartmentSchema.index({ updatedAt: -1, propertyApproval: 1 });
+apartmentSchema.index({ furnitureStatus: 1, facilityStatus: 1 });
 
-try {
-  Apartment = mongoose.model<IApartment>('Apartment');
-} catch (error) {
-  Apartment = mongoose.model<IApartment>('Apartment', apartmentSchema);
-}
+// Price range indexes
+apartmentSchema.index({ monthlyRent: 1, bedrooms: 1, city: 1 });
+apartmentSchema.index({ propertyPrice: 1, bedrooms: 1, city: 1 });
+
+// Multi-key indexes for array fields
+apartmentSchema.index({ mainAmenities: 1 });
+apartmentSchema.index({ optionalAmenities: 1 });
+apartmentSchema.index({ bookmarks: 1 });
+apartmentSchema.index({ likes: 1 });
+
+// Text search index for property search
+apartmentSchema.index({
+  title: 'text',
+  description: 'text',
+  address: 'text',
+  city: 'text',
+  state: 'text'
+});
+
+// Geospatial index (if you add coordinates later)
+// apartmentSchema.index({ location: '2dsphere' });
+
+// Sparse indexes for optional fields
+apartmentSchema.index({ propertyIdTag: 1 }, { sparse: true });
+apartmentSchema.index({ apartmentImages: 1 }, { sparse: true });
+
+// Popular properties index (based on engagement)
+apartmentSchema.index({ 
+  likes: -1, 
+  bookmarks: -1, 
+  propertyApproval: 1,
+  availabilityStatus: 1 
+});
+
+// Simplified model creation
+const Apartment: Model<IApartment> = mongoose.models.Apartment || 
+  mongoose.model<IApartment>('Apartment', apartmentSchema);
 
 export default Apartment;

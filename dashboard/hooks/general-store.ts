@@ -12,7 +12,7 @@ export interface MessageRecipient {
   lastName: string;
   email: string;
   phoneNumber?: string;
-  userType: 'user' | 'agent' | 'admin';
+  userType: 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin';
   propertyAddress?: string;
   rentAmount?: number;
   isActive?: boolean;
@@ -71,6 +71,23 @@ export interface UserForRestriction {
   isBlocked?: boolean;
   suspensionReason?: string;
   blockReason?: string;
+}
+
+export interface UnverifiedUser {
+  id: string;
+  surName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  userType: 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin';
+  registrationDate: string;
+}
+
+export interface VerificationReminderModalStore {
+  isOpen: boolean;
+  onOpen: (user: UnverifiedUser) => void;
+  onClose: () => void;
+  user: UnverifiedUser | null;
 }
 
 export interface SuspendUserModalStore {
@@ -155,5 +172,12 @@ export const useDeleteUserModal = create<BlockUserModalStore>((set) => ({
   isOpen: false,
   user: null,
   onOpen: (user: UserForRestriction) => set({ isOpen: true, user }),
+  onClose: () => set({ isOpen: false, user: null }),
+}));
+
+export const useVerificationReminderModal = create<VerificationReminderModalStore>((set) => ({
+  isOpen: false,
+  user: null,
+  onOpen: (user: UnverifiedUser) => set({ isOpen: true, user }),
   onClose: () => set({ isOpen: false, user: null }),
 }));

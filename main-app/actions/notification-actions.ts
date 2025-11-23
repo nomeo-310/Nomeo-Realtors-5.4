@@ -6,63 +6,242 @@ import Notification from "@/models/notification";
 import User from "@/models/user";
 import { ObjectId } from "mongodb";
 
+// Database connection optimization
+let isConnected = false;
 
-export const getSingleNotification = async (id:string) => {
-  await connectToMongoDB();
+const ensureConnection = async () => {
+  if (!isConnected) {
+    await connectToMongoDB();
+    isConnected = true;
+  }
+};
 
+// Common validation functions
+interface AuthValidationResult {
+  success: boolean;
+  message?: string;
+  status?: number;
+  currentUser?: any;
+}
+
+const validateUserAuth = async (): Promise<AuthValidationResult> => {
   const currentUser = await getCurrentUser();
-
+  
   if (!currentUser) {
-    return {success: false, message: 'You are not authorized to access this', status: 403}
-  };
+    return { 
+      success: false, 
+      message: 'You are not authorized to access this feature', 
+      status: 403 
+    };
+  }
+
+  return { success: true, currentUser };
+};
+
+// Helper functions
+const compareIds = (id1: any, id2: any): boolean => {
+  return id1?.toString() === id2?.toString();
+};
+
+const toObjectId = (id: string | ObjectId): ObjectId => {
+  return id instanceof ObjectId ? id : new ObjectId(id);
+};
+
+// Notification Actions
+export const getSingleNotification = async (id: string) => {
+  await ensureConnection();
+
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
 
   try {
-    const single_notification = await Notification.findOne({_id: id})
+    const single_notification = await Notification.findOne({ _id: id });
+    
+    if (!single_notification) {
+      return { 
+        success: false, 
+        message: 'Notification not found', 
+        status: 404 
+      };
+    }
 
-    const notification = JSON.parse(JSON.stringify(single_notification))
+    // Verify the notification belongs to the current user
+    if (!compareIds(single_notification.recipient, authResult.currentUser!._id)) {
+      return { 
+        success: false, 
+        message: 'You are not authorized to access this notification', 
+        status: 403 
+      };
+    }
+
+    const notification = JSON.parse(JSON.stringify(single_notification));
     return notification;
   } catch (error) {
-    console.error(error);
-    return {success: false, message: 'Internal server error', status: 500}
+    console.error('Get single notification error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
   }
 };
 
 export const deleteAllNotifications = async () => {
-  await connectToMongoDB();
+  await ensureConnection();
 
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    return {success: false, message: 'You are not authorized to access this feature', status: 403}
-  };
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
 
   try {
-    await Notification.deleteMany({recipient: currentUser._id, seen: true})
+    // Execute both operations in parallel
+    await Promise.all([
+      Notification.deleteMany({ 
+        recipient: authResult.currentUser!._id, 
+        seen: true 
+      }),
+      User.findByIdAndUpdate(
+        authResult.currentUser!._id, 
+        { notifications: [] }
+      )
+    ]);
 
-    await User.findOneAndUpdate({_id: currentUser._id}, {notifications: []})
-    return {success: true, message: 'All notifications successfully cleared', status: 200}
+    return { 
+      success: true, 
+      message: 'All notifications successfully cleared', 
+      status: 200 
+    };
   } catch (error) {
-    console.error(error);
-    return {success: false, message: 'Internal server error', status: 500}    
+    console.error('Delete all notifications error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
   }
 };
 
-export const deleteSingleNotification = async (id:string) => {
-  await connectToMongoDB();
+export const deleteSingleNotification = async (id: string) => {
+  await ensureConnection();
 
-  const currentUser = await getCurrentUser();
-
-  if (!currentUser) {
-    return {success: false, message: 'You are not authorized to access this feature', status: 403}
-  };
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
 
   try {
-    await Notification.deleteOne({_id: id, recipient: currentUser._id, seen: true})
+    // Verify the notification exists and belongs to the user
+    const notification = await Notification.findOne({ 
+      _id: id, 
+      recipient: authResult.currentUser!._id 
+    });
 
-    await User.findOneAndUpdate({_id: currentUser._id}, {$pull: {notifications: new ObjectId(id)}})
-    return {success: true, message: 'Notifications successfully deleted', status: 200}
+    if (!notification) {
+      return { 
+        success: false, 
+        message: 'Notification not found or you are not authorized to delete it', 
+        status: 404 
+      };
+    }
+
+    if (!notification.seen) {
+      return { 
+        success: false, 
+        message: 'You can only delete seen notifications', 
+        status: 403 
+      };
+    }
+
+    // Execute both operations in parallel
+    await Promise.all([
+      Notification.deleteOne({ 
+        _id: id, 
+        recipient: authResult.currentUser!._id 
+      }),
+      User.findByIdAndUpdate(
+        authResult.currentUser!._id, 
+        { $pull: { notifications: toObjectId(id) } }
+      )
+    ]);
+
+    return { 
+      success: true, 
+      message: 'Notification successfully deleted', 
+      status: 200 
+    };
   } catch (error) {
-    console.error(error);
-    return {success: false, message: 'Internal server error', status: 500}    
+    console.error('Delete single notification error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
+  }
+};
+
+// Additional utility functions you might find useful
+export const markNotificationAsSeen = async (id: string) => {
+  await ensureConnection();
+
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
+
+  try {
+    const notification = await Notification.findOneAndUpdate(
+      { 
+        _id: id, 
+        recipient: authResult.currentUser!._id 
+      },
+      { seen: true },
+      { new: true }
+    );
+
+    if (!notification) {
+      return { 
+        success: false, 
+        message: 'Notification not found', 
+        status: 404 
+      };
+    }
+
+    return { 
+      success: true, 
+      message: 'Notification marked as seen', 
+      status: 200 
+    };
+  } catch (error) {
+    console.error('Mark notification as seen error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
+  }
+};
+
+export const markAllNotificationsAsSeen = async () => {
+  await ensureConnection();
+
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
+
+  try {
+    await Notification.updateMany(
+      { 
+        recipient: authResult.currentUser!._id,
+        seen: false 
+      },
+      { seen: true }
+    );
+
+    return { 
+      success: true, 
+      message: 'All notifications marked as seen', 
+      status: 200 
+    };
+  } catch (error) {
+    console.error('Mark all notifications as seen error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
   }
 };

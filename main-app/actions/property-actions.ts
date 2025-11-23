@@ -16,6 +16,7 @@ import Inspection from "@/models/inspection";
 import Notification from "@/models/notification";
 import Rented from "@/models/rentout";
 import { ObjectId } from "mongodb";
+import type { Document } from 'mongoose';
 
 type imageProps = {
   public_id: string;
@@ -27,371 +28,509 @@ type singleAttachment = {
   attachments: imageProps[];
 };
 
+// Database connection optimization
+let isConnected = false;
 
-export const createProperty = async ({values}:{values:IAddApartmentClient}) => {
-  await connectToMongoDB();
+const ensureConnection = async () => {
+  if (!isConnected) {
+    await connectToMongoDB();
+    isConnected = true;
+  }
+};
 
-  const {propertyTag, title, description, address, city, state, monthlyRent, propertyPrice, annualRent, bedrooms, bathrooms, toilets, squareFootage, uploadedImages, mainAmenities, optionalAmenities, mainFees, optionalFees, closestLandmarks} = values;
-  
-  
+// Common validation functions
+interface AuthValidationResult {
+  success: boolean;
+  message?: string;
+  status?: number;
+  currentUser?: any;
+}
+
+const validateUserAuth = async (): Promise<AuthValidationResult> => {
   const currentUser = await getCurrentUser();
   
   if (!currentUser) {
-    return {success: false, message: "You are not logged in", status: 403};
-  };
-  
+    return { success: false, message: "You are not logged in", status: 403 };
+  }
+
+  return { success: true, currentUser };
+};
+
+const validateAgentAccess = async (currentUser: any) => {
   if (currentUser.role !== "agent") {
-    return {success: false, message: "You are not authorized to create a property", status: 403};
-  };
-  
+    return { 
+      success: false, 
+      message: "You are not authorized to perform this action", 
+      status: 403 
+    };
+  }
+  return { success: true };
+};
+
+// Helper functions
+const compareIds = (id1: any, id2: any): boolean => {
+  return id1?.toString() === id2?.toString();
+};
+
+const toObjectId = (id: string | ObjectId): ObjectId => {
+  return id instanceof ObjectId ? id : new ObjectId(id);
+};
+
+// Type-safe document ID extraction
+const getDocumentId = (doc: Document<any> | null | undefined): string => {
+  if (!doc || !doc._id) {
+    throw new Error('Document or document ID is null/undefined');
+  }
+  return doc._id.toString();
+};
+
+// Property Actions
+export const createProperty = async ({ values }: { values: IAddApartmentClient }) => {
+  await ensureConnection();
+
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
+
+  const agentAccessResult = await validateAgentAccess(authResult.currentUser!);
+  if (!agentAccessResult.success) return agentAccessResult;
+
   if (!values) {
-    return {success: false, message: "No values provided", status: 400};
-  };
-  
-  await connectToMongoDB();
+    return { success: false, message: "No values provided", status: 400 };
+  }
+
+  const {
+    propertyTag, title, description, address, city, state, monthlyRent, 
+    propertyPrice, annualRent, bedrooms, bathrooms, toilets, squareFootage, 
+    uploadedImages, mainAmenities, optionalAmenities, mainFees, optionalFees, 
+    closestLandmarks, facilityStatus
+  } = values;
 
   try {
-
+    // Create attachment and property in sequence (attachment is needed for property creation)
     const attachmentData = {
-      agent: currentUser.agentId,
+      agent: authResult.currentUser!.agentId,
       images: uploadedImages.map((image) => image.secure_url),
       attachments: uploadedImages,
     };
-  
-    const newAttachment = await Attachment.create(attachmentData);
-    newAttachment.save();
 
+    const newAttachment = await Attachment.create(attachmentData);
+    const attachmentId = getDocumentId(newAttachment);
+
+    const propertyTagData = generatePropertyTag();
     const propertyData = {
       propertyTag: propertyTag,
-      propertyTypeTag: values.propertyTag === 'for-rent' ? generatePropertyTag().rentId : generatePropertyTag().saleId,
+      propertyTypeTag: propertyTag === 'for-rent' ? propertyTagData.rentId : propertyTagData.saleId,
       propertyIdTag: generatePropertyId(),
-      title: title,
-      description: description,
-      address: address,
-      city: city,
-      state: state,
-      monthlyRent: monthlyRent,
-      propertyPrice: propertyPrice,
-      annualRent: annualRent,
+      title,
+      description,
+      address,
+      city,
+      state,
+      monthlyRent,
+      propertyPrice,
+      annualRent,
       bedrooms: parseInt(bedrooms),
       bathrooms: parseInt(bathrooms),
       toilets: parseInt(toilets),
       squareFootage: parseInt(squareFootage),
-      facilityStatus: values.facilityStatus === 'serviced' ? 'service' : 'non service',
-      mainAmenities: mainAmenities,
-      optionalAmenities: optionalAmenities,
-      mainFees: mainFees,
-      optionalFees: optionalFees,
-      closestLandmarks: closestLandmarks,
-      agent: currentUser.agentId,
-      apartmentImages: JSON.parse(JSON.stringify(newAttachment._id)),
+      facilityStatus: facilityStatus === 'serviced' ? 'service' : 'non service',
+      mainAmenities,
+      optionalAmenities,
+      mainFees,
+      optionalFees,
+      closestLandmarks,
+      agent: authResult.currentUser!.agentId,
+      apartmentImages: attachmentId,
       propertyApproval: "pending",
-      furnitureStatus: values.facilityStatus === 'serviced' ? 'furnished' : 'non furnished',
+      furnitureStatus: facilityStatus === 'serviced' ? 'furnished' : 'non furnished',
       availabilityStatus: "available",
     };
-   
+
     const newProperty = await Apartment.create(propertyData);
-    newProperty.save();
+    const propertyId = getDocumentId(newProperty);
 
-    await Agent.findByIdAndUpdate(currentUser.agentId, {$push: {apartments: newProperty._id}});
-    await Attachment.findByIdAndUpdate(newAttachment._id, {property: newProperty._id})
+    // Update agent and attachment in parallel
+    await Promise.all([
+      Agent.findByIdAndUpdate(authResult.currentUser!.agentId, {
+        $push: { apartments: propertyId }
+      }),
+      Attachment.findByIdAndUpdate(attachmentId, {
+        property: propertyId
+      })
+    ]);
 
-    return {success: true, message: "Property created successfully", status: 200};
+    return { 
+      success: true, 
+      message: "Property created successfully", 
+      status: 200 
+    };
   } catch (error) {
-    return {success: false, message: "Error creating property", status: 500};
+    console.error('Create property error:', error);
+    return { 
+      success: false, 
+      message: "Error creating property", 
+      status: 500 
+    };
   }
 };
 
-export const getSingleProperty = async (id:string) => {
-  await connectToMongoDB();
+export const getSingleProperty = async (id: string) => {
+  await ensureConnection();
 
   try {
-    const property = await Apartment.findOne({propertyIdTag: id})
-    .select('-propertyApproval')
-    .populate({
-      path: 'agent',
-      model: Agent,
-      select: ('agencyName inspectionFeePerHour userId officeAddress officeNumber _id'),
-      populate: {
-        path: 'userId',
-        model: User,
-        select: ('_id surName lastName city state profilePicture')
-      }
-    })
-    .populate({
-      path: 'apartmentImages',
-      model: Attachment,
-      select: ('_id images')
-    })
-  
+    const property = await Apartment.findOne({ propertyIdTag: id })
+      .select('-propertyApproval')
+      .populate({
+        path: 'agent',
+        model: Agent,
+        select: 'agencyName inspectionFeePerHour userId officeAddress officeNumber _id',
+        populate: {
+          path: 'userId',
+          model: User,
+          select: '_id surName lastName city state profilePicture'
+        }
+      })
+      .populate({
+        path: 'apartmentImages',
+        model: Attachment,
+        select: '_id images'
+      });
+
+    if (!property) {
+      return { 
+        success: false, 
+        message: 'Property not found', 
+        status: 404 
+      };
+    }
+
     const singleProperty = JSON.parse(JSON.stringify(property));
-  
-    return singleProperty as propertyProps
+    return singleProperty as propertyProps;
   } catch (error) {
-    console.error(error)
-    return;
+    console.error('Get single property error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
   }
-
 };
 
-export const likeProperty = async (values:{path:string; propertyId: string;}) => {
-  await connectToMongoDB();
+const togglePropertyInteraction = async (
+  values: { path: string; propertyId: string }, 
+  interactionType: 'like' | 'bookmark'
+) => {
+  await ensureConnection();
+
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
+
   const { path, propertyId } = values;
 
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    return {success: false, message: 'You are not logged in. Log in to access features', status: 403}
-  };
-
-  const current_property = await Apartment.findOne({_id: propertyId});
-
-  if (!current_property) {
-    return {success: false, message: 'This apartment does not exist in database', status: 403}
-  };
-
-  const currentPropertyAgentId = current_property.agent;
-
-  const currentPropertyAgent = await Agent.findOne({_id: currentPropertyAgentId});
-
-  const likes = JSON.parse(JSON.stringify(current_property.likes)) as string[];
-  const alreadyLiked = likes.includes(current_user._id);
-
   try {
-    if (alreadyLiked) {
-      await Apartment.findOneAndUpdate({_id: propertyId}, {$pull: {likes: current_user._id}});
-      await User.findByIdAndUpdate({_id: current_user._id}, {$pull: {likedApartments: current_property._id}});
+    const current_property = await Apartment.findById(propertyId);
 
-      revalidatePath(path);
-      return {success: true, message: 'You no longer like this apartment', status: 200}
-    } else {
-      await Apartment.findOneAndUpdate({_id: propertyId}, {$push: {likes: current_user._id}});
-      await User.findByIdAndUpdate({_id: current_user._id}, {$push: {likedApartments: current_property._id}});
-
-      if (currentPropertyAgent) {
-        if (currentPropertyAgent.getListings && !currentPropertyAgent.potentialClients.includes(new ObjectId(current_user._id))) {
-          await Agent.findOneAndUpdate({_id: currentPropertyAgentId}, {potentialClients: {$push: current_user._id}})
-        }
+    if (!current_property) {
+      return { 
+        success: false, 
+        message: 'This apartment does not exist in database', 
+        status: 404 
       };
-
-      revalidatePath(path);
-      return {success: true, message: 'You liked this apartment', status: 200}
     }
+
+    const field = interactionType === 'like' ? 'likes' : 'bookmarks';
+    const userField = interactionType === 'like' ? 'likedApartments' : 'bookmarkedApartments';
+    
+    const interactions = JSON.parse(JSON.stringify(current_property[field])) as string[];
+    const alreadyInteracted = interactions.includes(authResult.currentUser!._id);
+
+    const propertyUpdate = alreadyInteracted ?
+      { $pull: { [field]: authResult.currentUser!._id } } :
+      { $push: { [field]: authResult.currentUser!._id } };
+
+    const userUpdate = alreadyInteracted ?
+      { $pull: { [userField]: current_property._id } } :
+      { $push: { [userField]: current_property._id } };
+
+    // Execute updates in parallel
+    const updatePromises: Promise<any>[] = [
+      Apartment.findByIdAndUpdate(propertyId, propertyUpdate).exec(),
+      User.findByIdAndUpdate(authResult.currentUser!._id, userUpdate).exec()
+    ];
+
+    // Add potential client logic if it's a new interaction
+    if (!alreadyInteracted) {
+      const agent = await Agent.findById(current_property.agent);
+      if (agent?.getListings && !agent.potentialClients.some((id: any) => 
+        compareIds(id, authResult.currentUser!._id))) {
+        updatePromises.push(
+          Agent.findByIdAndUpdate(current_property.agent, {
+            $push: { potentialClients: authResult.currentUser!._id }
+          }).exec()
+        );
+      }
+    }
+
+    await Promise.all(updatePromises);
+
+    revalidatePath(path);
+    return {
+      success: true,
+      message: alreadyInteracted ? 
+        `You no longer ${interactionType} this apartment` : 
+        `You ${interactionType}d this apartment`,
+      status: 200
+    };
   } catch (error) {
-    return {success: false, message: 'Internal server error', status: 500}
+    console.error(`Toggle ${interactionType} error:`, error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
   }
 };
 
-export const bookmarkProperty = async (values:{path:string; propertyId: string;}) => {
-  await connectToMongoDB();
-  const { path, propertyId } = values;
-
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    return {success: false, message: 'You are not logged in. Log in to access features', status: 403}
-  };
-
-  const current_property = await Apartment.findOne({_id: propertyId});
-
-  if (!current_property) {
-    return {success: false, message: 'This apartment does not exist in database', status: 403}
-  };
-
-  const currentPropertyAgentId = current_property.agent;
-
-  const currentPropertyAgent = await Agent.findOne({_id: currentPropertyAgentId});
-
-  const bookmarks = JSON.parse(JSON.stringify(current_property.bookmarks)) as string[];
-  const alreadyBookmarked = bookmarks.includes(current_user._id);
-
-  try {
-    if (alreadyBookmarked) {
-      await Apartment.findOneAndUpdate({_id: propertyId}, {$pull: {bookmarks: current_user._id}});
-      await User.findByIdAndUpdate({_id: current_user._id}, {$pull: {bookmarkedApartments: current_property._id}});
-
-      revalidatePath(path);
-      return {success: true, message: 'You no longer bookmark this apartment', status: 200}
-    } else {
-      await Apartment.findOneAndUpdate({_id: propertyId}, {$push: {bookmarks: current_user._id}});
-      await User.findByIdAndUpdate({_id: current_user._id}, {$push: {bookmarkedApartments: current_property._id}});
-
-      if (currentPropertyAgent) {
-        if (currentPropertyAgent.getListings && !currentPropertyAgent.potentialClients.includes(new ObjectId(current_user._id))) {
-          await Agent.findOneAndUpdate({_id: currentPropertyAgentId}, {potentialClients: {$push: current_user._id}})
-        }
-      };
-
-      revalidatePath(path);
-      return {success: true, message: 'You bookmarked this apartment', status: 200}
-    }
-  } catch (error) {
-    return {success: false, message: 'Internal server error', status: 500}
-  }
+export const likeProperty = async (values: { path: string; propertyId: string }) => {
+  return togglePropertyInteraction(values, 'like');
 };
 
-export const deleteAllApartments = async (values:{email:string; path:string}) => {
-  await connectToMongoDB();
+export const bookmarkProperty = async (values: { path: string; propertyId: string }) => {
+  return togglePropertyInteraction(values, 'bookmark');
+};
+
+export const deleteAllApartments = async (values: { email: string; path: string }) => {
+  await ensureConnection();
+
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
 
   const { email, path } = values;
 
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    return {success: false, message: 'You are not logged in, login to access this feature', status: 403}
-  };
-
-  if (current_user.email !== email) {
-    return {success: false, message: 'The email address does not match!', status: 404}
-  };
-
-  const userIsAnAgent = current_user.userIsAnAgent
-
-  if (current_user && userIsAnAgent) {
-    const agent = await Agent.findOne({_id: current_user.agentId});
-
-    if (agent) {
-      const agentProperties = await Apartment.find({agent: agent._id}).select('apartmentImages')
-      const properties = JSON.parse(JSON.stringify(agentProperties)) as {_id: string, apartmentImages: string}[]
-
-      if (agentProperties && properties.length > 0) {
-        const propertyImages = properties.map((property) => property.apartmentImages);
-        const images = await Attachment.find({_id: {$in: propertyImages}}).select('attachments');
-        const allImages = JSON.parse(JSON.stringify(images)) as singleAttachment[];
-        const allImagesData = allImages.map((item) => item.attachments);
-        const imagesData = allImagesData.flatMap((arr: imageProps[]) => arr).map((property) => property.public_id);
-
-        try {
-          deleteArrayOfImages(imagesData);
-          await Apartment.deleteMany({agent: current_user.agentId})
-          await Agent.updateOne({_id: current_user.agentId}, {apartments: []})
-          await Attachment.deleteMany({agent: current_user.agentId});
-          await Rented.deleteMany({agent: current_user.agentId});
-
-          revalidatePath(path);
-          return {success: true, message: 'Properties successfully deleted', status: 200}
-        } catch (error) {
-
-          return {success: false, message: 'Internal server error', status: 500}
-        }
-      } else {
-        return {success: false, message: 'You do not have any apartments to delete', status: 404}
-      }
-    }
-  } else {
-    return {success: false, message: 'You do not have access to this feature', status: 404}
+  if (authResult.currentUser!.email !== email) {
+    return { 
+      success: false, 
+      message: 'The email address does not match!', 
+      status: 400 
+    };
   }
-};
 
-export const getDeletedProperty = async (id:string) => {
-  await connectToMongoDB();
-
-  const propertyData = await Apartment.findOne({_id: id})
-  .select('-bookmarks -reviews -likes')
-  .populate({
-    path: 'apartmentImages',
-    model: Attachment,
-    select: 'images'
-  })
-  .populate({
-    path: 'agent',
-    model: 'Agent',
-    select: 'licenseNumber coverPicture officeNumber officeAddress agencyName agentRatings agentVerified verificationStatus inspectionFeePerHour apartments clients createdAt userId',
-    populate: {
-      path: 'userId',
-      model: User,
-      select: 'username email firstName lastName profilePicture bio address city state phoneNumber additionalPhoneNumber role'
-    }
-  })
-
-  const property = JSON.parse(JSON.stringify(propertyData))
-
-  return property
-};
-
-export const deleteApartment = async (id:string) => {
-  await connectToMongoDB();
-
-  const current_user = await getCurrentUser();
-  const propertyData = await Apartment.findOne({_id: id}).select('apartmentImages');
-  const property = JSON.parse(JSON.stringify(propertyData)) as {_id: string; apartmentImages: string;}
-  const images = await Attachment.findOne({_id: property.apartmentImages}).select('attachments')
-  const imagesData  = JSON.parse(JSON.stringify(images)) as {_id:string; attachments: {public_id: string; secure_url: string;}[];}
-  const imagesArray = imagesData.attachments.map((image) => image.public_id)
-
-  if (!current_user) {
-    return {success: false, message: 'User does not exist', status: 404}
-  };
-
-  if (current_user.role === 'user') {
-    return {success: false, message: 'You do not have access to this feature', status: 404}
-  };
-
-  if (!propertyData) {
-    return {success: false, message: 'Property does not exist', status: 404}
-  };
+  if (!authResult.currentUser!.userIsAnAgent) {
+    return { 
+      success: false, 
+      message: 'You do not have access to this feature', 
+      status: 403 
+    };
+  }
 
   try {
-   
-    await deleteArrayOfImages(imagesArray);
-    await Agent.findOneAndUpdate({_id: current_user.agentId}, {$pull: {apartments: propertyData._id}})
-    await Inspection.deleteMany({apartment: propertyData._id})
-    await Notification.deleteMany({propertyId: propertyData._id})
-    await Attachment.deleteOne({property: propertyData._id})
-    await Apartment.deleteOne({_id: property._id, agent: current_user.agentId});
-    await Rented.deleteOne({apartment: propertyData.propertyIdTag})
+    const agent = await Agent.findById(authResult.currentUser!.agentId);
+    if (!agent) {
+      return { 
+        success: false, 
+        message: 'Agent profile not found', 
+        status: 404 
+      };
+    }
 
-    return {success: true, message: 'Property successfully deleted', status: 200}
+    const [agentProperties, attachments] = await Promise.all([
+      Apartment.find({ agent: agent._id }).select('apartmentImages'),
+      Attachment.find({ agent: agent._id }).select('attachments')
+    ]);
+
+    if (agentProperties.length === 0) {
+      return { 
+        success: false, 
+        message: 'You do not have any apartments to delete', 
+        status: 404 
+      };
+    }
+
+    // Extract all image public_ids for deletion
+    const allImagesData = attachments.flatMap(attachment => 
+      attachment.attachments.map(img => img.public_id)
+    );
+
+    // Delete images and all related data in parallel
+    const deletionPromises: Promise<any>[] = [
+      Apartment.deleteMany({ agent: authResult.currentUser!.agentId }),
+      Agent.findByIdAndUpdate(authResult.currentUser!.agentId, { apartments: [] }).exec(),
+      Attachment.deleteMany({ agent: authResult.currentUser!.agentId }),
+      Rented.deleteMany({ agent: authResult.currentUser!.agentId }),
+      Inspection.deleteMany({ agent: authResult.currentUser!.agentId }),
+      Notification.deleteMany({ agentId: authResult.currentUser!.agentId })
+    ];
+
+    // Only add image deletion if there are images
+    if (allImagesData.length > 0) {
+      deletionPromises.unshift(deleteArrayOfImages(allImagesData));
+    }
+
+    await Promise.all(deletionPromises);
+
+    revalidatePath(path);
+    return { 
+      success: true, 
+      message: 'Properties successfully deleted', 
+      status: 200 
+    };
   } catch (error) {
-    console.error(error);
-    
-    return {success: false, message: 'Internal server error', status: 500}
+    console.error('Delete all apartments error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
   }
 };
 
-export const hideProperty = async (id:string) => {
-  await connectToMongoDB();
+export const getDeletedProperty = async (id: string) => {
+  await ensureConnection();
 
-   const current_user = await getCurrentUser();
+  try {
+    const propertyData = await Apartment.findOne({ _id: id })
+      .select('-bookmarks -reviews -likes')
+      .populate({
+        path: 'apartmentImages',
+        model: Attachment,
+        select: 'images'
+      })
+      .populate({
+        path: 'agent',
+        model: Agent, // Changed from string to actual model
+        select: 'licenseNumber coverPicture officeNumber officeAddress agencyName agentRatings agentVerified verificationStatus inspectionFeePerHour apartments clients createdAt userId',
+        populate: {
+          path: 'userId',
+          model: User,
+          select: 'username email firstName lastName profilePicture bio address city state phoneNumber additionalPhoneNumber role'
+        }
+      });
 
-  if (!current_user) {
-    return {success: false, message: 'User does not exist', status: 404}
-  };
-
-  if (current_user.role === 'user') {
-    return {success: false, message: 'You do not have access to this feature', status: 403}
-  };
-
-  const property = await Apartment.findOne({_id: id});
-  const propertyData = JSON.parse(JSON.stringify(property)) as propertyProps
-
-  if (!property) {
-    return {success: false, message: 'Property does not exist', status: 404}
-  };
-
-  const alreadyHidden = propertyData.hideProperty;
-
-    if (alreadyHidden) {
-      try {
-      const update = await Apartment.findOneAndUpdate({_id: id}, {hideProperty: false})
-
-      const updatedProperty = JSON.parse(JSON.stringify(update))
-
-      return updatedProperty
-    } catch (error) {
-
-      return {success: false, message: 'Internal server error', status: 200}
+    if (!propertyData) {
+      return { 
+        success: false, 
+        message: 'Property not found', 
+        status: 404 
+      };
     }
-  } else {
-    try {
-      const update = await Apartment.findOneAndUpdate({_id: id}, {hideProperty: true})
 
-      const updatedProperty = JSON.parse(JSON.stringify(update))
+    const property = JSON.parse(JSON.stringify(propertyData));
+    return property;
+  } catch (error) {
+    console.error('Get deleted property error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
+  }
+};
 
-      return updatedProperty
-    } catch (error) {
+export const deleteApartment = async (id: string) => {
+  await ensureConnection();
 
-      return {success: false, message: 'Internal server error', status: 200}
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
+
+  const agentAccessResult = await validateAgentAccess(authResult.currentUser!);
+  if (!agentAccessResult.success) return agentAccessResult;
+
+  try {
+    const [propertyData, attachment] = await Promise.all([
+      Apartment.findOne({ _id: id, agent: authResult.currentUser!.agentId }),
+      Attachment.findOne({ property: id }).select('attachments')
+    ]);
+
+    if (!propertyData) {
+      return { 
+        success: false, 
+        message: 'Property not found or you are not authorized to delete it', 
+        status: 404 
+      };
     }
+
+    const imagesArray = attachment?.attachments?.map((image: imageProps) => image.public_id) || [];
+
+    // Execute all deletion operations in parallel
+    const deletionPromises: Promise<any>[] = [
+      Agent.findByIdAndUpdate(authResult.currentUser!.agentId, {
+        $pull: { apartments: propertyData._id }
+      }).exec(),
+      Inspection.deleteMany({ apartment: propertyData._id }),
+      Notification.deleteMany({ propertyId: propertyData.propertyIdTag }),
+      Attachment.deleteOne({ property: propertyData._id }),
+      Apartment.deleteOne({ _id: id, agent: authResult.currentUser!.agentId }),
+      Rented.deleteOne({ apartment: propertyData.propertyIdTag })
+    ];
+
+    // Only add image deletion if there are images
+    if (imagesArray.length > 0) {
+      deletionPromises.unshift(deleteArrayOfImages(imagesArray));
+    }
+
+    await Promise.all(deletionPromises);
+
+    return { 
+      success: true, 
+      message: 'Property successfully deleted', 
+      status: 200 
+    };
+  } catch (error) {
+    console.error('Delete apartment error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
+  }
+};
+
+export const hideProperty = async (id: string) => {
+  await ensureConnection();
+
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
+
+  const agentAccessResult = await validateAgentAccess(authResult.currentUser!);
+  if (!agentAccessResult.success) return agentAccessResult;
+
+  try {
+    const property = await Apartment.findOne({ 
+      _id: id, 
+      agent: authResult.currentUser!.agentId 
+    });
+
+    if (!property) {
+      return { 
+        success: false, 
+        message: 'Property not found or you are not authorized to modify it', 
+        status: 404 
+      };
+    }
+
+    const newHideStatus = !property.hideProperty;
+    const updatedProperty = await Apartment.findOneAndUpdate(
+      { _id: id }, 
+      { hideProperty: newHideStatus },
+      { new: true }
+    );
+
+    if (!updatedProperty) {
+      return { 
+        success: false, 
+        message: 'Failed to update property', 
+        status: 500 
+      };
+    }
+
+    const propertyData = JSON.parse(JSON.stringify(updatedProperty));
+    return propertyData;
+  } catch (error) {
+    console.error('Hide property error:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error', 
+      status: 500 
+    };
   }
 };

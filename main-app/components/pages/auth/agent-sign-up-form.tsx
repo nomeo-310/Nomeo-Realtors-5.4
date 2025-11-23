@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useTermsAndConditionModal } from '@/hooks/general-store'
 import { createAgent } from '@/actions/user-actions'
-import { protectSignUpActions } from '@/actions/auth'
+import { protectSignUp } from '@/actions/auth'
 
 const AgentSignUpForm = () => {
   
@@ -37,7 +37,7 @@ const AgentSignUpForm = () => {
   const submitForm = async (value:signupValues) => {
     setIsLoading(true);
     const data = {...value, role: 'agent'};
-    const checkEmailValidation = await protectSignUpActions(data.email);
+    const checkEmailValidation = await protectSignUp(data.email);
 
     if (!checkEmailValidation.success) {
       toast.error(checkEmailValidation.error)

@@ -1,4 +1,4 @@
-import SignUpLayout from '@/components/pages/auth/user-signup-layout'
+import AuthContentWrapper from '@/components/pages/auth/auth-content-wrapper'
 import VerifyAccountForm from '@/components/pages/auth/verify-account'
 import { Metadata } from 'next'
 import React from 'react'
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 const VerifyEmail = () => {
   return (
-    <SignUpLayout>
+    <AuthContentWrapper bannerImage={'/images/agent-sign-up-banner.jpg'} altText='agent_signup_banner'>
       <VerifyAccountForm/>
-    </SignUpLayout>
+    </AuthContentWrapper>
   )
 }
 

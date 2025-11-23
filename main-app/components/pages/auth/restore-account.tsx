@@ -12,8 +12,8 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useTermsAndConditionModal } from '@/hooks/general-store'
-import { protectSignUpActions } from '@/actions/auth'
 import { restoreUser } from '@/actions/user-actions'
+import { protectSignUp } from '@/actions/auth'
 
 const RestoreAccountForm = () => {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -43,7 +43,7 @@ const RestoreAccountForm = () => {
   const submitForm = async (value:restoreValues) => {
     setIsLoading(true);
     const data = {...value};
-    const checkEmailValidation = await protectSignUpActions(data.email);
+    const checkEmailValidation = await protectSignUp(data.email);
 
     if (!checkEmailValidation.success) {
       toast.error(checkEmailValidation.error)

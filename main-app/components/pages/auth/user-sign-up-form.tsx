@@ -12,8 +12,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useTermsAndConditionModal } from "@/hooks/general-store";
-import { protectSignUpActions } from "@/actions/auth";
 import { createUser } from "@/actions/user-actions";
+import { protectSignUp } from "@/actions/auth";
 
 const UserSignUpForm = () => {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -36,7 +36,7 @@ const UserSignUpForm = () => {
   const submitForm = async (value: signupValues) => {
     setIsLoading(true);
     const data = { ...value, role: "user" };
-    const checkEmailValidation = await protectSignUpActions(data.email);
+    const checkEmailValidation = await protectSignUp(data.email);
 
     if (!checkEmailValidation.success) {
       toast.error(checkEmailValidation.error);

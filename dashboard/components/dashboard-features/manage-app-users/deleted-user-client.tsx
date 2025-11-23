@@ -11,10 +11,11 @@ import EmptyState from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/formatDate'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Eye, MessageCircle, MoreHorizontalIcon, RotateCcw, Trash2 } from 'lucide-react'
+import { Eye, MoreHorizontalIcon, RotateCcw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import TableLoading from '../table-loading'
 import Pagination from '@/components/ui/pagination'
+import { useDeleteUserModal, UserForRestriction } from '@/hooks/general-store'
 
 interface ApiResponse {
   users: ExtendedUserProps[];
@@ -58,8 +59,6 @@ const DeletedUserClient = ({user}:{user:AdminDetailsProps}) => {
     queryKey: ['deleted-users', search, sortOrder, currentPage],
     queryFn: fetchData,
     retry: 2,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 10,
   });
 
   React.useEffect(() => {
@@ -111,14 +110,31 @@ const DeletedUserClient = ({user}:{user:AdminDetailsProps}) => {
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{user.state}</TableCell>
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{formatDate(user.createdAt)}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
-          <Menu/>
+          <Menu user={user}/>
         </TableCell>
       </TableRow>
     )
   };
 
-  const Menu = () => {
+  const Menu = ({user}:{user:ExtendedUserProps}) => {
     const [showMenu, setShowMenu] = React.useState(false);
+
+    const deleteUserModal = useDeleteUserModal();
+
+    const handleDeleteUser = (user: ExtendedUserProps) => {
+      const userForBlocking: UserForRestriction = {
+        id: user._id,
+        surName: user.surName,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        userType: user.role,
+        isActive: user.userVerified,
+        isSuspended: !user.userVerified,
+      };
+
+      deleteUserModal.onOpen(userForBlocking);
+    };
 
     return (
       <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
@@ -137,16 +153,12 @@ const DeletedUserClient = ({user}:{user:AdminDetailsProps}) => {
               <Eye className="w-4 h-4" />
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-cyan-600 focus:text-cyan-600 focus:bg-cyan-50">
-              <MessageCircle className="w-4 h-4" />
-              Contact User
-            </DropdownMenuItem>
           </div>
 
           {/* Permanent Actions */}
           <div className="p-2 border-t border-gray-100">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteUser(user)}>
               <Trash2 className="w-4 h-4" />
               Delete Permanently
             </DropdownMenuItem>

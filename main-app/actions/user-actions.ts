@@ -1,84 +1,55 @@
 "use server";
 
-// =============================================
-// IMPORTS
-// =============================================
-
-// Authentication & Session
+// Imports
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import { getServerSession } from "next-auth";
-
-// Database & Models
 import { connectToMongoDB } from "@/lib/connectToMongoDB";
 import mongoose from "mongoose";
 import User from "@/models/user";
 import Agent from "@/models/agent";
 import Notification from "@/models/notification";
 import Apartment from "@/models/apartment";
-import Rented from "@/models/rentout";
-
-// Utilities
+import Rentout from "@/models/rentout";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import generateOtp from "@/utils/generateOtp";
 import { capitalizeName } from "@/lib/utils";
-
-// Email & Templates
 import { render } from "@react-email/components";
 import { sendEmail } from "@/lib/send-email";
 import { VerificationEmailTemplate } from "@/components/email-templates/verification-email-template";
 import { TemporaryDeleteEmailTemplate } from "@/components/email-templates/temporary-delete-email-template";
-
-// Image Management
 import { deleteCloudinaryImages } from "./delete-cloudinary-image";
+import { userProps } from "@/lib/types";
 
 // Types
-import { agentProps, propertyProps, userProps } from "@/lib/types";
-
-// =============================================
-// TYPE DEFINITIONS
-// =============================================
-
-interface apiResponse {
+interface ApiResponse {
   success: boolean;
   message: string;
   status: number;
 }
 
-type Image = {
+interface Image {
   public_id: string;
   secure_url: string;
-};
+}
 
-type signUpValues = {
+interface SignUpValues {
   role: string;
   username: string;
   email: string;
   password: string;
-};
+}
 
-type restoreUserValues = {
-  username: string;
-  email: string;
-  password: string;
-};
-
-type verifyValues = {
+interface VerifyValues {
   otp: string;
   email?: string;
-};
+}
 
-type resetPasswordValues = {
-  email: string;
-  otp: string;
-  password: string;
-};
-
-type createAgentProfile = {
+interface CreateAgentProfile {
   surName: string;
   lastName: string;
   userId: string;
-  profileImage: { public_id: string; secure_url: string };
+  profileImage: Image;
   phoneNumber: string;
   city: string;
   state: string;
@@ -87,22 +58,22 @@ type createAgentProfile = {
   inspectionFeePerHour: number;
   agencyAddress: string;
   agentBio: string;
-  additionalPhoneNumber?: string | undefined;
-};
+  additionalPhoneNumber?: string;
+}
 
-type createUserProfile = {
+interface CreateUserProfile {
   surName: string;
   lastName: string;
   userId: string;
-  profileImage: { public_id: string; secure_url: string };
+  profileImage: Image;
   city: string;
   state: string;
   phoneNumber: string;
-  additionalPhoneNumber?: string | undefined;
-  userBio?: string | undefined;
-};
+  additionalPhoneNumber?: string;
+  userBio?: string;
+}
 
-type editUserProps = {
+interface EditUserProps {
   userId: string;
   username: string;
   firstName?: string;
@@ -117,104 +88,117 @@ type editUserProps = {
   state?: string;
   path: string;
   isNewImage: boolean;
+}
+
+interface ResetPasswordValues {
+  email: string;
+  otp: string;
+  password: string;
+}
+
+// Constants
+const OTP_EXPIRY_MS = 24 * 60 * 60 * 1000;
+const RESET_OTP_EXPIRY_MS = 30000;
+
+// Utility functions
+const handleServerError = (error: unknown): ApiResponse => {
+  console.error("Server error:", error);
+  return {
+    success: false,
+    message: "Internal server error, try again later!",
+    status: 500,
+  };
 };
 
-type notificationProps = {
-  _id: string;
-  type: "notification" | "inspection" | "rentouts" | "verification" | "pending" | "payment" | "add-clients" | "profile";
-  title: string;
-  content: string;
-  propertyId?: string;
-  issuer?: string;
-  recipient?: string;
-  seen: boolean;
-  createdAt: string;
-};
-
-// =============================================
-// USER MANAGEMENT FUNCTIONS
-// =============================================
-
-/**
- * Get user by email address
- */
-export const getUserByEmail = async (email: string) => {
-  await connectToMongoDB();
-
-  const user = await User.findOne({
-    email: email,
-    userAccountDeleted: false,
-  }).exec();
-
-  if (!user) {
-    return;
+const validateUserAccess = (currentUser: userProps | null, userId: string): ApiResponse | null => {
+  if (!currentUser) {
+    return { success: false, message: "You are not logged in", status: 403 };
   }
-
-  const userData = JSON.parse(JSON.stringify(user));
-  return userData as userProps;
-};
-
-/**
- * Get agent by ID
- */
-export const getAgentById = async (id: string) => {
-  await connectToMongoDB();
-
-  const agent = await Agent.findById(id).exec();
-  if (!agent) {
-    return;
+  
+  if (currentUser._id !== userId) {
+    return { 
+      success: false, 
+      message: "You are not authorized to access this feature", 
+      status: 403 
+    };
   }
-
-  const agentData = JSON.parse(JSON.stringify(agent));
-  return agentData;
+  
+  return null;
 };
 
-/**
- * Get current server session
- */
+const sendVerificationEmail = async (
+  email: string, 
+  username: string, 
+  otp: string, 
+  subject: string,
+  customMessage?: string
+): Promise<boolean> => {
+  try {
+    const emailTemplate = await render(
+      VerificationEmailTemplate({ 
+        username, 
+        title: subject, 
+        otp, 
+        message: customMessage || "Your one-time password (OTP) is: " 
+      })
+    );
+
+    await sendEmail({ email, subject, html: emailTemplate });
+    return true;
+  } catch (error) {
+    console.error("Email error:", error);
+    return false;
+  }
+};
+
+// User functions
+export const getUserByEmail = async (email: string): Promise<userProps | undefined> => {
+  await connectToMongoDB();
+  const user = await User.findOne({ email, userAccountDeleted: false }).lean().exec();
+  return user ? JSON.parse(JSON.stringify(user)) : undefined;
+};
+
+export const getAgentById = async (id: string): Promise<any> => {
+  await connectToMongoDB();
+  const agent = await Agent.findById(id).lean().exec();
+  return agent ? JSON.parse(JSON.stringify(agent)) : undefined;
+};
+
 export const getUserSession = async () => {
   return await getServerSession(authOptions);
 };
 
-/**
- * Get current authenticated user with full data
- */
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (): Promise<userProps | null> => {
   await connectToMongoDB();
-
   const currentUserSession = await getUserSession();
+  
   if (!currentUserSession?.user?.email) {
-    return;
+    return null;
   }
 
   try {
     const user = await User.findOne({
       email: currentUserSession.user.email,
       userAccountDeleted: false,
-    }).exec();
+    }).lean().exec();
 
-    if (!user) {
-      return;
-    }
+    if (!user) return null;
 
     const currentUser = JSON.parse(JSON.stringify(user));
     revalidatePath("/");
-    return currentUser as userProps;
+    return currentUser;
   } catch (error) {
-    console.error(error);
-    return;
+    console.error("Get current user error:", error);
+    return null;
   }
 };
 
-/**
- * Get current user with limited profile data
- */
-export const getCurrentUserDetails = async () => {
+export const getCurrentUserDetails = async (): Promise<any> => {
   await connectToMongoDB();
-
   const currentUserSession = await getUserSession();
+  
   if (!currentUserSession?.user?.email) {
-    return;
+    return undefined;
   }
 
   try {
@@ -223,34 +207,27 @@ export const getCurrentUserDetails = async () => {
       userAccountDeleted: false,
     })
       .select("_id profilePicture username surName lastName bio phoneNumber additionalPhoneNumber address city state role userOnboarded profileCreated userVerified placeholderColor email")
+      .lean()
       .exec();
 
-    if (!user) {
-      return;
-    }
+    if (!user) return undefined;
 
     const currentUser = JSON.parse(JSON.stringify(user));
     revalidatePath("/");
     return currentUser;
   } catch (error) {
-    console.error(error);
-    return;
+    console.error("Get current user details error:", error);
+    return undefined;
   }
 };
 
-// =============================================
-// AUTHENTICATION & ACCOUNT FUNCTIONS
-// =============================================
-
-/**
- * Create a new user account
- */
-export const createUser = async (value: signUpValues) => {
-  const { role, username, email, password } = value;
+// Auth functions
+export const createUser = async (values: SignUpValues): Promise<ApiResponse> => {
+  const { role, username, email, password } = values;
   await connectToMongoDB();
 
   try {
-    const existingUser = await User.findOne({ email: email });
+    const existingUser = await User.findOne({ email }).lean();
 
     if (existingUser) {
       if (existingUser.userAccountDeleted) {
@@ -268,164 +245,122 @@ export const createUser = async (value: signUpValues) => {
     }
 
     const otp = generateOtp();
-    const otpExpiresIn = Date.now() + 24 * 60 * 60 * 100;
-    
     const newUser = await User.create({
-      email,
-      password,
-      username,
-      role,
-      otp,
-      otpExpiresIn,
+      email, password, username, role, otp,
+      otpExpiresIn: Date.now() + OTP_EXPIRY_MS,
     });
-    newUser.save();
 
-    // Send verification email
-    const emailTemplate = await render(
-      VerificationEmailTemplate({
-        username,
-        title: "Email Verification OTP",
-        otp,
-        message: "Your one-time password (OTP) for account verification is: ",
-      })
-    );
+    const emailSent = await sendVerificationEmail(email, username, otp, "Email Account Verification");
 
-    const sendOption = {
-      email: email,
-      subject: "Email Account Verification",
-      html: emailTemplate,
-    };
-
-    try {
-      await sendEmail(sendOption);
-      return {
-        success: true,
-        message: "User created! OTP has been sent to your email",
-        status: 201,
-      };
-    } catch (error) {
-      // Rollback user creation if email fails
-      await User.findOneAndDelete({ _id: newUser._id });
+    if (!emailSent) {
+      await User.findByIdAndDelete(newUser._id);
       return {
         success: false,
-        message: "User not created! Something went wrong",
+        message: "User not created! Email failed",
         status: 500,
       };
     }
-  } catch (error) {
+
     return {
-      success: false,
-      message: "Internal server error, try again later!",
-      status: 500,
+      success: true,
+      message: "User created! OTP sent to your email",
+      status: 201,
     };
+  } catch (error) {
+    return handleServerError(error);
   }
 };
 
-/**
- * Restore a previously deleted user account
- */
-export const restoreUser = async (value: restoreUserValues) => {
-  const { username, email, password } = value;
+export const restoreUser = async (values: {
+  username: string;
+  email: string;
+  password: string;
+}): Promise<ApiResponse> => {
+  const { username, email, password } = values;
   await connectToMongoDB();
 
   try {
-    const existingUser = await User.findOne({
-      email: email,
-      username: username,
-    });
+    const existingUser = await User.findOne({ email, username });
 
-    if (existingUser) {
-      if (!existingUser.password) {
-        return { success: false, message: "Invalid account data", status: 500 };
-      }
+    if (!existingUser) {
+      return {
+        success: false,
+        message: "No account found with these credentials",
+        status: 404,
+      };
+    }
 
-      const passwordMatch = await bcrypt.compare(password, existingUser.password);
-      if (!passwordMatch) {
-        return { success: false, message: "Invalid credentials", status: 401 };
-      }
+    if (!existingUser.password) {
+      return { 
+        success: false, 
+        message: "Invalid account data", 
+        status: 500 
+      };
+    }
 
-      if (existingUser.userAccountDeleted) {
-        const otp = generateOtp();
-        const otpExpiresIn = Date.now() + 24 * 60 * 60 * 1000;
+    const passwordMatch = await bcrypt.compare(password, existingUser.password);
+    if (!passwordMatch) {
+      return { 
+        success: false, 
+        message: "Invalid credentials", 
+        status: 401 
+      };
+    }
 
-        // Restore the existing account
-        await User.findOneAndUpdate(
-          { _id: existingUser._id },
-          {
-            userAccountDeleted: false,
-            otp: otp,
-            otpExpiresIn: otpExpiresIn,
-            userVerified: false, // Reset verification status
-          }
-        );
-
-        const emailTemplate = await render(
-          VerificationEmailTemplate({
-            username: existingUser.username,
-            title: "Account Restored - Email Verification OTP",
-            otp,
-            message: "Your account has been restored. Your one-time password (OTP) for account verification is: ",
-          })
-        );
-
-        const sendOption = {
-          email: email,
-          subject: "Account Restored - Email Verification",
-          html: emailTemplate,
-        };
-
-        try {
-          await sendEmail(sendOption);
-          return {
-            success: true,
-            message: "Account restored! OTP has been sent to your email for verification",
-            status: 200,
-          };
-        } catch (error) {
-          // Revert restoration if email fails
-          await User.findOneAndUpdate(
-            { _id: existingUser._id },
-            { userAccountDeleted: true, otp: null, otpExpiresIn: null }
-          );
-          return {
-            success: false,
-            message: "Account restoration failed! Something went wrong",
-            status: 500,
-          };
-        }
-      }
+    if (!existingUser.userAccountDeleted) {
       return {
         success: false,
         message: "Account is active, go ahead and login",
         status: 409,
       };
-    } else {
+    }
+
+    const otp = generateOtp();
+    await User.findByIdAndUpdate(existingUser._id, {
+      userAccountDeleted: false,
+      otp,
+      otpExpiresIn: Date.now() + OTP_EXPIRY_MS,
+      userVerified: false,
+    });
+
+    const emailSent = await sendVerificationEmail(
+      email,
+      existingUser.username,
+      otp,
+      "Account Restored - Email Verification",
+      "Your account has been restored. Your one-time password (OTP) for account verification is: "
+    );
+
+    if (!emailSent) {
+      await User.findByIdAndUpdate(existingUser._id, {
+        userAccountDeleted: true,
+        otp: null,
+        otpExpiresIn: null,
+      });
       return {
         success: false,
-        message: "No account found with this credentials",
-        status: 404,
+        message: "Account restoration failed! Email failed",
+        status: 500,
       };
     }
-  } catch (error) {
+
     return {
-      success: false,
-      message: "Internal server error, try again later!",
-      status: 500,
+      success: true,
+      message: "Account restored! OTP sent to your email",
+      status: 200,
     };
+  } catch (error) {
+    return handleServerError(error);
   }
 };
 
-/**
- * Create a new agent account
- */
-export const createAgent = async (value: signUpValues): Promise<apiResponse> => {
-  const { email, password, username, role } = value;
+export const createAgent = async (values: SignUpValues): Promise<ApiResponse> => {
+  const { email, password, username, role } = values;
 
-  // Validate role early
   if (role !== "agent") {
     return {
       success: false,
-      message: "Role must be agent to create account.",
+      message: "Role must be agent",
       status: 400,
     };
   }
@@ -433,145 +368,108 @@ export const createAgent = async (value: signUpValues): Promise<apiResponse> => 
   try {
     await connectToMongoDB();
 
-    // Check for existing user
     if (await User.findOne({ email }).lean()) {
       return {
         success: false,
-        message: "Email already used by an account!",
+        message: "Email already used!",
         status: 409,
       };
     }
 
     const otp = generateOtp();
-    const otpExpiresIn = Date.now() + 24 * 60 * 60 * 1000;
-
-    const userData = {
-      email,
-      password,
-      username,
-      otp,
-      otpExpiresIn,
-      role,
-      userIsAnAgent: true,
-    };
-
-    const newUser = await User.create(userData);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
     try {
-      // Create associated agent profile
-      const newAgent = await Agent.create({ userId: newUser._id });
-      newUser.agentId = newAgent._id as mongoose.Types.ObjectId;
-      await newUser.save();
+      const newUser = await User.create([{
+        email, password, username, otp,
+        otpExpiresIn: Date.now() + OTP_EXPIRY_MS,
+        role, userIsAnAgent: true,
+      }], { session });
 
-      // Send verification email
-      const emailTemplate = await render(
-        VerificationEmailTemplate({
-          username,
-          title: "Email Verification OTP",
-          otp,
-          message: "Your one-time password (OTP) for account verification is: ",
-        })
-      );
+      const newAgent = await Agent.create([{ userId: newUser[0]._id }], { session });
+      await User.findByIdAndUpdate(newUser[0]._id, { agentId: newAgent[0]._id }, { session });
 
-      await sendEmail({
-        email,
-        subject: "Email Account Verification",
-        html: emailTemplate,
-      });
+      const emailSent = await sendVerificationEmail(email, username, otp, "Email Account Verification");
 
+      if (!emailSent) {
+        await session.abortTransaction();
+        return {
+          success: false,
+          message: "Account creation failed! Email failed",
+          status: 500,
+        };
+      }
+
+      await session.commitTransaction();
       return {
         success: true,
-        message: "Account created! OTP has been sent to your email",
+        message: "Account created! OTP sent to your email",
         status: 201,
       };
     } catch (error) {
-      // Rollback if agent creation fails
-      await User.findByIdAndDelete(newUser._id);
-      await Agent.findOneAndDelete({ userId: newUser._id });
+      await session.abortTransaction();
       throw error;
+    } finally {
+      await session.endSession();
     }
   } catch (error) {
-    console.error("Error creating agent:", error);
-    return {
-      success: false,
-      message: "Internal server error, try again later!",
-      status: 500,
-    };
+    return handleServerError(error);
   }
 };
 
-/**
- * Verify user account with OTP
- */
-export const verifyAccount = async (value: verifyValues) => {
-  const { otp, email } = value;
+export const verifyAccount = async (values: VerifyValues): Promise<ApiResponse> => {
+  const { otp, email } = values;
 
-  if (!otp) {
+  if (!otp || !email) {
     return {
       success: false,
-      message: "OTP is required for account verification.",
+      message: "OTP and email are required",
       status: 400,
     };
   }
 
   await connectToMongoDB();
-  const user = await User.findOne({ email: email });
-
-  if (!user) {
-    return { success: false, message: "User does not exist", status: 404 };
-  }
 
   try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return { success: false, message: "User does not exist", status: 404 };
+    }
+
     if (user.otp !== otp) {
-      return { success: false, message: "OTP sent is invalid", status: 403 };
+      return { success: false, message: "Invalid OTP", status: 403 };
     }
 
     if (user.otpExpiresIn && Date.now() > user.otpExpiresIn) {
-      return {
-        success: false,
-        message: "OTP sent has expired. Please request a new OTP.",
-        status: 403,
-      };
+      return { success: false, message: "OTP expired", status: 403 };
     }
 
-    await User.findOneAndUpdate(
-      { _id: user._id, email: user.email, role: user.role },
-      { userVerified: true, otp: null, otpExpiresIn: null }
-    );
+    await User.findByIdAndUpdate(user._id, {
+      userVerified: true,
+      otp: null,
+      otpExpiresIn: null,
+    });
 
-    // Create welcome notification
-    const createNotification = {
+    await Notification.create({
       type: "notification",
-      title: "Email Verified!!!",
-      content: "Welcome to Nomeo Realtors. We are glad to have you, either you are just a user or an agent. When you login, there will be a prompt to create your profile. This will not take much time after which your membership will be fully verified.",
+      title: "Email Verified!",
+      content: "Welcome to Nomeo Realtors.",
       recipient: user._id,
-    };
-
-    const notification = await Notification.create(createNotification);
-    notification.save();
+    });
 
     return {
       success: true,
-      message: "Email verified!! Welcome to Nomeo Realtors!",
+      message: "Email verified! Welcome!",
       status: 200,
     };
   } catch (error) {
-    return {
-      success: false,
-      message: "Email verification failed, try again later!",
-      status: 500,
-    };
+    return handleServerError(error);
   }
 };
 
-// =============================================
-// PROFILE MANAGEMENT FUNCTIONS
-// =============================================
-
-/**
- * Create user profile after account verification
- */
-export const createUserProfile = async (values: createUserProfile) => {
+// Profile functions
+export const createUserProfile = async (values: CreateUserProfile): Promise<ApiResponse> => {
   const {
     profileImage,
     phoneNumber,
@@ -584,161 +482,96 @@ export const createUserProfile = async (values: createUserProfile) => {
     lastName,
   } = values;
 
-  const current_user = await getCurrentUser();
+  const currentUser = await getCurrentUser();
   await connectToMongoDB();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
-  if (current_user._id !== userId) {
-    return {
-      success: false,
-      message: "You are not authorized to access this feature",
-      status: 403,
-    };
-  }
-
-  if (current_user.role !== "user") {
-    return {
-      success: false,
-      message: "You are not authorized to access this feature",
-      status: 403,
-    };
+  if (currentUser!.role !== "user") {
+    return { success: false, message: "Not authorized", status: 403 };
   }
 
   const userUpdate = {
-    surName: surName,
-    lastName: lastName,
+    surName,
+    lastName,
     profilePicture: profileImage.secure_url,
-    profileImage: profileImage,
+    profileImage,
     bio: userBio,
-    phoneNumber: phoneNumber,
-    additionalPhoneNumber: additionalPhoneNumber,
-    city: city,
-    state: state,
+    phoneNumber,
+    additionalPhoneNumber,
+    city,
+    state,
     userOnboarded: true,
     profileCreated: true,
   };
 
-  const createNotification = {
-    type: "profile",
-    title: "Profile Created!!!",
-    content: `Congratulations dear ${surName} ${lastName}, you have successfully created your profile and therefore your membership has been verified. You now have access to all that Nomeo Realtors have to offer.`,
-    recipient: current_user._id,
-  };
-
   try {
-    await User.findOneAndUpdate({ _id: current_user._id }, userUpdate);
-    const notification = await Notification.create(createNotification);
-    notification.save();
+    await User.findByIdAndUpdate(currentUser!._id, userUpdate);
+
+    await Notification.create({
+      type: "profile",
+      title: "Profile Created!",
+      content: `Congratulations ${surName} ${lastName}, your profile has been created.`,
+      recipient: currentUser!._id,
+    });
 
     revalidatePath("/");
-    return {
-      success: true,
-      message: "Profile successfully created!",
-      status: 201,
-    };
+    return { success: true, message: "Profile created!", status: 201 };
   } catch (error) {
-    return { success: false, message: "Internal server error", status: 500 };
+    return handleServerError(error);
   }
 };
 
-/**
- * Create agent profile after account verification
- */
-export const createAgentProfile = async (values: createAgentProfile) => {
+export const createAgentProfile = async (values: CreateAgentProfile): Promise<ApiResponse> => {
   const {
-    profileImage,
-    phoneNumber,
-    city,
-    state,
-    officeNumber,
-    agencyName,
-    inspectionFeePerHour,
-    agencyAddress,
-    agentBio,
-    additionalPhoneNumber,
-    userId,
-    surName,
-    lastName,
+    profileImage, phoneNumber, city, state, officeNumber, agencyName,
+    inspectionFeePerHour, agencyAddress, agentBio, additionalPhoneNumber,
+    userId, surName, lastName,
   } = values;
 
   await connectToMongoDB();
-  const current_user = await getCurrentUser();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
-  if (current_user._id !== userId) {
-    return {
-      success: false,
-      message: "You are not authorized to access this feature",
-      status: 403,
-    };
-  }
-
-  if (current_user.role !== "agent") {
-    return {
-      success: false,
-      message: "You are not authorized to access this feature",
-      status: 403,
-    };
+  if (currentUser!.role !== "agent") {
+    return { success: false, message: "Not authorized", status: 403 };
   }
 
   const userUpdate = {
-    surName: surName,
-    lastName: lastName,
-    profilePicture: profileImage.secure_url,
-    profileImage: profileImage,
-    bio: agentBio,
-    phoneNumber: phoneNumber,
-    additionalPhoneNumber: additionalPhoneNumber,
-    address: agencyAddress,
-    city: city,
-    state: state,
-    userOnboarded: true,
-    profileCreated: true,
+    surName, lastName, profilePicture: profileImage.secure_url, profileImage,
+    bio: agentBio, phoneNumber, additionalPhoneNumber, address: agencyAddress,
+    city, state, userOnboarded: true, profileCreated: true,
   };
 
   const agentUpdate = {
-    officeNumber: officeNumber,
-    officeAddress: agencyAddress,
-    agencyName: agencyName,
-    inspectionFeePerHour: inspectionFeePerHour,
+    officeNumber, officeAddress: agencyAddress, agencyName, inspectionFeePerHour,
     verificationStatus: "pending",
   };
 
-  const createNotification = {
-    type: "profile",
-    title: "Profile Created!!!",
-    content: `Congratulations dear ${surName} ${lastName}, you have successfully created your profile and therefore your membership has been verified. You now have access to all that Nomeo Realtors have to offer.`,
-    recipient: current_user._id,
-  };
-
   try {
-    await User.findOneAndUpdate({ _id: current_user._id }, userUpdate);
-    await Agent.findOneAndUpdate({ _id: current_user.agentId }, agentUpdate);
+    await Promise.all([
+      User.findByIdAndUpdate(currentUser!._id, userUpdate),
+      Agent.findByIdAndUpdate(currentUser!.agentId, agentUpdate),
+    ]);
 
-    const notification = await Notification.create(createNotification);
-    notification.save();
+    await Notification.create({
+      type: "profile",
+      title: "Profile Created!",
+      content: `Congratulations ${surName} ${lastName}, your profile has been created.`,
+      recipient: currentUser!._id,
+    });
 
     revalidatePath("/");
-    return {
-      success: true,
-      message: "Profile successfully created!",
-      status: 201,
-    };
+    return { success: true, message: "Profile created!", status: 201 };
   } catch (error) {
-    return { success: false, message: "Internal server error", status: 500 };
+    return handleServerError(error);
   }
 };
 
-/**
- * Edit existing user profile
- */
-export const editUserProfile = async (values: editUserProps) => {
+export const editUserProfile = async (values: EditUserProps): Promise<ApiResponse> => {
   const {
     profileImage,
     phoneNumber,
@@ -757,62 +590,39 @@ export const editUserProfile = async (values: editUserProps) => {
   } = values;
 
   await connectToMongoDB();
-  const current_user = await getCurrentUser();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
-  if (current_user._id !== userId) {
-    return {
-      success: false,
-      message: "You are not authorized to access this feature",
-      status: 403,
-    };
-  }
-
-  // Delete old image if new one is uploaded
-  if (isNewImage && current_user.profileImage && current_user.profileImage.public_id) {
-    deleteCloudinaryImages(current_user.profileImage.public_id);
+  if (isNewImage && currentUser!.profileImage?.public_id) {
+    await deleteCloudinaryImages(currentUser!.profileImage.public_id);
   }
 
   try {
-    await User.findOneAndUpdate(
-      { _id: userId },
-      {
-        profileImage,
-        profilePicture,
-        phoneNumber,
-        city,
-        state,
-        bio,
-        additionalPhoneNumber,
-        username,
-        firstName,
-        lastName,
-        address,
-      }
-    );
+    await User.findByIdAndUpdate(userId, {
+      profileImage,
+      profilePicture,
+      phoneNumber,
+      city,
+      state,
+      bio,
+      additionalPhoneNumber,
+      username,
+      firstName,
+      lastName,
+      address,
+    });
 
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Profile successfully updated!",
-      status: 200,
-    };
+    return { success: true, message: "Profile updated!", status: 200 };
   } catch (error) {
-    return { success: false, message: "Internal server error", status: 500 };
+    return handleServerError(error);
   }
 };
 
-// =============================================
-// PASSWORD & SECURITY FUNCTIONS
-// =============================================
-
-/**
- * Resend OTP for verification
- */
-export const resendOtp = async (email: string) => {
+// Password & Security functions
+export const resendOtp = async (email: string): Promise<ApiResponse> => {
   if (!email) {
     return {
       success: false,
@@ -821,164 +631,127 @@ export const resendOtp = async (email: string) => {
     };
   }
 
-  const user = await User.findOne({ email: email });
-  if (!user) {
-    return { success: false, message: "User does not exist!", status: 404 };
-  }
-
-  if (user.userVerified) {
-    return {
-      success: false,
-      message: "This account is already verified",
-      status: 400,
-    };
-  }
-
   await connectToMongoDB();
-  const otp = generateOtp();
-  const otpExpiresIn = Date.now() + 24 * 60 * 60 * 1000;
 
-  let verificationDetails;
-
-  if (user.userIsAnAgent && user.agentId) {
-    const agent = await Agent.findOne({ _id: user.agentId });
-    if (agent) {
-      verificationDetails = {
-        username: agent.licenseNumber,
-        title: "New OTP Verification Code",
-        otp: otp,
-        message: "Your new one-time password (OTP) for account verification is: ",
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return { 
+        success: false, 
+        message: "User does not exist!", 
+        status: 404 
       };
-      await User.findOneAndUpdate({ email: email }, { otp: otp, otpExpiresIn: otpExpiresIn });
-    } else {
+    }
+
+    if (user.userVerified) {
       return {
         success: false,
-        message: "Something went wrong! Try again later",
+        message: "This account is already verified",
+        status: 400,
+      };
+    }
+
+    const otp = generateOtp();
+    await User.findByIdAndUpdate(user._id, { 
+      otp, 
+      otpExpiresIn: Date.now() + OTP_EXPIRY_MS 
+    });
+
+    const emailSent = await sendVerificationEmail(
+      email,
+      user.username,
+      otp,
+      "New Verification Code"
+    );
+
+    if (!emailSent) {
+      return {
+        success: false,
+        message: "New OTP not sent! Something went wrong",
         status: 500,
       };
     }
-  } else {
-    verificationDetails = {
-      username: user.username,
-      title: "New OTP Verification Code",
-      otp: otp,
-      message: "Your new one-time password (OTP) for account verification is: ",
-    };
-    await User.findOneAndUpdate({ email: email }, { otp: otp, otpExpiresIn: otpExpiresIn });
-  }
 
-  if (!verificationDetails) {
-    return {
-      success: false,
-      message: "Verification details are missing",
-      status: 403,
-    };
-  }
-
-  const emailTemplate = await render(VerificationEmailTemplate(verificationDetails));
-  const sendOption = {
-    email: email,
-    subject: "New Verification Code",
-    html: emailTemplate,
-  };
-
-  try {
-    await sendEmail(sendOption);
     return {
       success: true,
       message: "New OTP has been sent to your email",
       status: 200,
     };
   } catch (error) {
-    return {
-      success: false,
-      message: "New OTP not sent! Something went wrong",
-      status: 500,
-    };
+    return handleServerError(error);
   }
 };
 
-/**
- * Initiate password reset process
- */
-export const forgotPassword = async (email: string) => {
-  const user = await User.findOne({ email: email });
-  if (!user) {
-    return { success: false, message: "User not found!", status: 404 };
-  }
-
+export const forgotPassword = async (email: string): Promise<ApiResponse> => {
   await connectToMongoDB();
-  const otp = generateOtp();
-  const resetOtpExpiresIn = Date.now() + 30000;
-
-  await User.findOneAndUpdate(
-    { email: email },
-    { resetPasswordOtp: otp, resetPasswordOtpExpresIn: resetOtpExpiresIn }
-  );
 
   try {
-    const emailTemplate = await render(
-      VerificationEmailTemplate({
-        username: user.username,
-        title: "Password Reset OTP",
-        otp,
-        message: "Your one-time password (OTP) for password reset is: ",
-      })
+    const user = await User.findOne({ email });
+    if (!user) {
+      return { 
+        success: false, 
+        message: "User not found!", 
+        status: 404 
+      };
+    }
+
+    const otp = generateOtp();
+    await User.findByIdAndUpdate(user._id, {
+      resetPasswordOtp: otp,
+      resetPasswordOtpExpresIn: Date.now() + RESET_OTP_EXPIRY_MS,
+    });
+
+    const emailSent = await sendVerificationEmail(
+      email,
+      user.username,
+      otp,
+      "Password Reset Request",
+      "Your one-time password (OTP) for password reset is: "
     );
 
-    const sendOption = {
-      email: email,
-      subject: "Password Reset Request",
-      html: emailTemplate,
-    };
-
-    try {
-      await sendEmail(sendOption);
-      return {
-        success: true,
-        message: "Password reset OTP has been sent to your email",
-        status: 200,
-      };
-    } catch (error) {
-      console.error(error);
+    if (!emailSent) {
       return {
         success: false,
         message: "Password reset OTP not sent! Something went wrong",
         status: 500,
       };
     }
-  } catch (error) {
+
     return {
-      success: false,
-      message: "Internal server error, try again later!",
-      status: 500,
+      success: true,
+      message: "Password reset OTP has been sent to your email",
+      status: 200,
     };
+  } catch (error) {
+    return handleServerError(error);
   }
 };
 
-/**
- * Reset password with OTP verification
- */
-export const resetPassword = async (value: resetPasswordValues) => {
-  const { email, password, otp } = value;
-  const user = await User.findOne({ email: email, resetPasswordOtp: otp });
-
-  if (!user) {
-    return { success: false, message: "User not found!", status: 404 };
-  }
-
+export const resetPassword = async (values: ResetPasswordValues): Promise<ApiResponse> => {
+  const { email, password, otp } = values;
+  
   await connectToMongoDB();
-  const new_password = await bcrypt.hash(password, 10);
 
   try {
-    await User.findOneAndUpdate(
-      { email: email },
-      {
-        password: new_password,
-        resetPasswordOtp: null,
-        resetPasswordOtpExpresIn: null,
-      }
-    );
+    const user = await User.findOne({ 
+      email, 
+      resetPasswordOtp: otp 
+    });
+
+    if (!user) {
+      return { 
+        success: false, 
+        message: "Invalid OTP or user not found!", 
+        status: 404 
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await User.findByIdAndUpdate(user._id, {
+      password: hashedPassword,
+      resetPasswordOtp: null,
+      resetPasswordOtpExpresIn: null,
+    });
 
     return {
       success: true,
@@ -986,758 +759,370 @@ export const resetPassword = async (value: resetPasswordValues) => {
       status: 200,
     };
   } catch (error) {
-    return {
-      success: false,
-      message: "Password reset Failed! Try again later",
-      status: 500,
-    };
+    return handleServerError(error);
   }
 };
 
-// =============================================
-// PROFILE UPDATE FUNCTIONS
-// =============================================
-
-/**
- * Change user profile image
- */
-export const changeProfileImage = async (value: {
+// Profile update functions
+export const changeProfileImage = async (values: {
   secure_url: string;
   public_id: string;
   userId: string;
   isNewImage: boolean;
   path: string;
-}) => {
+}): Promise<ApiResponse> => {
+  const { secure_url, public_id, userId, isNewImage, path } = values;
   await connectToMongoDB();
-  const { secure_url, public_id, userId, isNewImage, path } = value;
-  const current_user = await getCurrentUser();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
+
+  if (isNewImage && currentUser!.profileImage?.public_id) {
+    await deleteCloudinaryImages(currentUser!.profileImage.public_id);
   }
 
-  if (current_user._id !== userId) {
-    return {
-      success: false,
-      message: "You do not have access to this feature",
-      status: 403,
-    };
-  }
-
-  const oldProfileImage = current_user.profileImage;
-
-  // Delete old image from Cloudinary if new one is uploaded
-  if (isNewImage && oldProfileImage && oldProfileImage.public_id) {
-    deleteCloudinaryImages(oldProfileImage.public_id);
-  }
-
-  const profileImage = { secure_url: secure_url, public_id: public_id };
+  const profileImage = { secure_url, public_id };
 
   try {
-    await User.findOneAndUpdate(
-      { _id: userId },
-      { profileImage: profileImage, profilePicture: secure_url }
-    );
-
+    await User.findByIdAndUpdate(userId, { profileImage, profilePicture: secure_url });
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Profile image successfully changed",
-      status: 200,
-    };
+    return { success: true, message: "Profile image updated", status: 200 };
   } catch (error) {
-    return { success: false, message: "Internal server error", status: 500 };
+    return handleServerError(error);
   }
 };
 
-/**
- * Change user password
- */
-export const changePassword = async (value: {
+export const changePassword = async (values: {
   oldPassword: string;
   newPassword: string;
   userId: string;
   path: string;
-}) => {
+}): Promise<ApiResponse> => {
+  const { oldPassword, newPassword, userId, path } = values;
   await connectToMongoDB();
-  const { oldPassword, newPassword, userId, path } = value;
-  const current_user = await getCurrentUser();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (current_user._id !== userId) {
-    return {
-      success: false,
-      message: "You do not have access to this feature",
-      status: 403,
-    };
-  }
-
-  const rawUserData = await User.findOne({ _id: userId });
-  if (!rawUserData) {
-    return;
-  }
-
-  const oldHashedPassword = rawUserData.password;
-  if (!oldHashedPassword) {
-    return;
-  }
-
-  const oldpasswordMatch = await bcrypt.compare(oldPassword, oldHashedPassword);
-  if (!oldpasswordMatch) {
-    return {
-      success: false,
-      message: "Old password is incorrect!!",
-      status: 403,
-    };
-  }
-
-  if (oldpasswordMatch && oldPassword === newPassword) {
-    return {
-      success: false,
-      message: "Password change not necessary",
-      status: 403,
-    };
-  }
-
-  const newHashedPassword = await bcrypt.hash(newPassword, 10);
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
   try {
-    await User.findOneAndUpdate({ _id: userId }, { password: newHashedPassword });
+    const user = await User.findById(userId).select('+password');
+    if (!user?.password) {
+      return { success: false, message: "User not found", status: 404 };
+    }
+
+    const oldPasswordMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!oldPasswordMatch) {
+      return { success: false, message: "Old password incorrect", status: 403 };
+    }
+
+    if (oldPassword === newPassword) {
+      return { success: false, message: "Password change not needed", status: 403 };
+    }
+
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(userId, { password: newHashedPassword });
+
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Password successfully changed.",
-      status: 200,
-    };
+    return { success: true, message: "Password updated", status: 200 };
   } catch (error) {
-    console.error(error);
-    return { success: false, message: "Internal server error", status: 500 };
+    return handleServerError(error);
   }
 };
 
-/**
- * Initiate email change process
- */
-export const changeEmailStart = async (value: {
+export const changeEmailStart = async (values: {
   newEmail: string;
   userId: string;
   path: string;
-}) => {
+}): Promise<ApiResponse> => {
+  const { newEmail, userId, path } = values;
   await connectToMongoDB();
-  const { newEmail, userId, path } = value;
-  const current_user = await getCurrentUser();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
-  if (current_user._id !== userId) {
-    return {
-      success: false,
-      message: "You do not have access to this feature",
-      status: 403,
-    };
-  }
-
-  if (current_user.email === newEmail) {
-    return {
-      success: false,
-      message: "Email change not necessary",
-      status: 403,
-    };
+  if (currentUser!.email === newEmail) {
+    return { success: false, message: "Email change not needed", status: 403 };
   }
 
   const emailExists = await User.findOne({ email: newEmail });
   if (emailExists) {
-    return {
-      success: false,
-      message: "Email address already in use",
-      status: 403,
-    };
+    return { success: false, message: "Email already in use", status: 403 };
   }
 
   const otp = generateOtp();
-  const otpExpiresIn = Date.now() + 24 * 60 * 60 * 1000;
+  await User.findByIdAndUpdate(userId, { 
+    otp, 
+    otpExpiresIn: Date.now() + OTP_EXPIRY_MS 
+  });
 
-  const verificationDetails = {
-    username: current_user.username,
-    title: "OTP Verification Code",
-    otp: otp,
-    message: "Your new one-time password (OTP) for email change verification is: ",
-  };
+  const emailSent = await sendVerificationEmail(
+    newEmail,
+    currentUser!.username,
+    otp,
+    "Email Change Verification",
+    "Your new one-time password (OTP) for email change verification is: "
+  );
 
-  await User.findOneAndUpdate({ _id: userId }, { otp: otp, otpExpiresIn: otpExpiresIn });
-
-  const emailTemplate = await render(VerificationEmailTemplate(verificationDetails));
-  const sendOption = {
-    email: newEmail,
-    subject: "Email Change Verification",
-    html: emailTemplate,
-  };
-
-  try {
-    await sendEmail(sendOption);
-    revalidatePath(path);
-    return {
-      success: true,
-      message: "Verification OTP has been sent to your email",
-      status: 200,
-    };
-  } catch (error) {
+  if (!emailSent) {
     return {
       success: false,
       message: "Verification OTP not sent! Something went wrong",
       status: 500,
     };
   }
+
+  revalidatePath(path);
+  return {
+    success: true,
+    message: "Verification OTP has been sent to your email",
+    status: 200,
+  };
 };
 
-/**
- * Complete email change with OTP verification
- */
-export const changeEmail = async (value: {
+export const changeEmail = async (values: {
   email: string;
   otp: string;
   path: string;
   userId: string;
-}) => {
+}): Promise<ApiResponse> => {
+  const { email, userId, path, otp } = values;
   await connectToMongoDB();
-  const { email, userId, path, otp } = value;
-  const current_user = await getCurrentUser();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (current_user._id !== userId) {
-    return {
-      success: false,
-      message: "You do not have access to this feature",
-      status: 403,
-    };
-  }
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
   try {
-    if (current_user.otp !== otp) {
-      return { success: false, message: "OTP sent is invalid", status: 403 };
+    if (currentUser!.otp !== otp) {
+      return { success: false, message: "Invalid OTP", status: 403 };
     }
 
-    if (current_user.otpExpiresIn && Date.now() > current_user.otpExpiresIn) {
-      return {
-        success: false,
-        message: "OTP sent has expired. Please request a new OTP.",
-        status: 403,
-      };
+    if (currentUser!.otpExpiresIn && Date.now() > currentUser!.otpExpiresIn) {
+      return { success: false, message: "OTP expired", status: 403 };
     }
 
-    await User.findOneAndUpdate(
-      { _id: current_user._id },
-      { email: email, userVerified: true, otp: null, otpExpiresIn: null }
-    );
+    await User.findByIdAndUpdate(currentUser!._id, {
+      email: email,
+      userVerified: true,
+      otp: null,
+      otpExpiresIn: null,
+    });
 
     revalidatePath(path);
-    return { success: true, message: "Email succesfully changed", status: 200 };
+    return { success: true, message: "Email updated", status: 200 };
   } catch (error) {
-    return {
-      success: false,
-      message: "Verification OTP not sent! Something went wrong",
-      status: 500,
-    };
+    return handleServerError(error);
   }
 };
 
-// =============================================
-// AGENT-SPECIFIC FUNCTIONS
-// =============================================
+// Agent-specific functions
+const validateAgentAccess = async (agentId: string): Promise<{ agent?: any; error?: ApiResponse }> => {
+  const currentUser = await getCurrentUser();
+  const agent = await getAgentById(agentId);
 
-/**
- * Change agent's office address
- */
+  if (!currentUser || !agent) {
+    return { error: { success: false, message: "Not authorized", status: 403 } };
+  }
+
+  if (agent.userId !== currentUser._id) {
+    return { error: { success: false, message: "Not authorized", status: 403 } };
+  }
+
+  return { agent };
+};
+
 export const changeAgencyAddress = async (values: {
   agentId: string;
   newAddress: string;
   path: string;
-}) => {
-  await connectToMongoDB();
+}): Promise<ApiResponse> => {
   const { agentId, newAddress, path } = values;
-  const current_user = await getCurrentUser();
-  const agent = await getAgentById(agentId);
-
-  if (!agent) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (!current_user || agent.userId !== current_user._id) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+  await connectToMongoDB();
+  
+  const { agent, error } = await validateAgentAccess(agentId);
+  if (error) return error;
 
   try {
-    await Agent.findOneAndUpdate({ _id: agentId }, { officeAddress: newAddress });
+    await Agent.findByIdAndUpdate(agentId, { officeAddress: newAddress });
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Office address successfully changed",
-      status: 200,
-    };
+    return { success: true, message: "Office address updated", status: 200 };
   } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to update office address.",
-      status: 403,
-    };
+    return handleServerError(error);
   }
 };
 
-/**
- * Change agent's inspection fee
- */
 export const changeInspectionFee = async (values: {
   agentId: string;
   newFee: number;
   path: string;
-}) => {
-  await connectToMongoDB();
+}): Promise<ApiResponse> => {
   const { agentId, newFee, path } = values;
-  const current_user = await getCurrentUser();
-  const agent = await getAgentById(agentId);
-
-  if (!agent) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (!current_user || agent.userId !== current_user._id) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+  await connectToMongoDB();
+  
+  const { agent, error } = await validateAgentAccess(agentId);
+  if (error) return error;
 
   try {
-    await Agent.findOneAndUpdate({ _id: agentId }, { inspectionFeePerHour: newFee });
+    await Agent.findByIdAndUpdate(agentId, { inspectionFeePerHour: newFee });
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Inspection fee successfully changed",
-      status: 200,
-    };
+    return { success: true, message: "Inspection fee updated", status: 200 };
   } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to update inspection fee.",
-      status: 403,
-    };
+    return handleServerError(error);
   }
 };
 
-/**
- * Change agent's office number
- */
 export const changeOfficeNumber = async (values: {
   agentId: string;
   newNumber: string;
   path: string;
-}) => {
-  await connectToMongoDB();
+}): Promise<ApiResponse> => {
   const { agentId, newNumber, path } = values;
-  const current_user = await getCurrentUser();
-  const agent = await getAgentById(agentId);
-
-  if (!agent) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (!current_user || agent.userId !== current_user._id) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+  await connectToMongoDB();
+  
+  const { agent, error } = await validateAgentAccess(agentId);
+  if (error) return error;
 
   try {
-    await Agent.findOneAndUpdate({ _id: agentId }, { officeNumber: newNumber });
+    await Agent.findByIdAndUpdate(agentId, { officeNumber: newNumber });
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Office number successfully changed",
-      status: 200,
-    };
+    return { success: true, message: "Office number updated", status: 200 };
   } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to update office number.",
-      status: 403,
-    };
+    return handleServerError(error);
   }
 };
 
-/**
- * Toggle agent's listing preferences
- */
 export const toggleListings = async (values: {
   agentId: string;
   path: string;
-}) => {
-  await connectToMongoDB();
+}): Promise<ApiResponse> => {
   const { agentId, path } = values;
-  const agent = await Agent.findById(agentId);
-  const current_user = await getCurrentUser();
+  await connectToMongoDB();
+  const currentUser = await getCurrentUser();
+  const agent = await getAgentById(agentId);
 
-  if (!current_user) {
-    return { success: false, message: "You are logged in", status: 403 };
+  if (!currentUser || !agent || agent.userId !== currentUser._id) {
+    return { success: false, message: "Not authorized", status: 403 };
   }
 
-  if (!agent) {
-    return { success: false, message: "Agent does not exist", status: 403 };
-  }
-
-  const alreadyToggled = agent.getListings;
+  const newValue = !agent.getListings;
 
   try {
-    if (alreadyToggled) {
-      await Agent.findOneAndUpdate({ _id: agentId }, { getListings: false });
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will no longer get client listings.",
-        status: 200,
-      };
-    } else {
-      await Agent.findOneAndUpdate({ _id: agentId }, { getListings: true });
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will be getting client listings henceforth.",
-        status: 200,
-      };
-    }
-  } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to update listings.",
-      status: 500,
+    await Agent.findByIdAndUpdate(agentId, { getListings: newValue });
+    revalidatePath(path);
+    return { 
+      success: true, 
+      message: newValue ? "Getting client listings" : "Stopped getting listings", 
+      status: 200 
     };
+  } catch (error) {
+    return handleServerError(error);
   }
 };
 
-// =============================================
-// USER PREFERENCE FUNCTIONS
-// =============================================
-
-/**
- * Change user's phone number
- */
+// User preference functions
 export const changePhoneNumber = async (values: {
   userId: string;
   newNumber: string;
   path: string;
-}) => {
-  await connectToMongoDB();
+}): Promise<ApiResponse> => {
   const { userId, newNumber, path } = values;
-  const current_user = await getCurrentUser();
+  await connectToMongoDB();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user || current_user._id !== userId) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
   try {
-    await User.findOneAndUpdate({ _id: userId }, { phoneNumber: newNumber });
+    await User.findByIdAndUpdate(userId, { phoneNumber: newNumber });
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Phone number successfully changed",
-      status: 200,
-    };
+    return { success: true, message: "Phone number updated", status: 200 };
   } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to update phone number.",
-      status: 403,
-    };
+    return handleServerError(error);
   }
 };
 
-/**
- * Toggle liked apartments visibility
- */
-export const toggleLikedApartments = async (values: {
-  userId: string;
-  path: string;
-}) => {
-  await connectToMongoDB();
+const toggleUserPreference = async (
+  values: { userId: string; path: string },
+  preferenceField: string,
+  trueMessage: string,
+  falseMessage: string
+): Promise<ApiResponse> => {
   const { userId, path } = values;
-  const user = await User.findById(userId);
-  const current_user = await getCurrentUser();
+  await connectToMongoDB();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (!user) {
-    return { success: false, message: "User does not exist", status: 403 };
-  }
-
-  const alreadyToggled = user.showLikedApartments;
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
   try {
-    if (alreadyToggled) {
-      await User.findOneAndUpdate({ _id: userId }, { showLikedApartments: false });
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will not get list of like apartments.",
-        status: 200,
-      };
-    } else {
-      await User.findOneAndUpdate(
-        { _id: userId },
-        { showLikedApartments: true },
-        { upsert: true }
-      );
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will be getting list of liked apartments.",
-        status: 200,
-      };
-    }
+    const user = await User.findById(userId);
+    if (!user) return { success: false, message: "User not found", status: 403 };
+
+    const newValue = !user[preferenceField as keyof typeof user];
+    await User.findByIdAndUpdate(userId, { [preferenceField]: newValue });
+
+    revalidatePath(path);
+    return { success: true, message: newValue ? trueMessage : falseMessage, status: 200 };
   } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to access feature.",
-      status: 500,
-    };
+    return handleServerError(error);
   }
 };
 
-/**
- * Toggle bookmarked apartments visibility
- */
-export const toggleBookmarkedApartments = async (values: {
-  userId: string;
-  path: string;
-}) => {
-  await connectToMongoDB();
-  const { userId, path } = values;
-  const user = await User.findById(userId);
-  const current_user = await getCurrentUser();
+export const toggleLikedApartments = async (values: { userId: string; path: string }): Promise<ApiResponse> => 
+  toggleUserPreference(values, 'showLikedApartments', 'Showing liked apartments', 'Hiding liked apartments');
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
+export const toggleBookmarkedApartments = async (values: { userId: string; path: string }): Promise<ApiResponse> => 
+  toggleUserPreference(values, 'showBookmarkedApartments', 'Showing bookmarked apartments', 'Hiding bookmarked apartments');
 
-  if (!user) {
-    return { success: false, message: "User does not exist", status: 403 };
-  }
+export const toggleLikedBlogs = async (values: { userId: string; path: string }): Promise<ApiResponse> => 
+  toggleUserPreference(values, 'showLikedBlogs', 'Showing liked blogs', 'Hiding liked blogs');
 
-  const alreadyToggled = user.showBookmarkedApartments;
+export const toggleBookmarkedBlogs = async (values: { userId: string; path: string }): Promise<ApiResponse> => 
+  toggleUserPreference(values, 'showBookmarkedBlogs', 'Showing bookmarked blogs', 'Hiding bookmarked blogs');
 
-  try {
-    if (alreadyToggled) {
-      await User.findOneAndUpdate({ _id: userId }, { showBookmarkedApartments: false });
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will not get list of bookmarked apartments.",
-        status: 200,
-      };
-    } else {
-      await User.findOneAndUpdate(
-        { _id: userId },
-        { showBookmarkedApartments: true },
-        { upsert: true }
-      );
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will be getting list of bookmarked apartments.",
-        status: 200,
-      };
-    }
-  } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to access feature.",
-      status: 500,
-    };
-  }
-};
-
-/**
- * Toggle liked blogs visibility
- */
-export const toggleLikedBlogs = async (values: {
-  userId: string;
-  path: string;
-}) => {
-  await connectToMongoDB();
-  const { userId, path } = values;
-  const user = await User.findById(userId);
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (!user) {
-    return { success: false, message: "User does not exist", status: 403 };
-  }
-
-  const alreadyToggled = user.showLikedBlogs;
-
-  try {
-    if (alreadyToggled) {
-      await User.findOneAndUpdate({ _id: userId }, { showLikedBlogs: false });
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will not get list of like blogs.",
-        status: 200,
-      };
-    } else {
-      await User.findOneAndUpdate(
-        { _id: userId },
-        { showLikedBlogs: true },
-        { upsert: true }
-      );
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will be getting list of liked blogs.",
-        status: 200,
-      };
-    }
-  } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to access feature.",
-      status: 500,
-    };
-  }
-};
-
-/**
- * Toggle bookmarked blogs visibility
- */
-export const toggleBookmarkedBlogs = async (values: {
-  userId: string;
-  path: string;
-}) => {
-  await connectToMongoDB();
-  const { userId, path } = values;
-  const user = await User.findById(userId);
-  const current_user = await getCurrentUser();
-
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (!user) {
-    return { success: false, message: "User does not exist", status: 403 };
-  }
-
-  const alreadyToggled = user.showBookmarkedBlogs;
-
-  try {
-    if (alreadyToggled) {
-      await User.findOneAndUpdate({ _id: userId }, { showBookmarkedBlogs: false });
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will not get list of like apartments.",
-        status: 200,
-      };
-    } else {
-      await User.findOneAndUpdate(
-        { _id: userId },
-        { showBookmarkedBlogs: true },
-        { upsert: true }
-      );
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You will be getting list of liked apartments.",
-        status: 200,
-      };
-    }
-  } catch (error) {
-    return {
-      success: false,
-      message: "Something went wrong while trying to access feature.",
-      status: 500,
-    };
-  }
-};
-
-// =============================================
-// ACCOUNT MANAGEMENT FUNCTIONS
-// =============================================
-
-/**
- * Delete user account (soft delete)
- */
-export const deleteAccount = async (values: {
-  email: string;
-  path: string;
-}) => {
-  await connectToMongoDB();
+// Account management
+export const deleteAccount = async (values: { email: string; path: string }): Promise<ApiResponse> => {
   const { email, path } = values;
-  const current_user = await getCurrentUser();
+  await connectToMongoDB();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return {
-      success: false,
-      message: "You are not logged in, login to access this feature",
-      status: 403,
-    };
+  if (!currentUser) {
+    return { success: false, message: "Not logged in", status: 403 };
   }
 
-  if (current_user.email !== email) {
-    return {
-      success: false,
-      message: "The email address does not match!",
-      status: 404,
-    };
+  if (currentUser.email !== email) {
+    return { success: false, message: "Email doesn't match", status: 404 };
   }
 
-  const surname = capitalizeName(current_user.surName || "");
-  const lastname = capitalizeName(current_user.lastName || "");
+  const surname = capitalizeName(currentUser.surName || "");
+  const lastname = capitalizeName(currentUser.lastName || "");
   const name = `${surname} ${lastname}`;
 
-  const emailTemplate = await render(TemporaryDeleteEmailTemplate({ name }));
-  const sendOption = {
-    email: email,
-    subject: " Your Account Has Been Temporarily Deleted",
-    html: emailTemplate,
-  };
-
   try {
-    await sendEmail(sendOption);
-    await User.findOneAndUpdate(
-      { _id: current_user._id, email: email },
-      { userAccountDeleted: true }
-    );
-    revalidatePath(path);
+    const emailTemplate = await render(TemporaryDeleteEmailTemplate({ name }));
+    await sendEmail({ email, subject: "Account Deleted", html: emailTemplate });
 
-    return {
-      success: true,
-      message: "Account successfully deleted",
-      status: 200,
-    };
+    await User.findByIdAndUpdate(currentUser._id, { userAccountDeleted: true });
+    revalidatePath(path);
+    return { success: true, message: "Account deleted", status: 200 };
   } catch (error) {
-    return { success: false, message: "Internal server error", status: 500 };
+    return handleServerError(error);
   }
 };
 
-/**
- * Transfer agent account to another user
- */
 export const transferAccount = async (values: {
   oldEmail: string;
   newEmail: string;
   path: string;
-}) => {
-  await connectToMongoDB();
+}): Promise<ApiResponse> => {
   const { oldEmail, newEmail, path } = values;
-  const current_user = await getCurrentUser();
+  await connectToMongoDB();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
+  if (!currentUser) {
     return {
       success: false,
       message: "You are not logged in, login to access this feature",
@@ -1745,189 +1130,137 @@ export const transferAccount = async (values: {
     };
   }
 
-  const oldAgent = await Agent.findOne({ _id: current_user._id });
-  const oldAgentData = JSON.parse(JSON.stringify(oldAgent)) as agentProps;
-
-  if (current_user) {
-    if (current_user.role !== "agent" && !oldAgent) {
-      return {
-        success: false,
-        message: "You are authorized to access this feature",
-        status: 403,
-      };
-    }
-  }
-
-  if (current_user.email !== oldEmail) {
+  if (currentUser.role !== "agent") {
     return {
       success: false,
-      message: "Your credentials does not match! Check and retype",
+      message: "You are not authorized to access this feature",
+      status: 403,
+    };
+  }
+
+  if (currentUser.email !== oldEmail) {
+    return {
+      success: false,
+      message: "Your credentials do not match! Check and retype",
       status: 403,
     };
   }
 
   const newUser = await getUserByEmail(newEmail);
-  if (!newUser) {
+  if (!newUser || newUser.role !== "agent" || !newUser.userVerified) {
     return {
       success: false,
-      message: "New account does not exist! Use email of an existing account",
+      message: "You can only transfer account to a verified agent like you",
       status: 403,
     };
   }
 
-  if (newUser) {
-    if (newUser.role !== "agent" && newUser.userVerified !== true) {
-      return {
-        success: false,
-        message: "You can only transfer account to a verified agent like you",
-        status: 403,
-      };
-    }
-  }
-
-  // Transfer properties
-  const properties = await Apartment.find({ agent: current_user.agentId });
-  const oldAgentProperties = JSON.parse(JSON.stringify(properties)) as propertyProps[];
-
-  if (oldAgentProperties && oldAgentProperties.length > 0) {
-    const propertyId = oldAgentProperties.map((item) => item._id);
-    if (propertyId.length > 0) {
-      await Apartment.updateMany(
-        { _id: { $in: propertyId } },
-        { agent: newUser.agentId }
-      );
-      await Rented.updateMany(
-        { apartment: { $in: propertyId } },
-        { agent: newUser.agentId }
-      );
-
-      propertyId.forEach(async (element) => {
-        await Agent.findOneAndUpdate(
-          { _id: newUser.agentId },
-          { apartments: { $push: element } }
-        );
-      });
-    }
-  }
-
-  // Transfer clients
-  if (oldAgentData && oldAgentData.clients.length > 0) {
-    oldAgentData.clients.forEach(async (element) => {
-      await Agent.findOneAndUpdate(
-        { _id: newUser.agentId },
-        { clients: { $push: element } }
-      );
-    });
-  }
-
-  // Transfer inspections
-  if (oldAgentData && oldAgentData.inspections.length > 0) {
-    oldAgentData.clients.forEach(async (element) => {
-      await Agent.findOneAndUpdate(
-        { _id: newUser.agentId },
-        { inspections: { $push: element } }
-      );
-    });
-  }
-
-  // Transfer notifications
-  const notifications = await Notification.find({ recipient: current_user._id });
-  const oldNotifications = JSON.parse(JSON.stringify(notifications)) as notificationProps[];
-
-  if (oldNotifications && oldNotifications.length > 0) {
-    const notificationIds = oldNotifications.map((item) => item._id) as string[];
-    await Notification.updateMany(
-      { _id: { $in: notificationIds } },
-      { recipient: newUser._id }
-    );
-
-    notificationIds.forEach(async (element) => {
-      await User.findOneAndUpdate(
-        { _id: newUser._id },
-        { notifications: { $push: element } }
-      );
-    });
-  }
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    // Delete old profile image
-    if (current_user && current_user.profileImage && current_user.profileImage.public_id !== undefined) {
-      deleteCloudinaryImages(current_user.profileImage.public_id);
+    // Transfer properties
+    const properties = await Apartment.find({ agent: currentUser.agentId });
+    if (properties.length > 0) {
+      const propertyIds = properties.map(item => item._id);
+      
+      await Promise.all([
+        Apartment.updateMany(
+          { _id: { $in: propertyIds } },
+          { agent: newUser.agentId },
+          { session }
+        ),
+        Rentout.updateMany(
+          { apartment: { $in: propertyIds } },
+          { agent: newUser.agentId },
+          { session }
+        ),
+        Agent.findByIdAndUpdate(
+          newUser.agentId,
+          { $push: { apartments: { $each: propertyIds } } },
+          { session }
+        )
+      ]);
     }
 
-    await User.deleteOne({ _id: current_user._id });
-    revalidatePath(path);
+    // Transfer notifications
+    const notifications = await Notification.find({ recipient: currentUser._id });
+    if (notifications.length > 0) {
+      const notificationIds = notifications.map(item => item._id);
+      
+      await Promise.all([
+        Notification.updateMany(
+          { _id: { $in: notificationIds } },
+          { recipient: newUser._id },
+          { session }
+        ),
+        User.findByIdAndUpdate(
+          newUser._id,
+          { $push: { notifications: { $each: notificationIds } } },
+          { session }
+        )
+      ]);
+    }
 
+    // Delete old profile image
+    if (currentUser.profileImage?.public_id) {
+      await deleteCloudinaryImages(currentUser.profileImage.public_id);
+    }
+
+    await User.findByIdAndDelete(currentUser._id, { session });
+
+    await session.commitTransaction();
+
+    revalidatePath(path);
     return {
       success: true,
       message: "You have successfully transferred your account",
       status: 200,
     };
   } catch (error) {
-    return {
-      success: true,
-      message: "Error occurred while transferring account",
-      status: 500,
-    };
+    await session.abortTransaction();
+    return handleServerError(error);
+  } finally {
+    await session.endSession();
   }
 };
 
-/**
- * Toggle blog collaborator status
- */
-export const toggleCollaborator = async (values: {
-  userId: string;
-  path: string;
-}) => {
-  await connectToMongoDB();
+export const toggleCollaborator = async (values: { userId: string; path: string }): Promise<ApiResponse> => {
   const { userId, path } = values;
-  const user = await User.findById(userId);
-  const current_user = await getCurrentUser();
+  await connectToMongoDB();
+  const currentUser = await getCurrentUser();
 
-  if (!current_user) {
-    return { success: false, message: "You are not logged in", status: 403 };
-  }
-
-  if (!user) {
-    return { success: false, message: "User does not exist", status: 403 };
-  }
-
-  const alreadyToggled = user.blogCollaborator;
-  const isAnAgent = user.userIsAnAgent && user.agentId !== undefined;
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
 
   try {
-    if (alreadyToggled) {
-      await User.findOneAndUpdate({ _id: userId }, { blogCollaborator: false });
-      if (isAnAgent) {
-        await Agent.findOneAndUpdate({ _id: user.agentId }, { isACollaborator: false });
-      }
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You are no longer a collaborator on blogs.",
-        status: 200,
-      };
-    } else {
-      await User.findOneAndUpdate(
-        { _id: userId },
-        { blogCollaborator: true },
-        { upsert: true }
+    const user = await User.findById(userId);
+    if (!user) return { success: false, message: "User not found", status: 403 };
+
+    const newCollaboratorStatus = !user.blogCollaborator;
+    const isAnAgent = user.userIsAnAgent && user.agentId;
+
+    const updatePromises: Promise<any>[] = [
+      User.findByIdAndUpdate(userId, { blogCollaborator: newCollaboratorStatus })
+    ];
+
+    if (isAnAgent) {
+      updatePromises.push(
+        Agent.findByIdAndUpdate(user.agentId, { isACollaborator: newCollaboratorStatus })
       );
-      if (isAnAgent) {
-        await Agent.findOneAndUpdate({ _id: user.agentId }, { isACollaborator: true });
-      }
-      revalidatePath(path);
-      return {
-        success: true,
-        message: "You are now a collaborator on blogs.",
-        status: 200,
-      };
     }
-  } catch (error) {
+
+    await Promise.all(updatePromises);
+
+    revalidatePath(path);
     return {
-      success: false,
-      message: "Something went wrong while trying to access feature.",
-      status: 500,
+      success: true,
+      message: newCollaboratorStatus 
+        ? "You are now a collaborator on blogs" 
+        : "You are no longer a collaborator on blogs",
+      status: 200,
     };
+  } catch (error) {
+    return handleServerError(error);
   }
 };

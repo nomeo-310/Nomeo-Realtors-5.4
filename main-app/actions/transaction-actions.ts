@@ -1,29 +1,14 @@
 "use server";
 
-// =============================================
-// IMPORTS
-// =============================================
-
-// Models
 import User from "@/models/user";
 import Apartment from "@/models/apartment";
 import Transaction from "@/models/transaction";
 import Notification from "@/models/notification";
 import Rentout from "@/models/rentout";
 import Sellout from "@/models/sellout";
-
-// Actions & Utilities
 import { getCurrentUser } from "./user-actions";
 import { revalidatePath } from "next/cache";
 
-// =============================================
-// TYPE DEFINITIONS
-// =============================================
-
-/**
- * Transaction properties interface
- * Defines the structure for transaction initiation data
- */
 type transactionProps = {
   createdAt: string;
   transactionId: string;
@@ -37,24 +22,55 @@ type transactionProps = {
   paymentMethod: string;
 };
 
-// =============================================
-// TRANSACTION MANAGEMENT FUNCTIONS
-// =============================================
+// Database connection optimization
+let isConnected = false;
 
-/**
- * Initiate a new transaction for property rent or purchase
- * 
- * This function handles:
- * - Transaction creation for both rent and purchase scenarios
- * - Validation of user, agent, and property existence
- * - Automatic creation of rentout/sellout records
- * - Notification generation for transaction initiation
- * 
- * @param values - Transaction data including property, agent, and payment details
- * @returns API response indicating success or failure
- */
+const ensureConnection = async () => {
+  if (!isConnected) {
+    await import("@/lib/connectToMongoDB").then(({ connectToMongoDB }) => connectToMongoDB());
+    isConnected = true;
+  }
+};
+
+// Common validation functions
+interface AuthValidationResult {
+  success: boolean;
+  message?: string;
+  status?: number;
+  currentUser?: any;
+}
+
+const validateUserAuth = async (): Promise<AuthValidationResult> => {
+  const currentUser = await getCurrentUser();
+  
+  if (!currentUser) {
+    return { 
+      success: false, 
+      message: 'You are not logged in. Log in to access this feature', 
+      status: 403 
+    };
+  }
+
+  return { success: true, currentUser };
+};
+
+// Helper functions
+const createNotification = async (notificationData: any) => {
+  const notification = await Notification.create(notificationData);
+  await User.findByIdAndUpdate(
+    notificationData.recipient,
+    { $push: { notifications: notification._id } }
+  );
+  return notification;
+};
+
+// Transaction Actions
 export const initiateTransaction = async ({ values }: { values: transactionProps }) => {
-  // Extract values from parameters
+  await ensureConnection();
+
+  const authResult = await validateUserAuth();
+  if (!authResult.success) return authResult;
+
   const { 
     propertyId, 
     agentUserId, 
@@ -68,53 +84,32 @@ export const initiateTransaction = async ({ values }: { values: transactionProps
     paymentMethod 
   } = values;
 
-  // Get current authenticated user
-  const current_user = await getCurrentUser();
-
-  // Validate user authentication
-  if (!current_user) {
-    return { 
-      success: false, 
-      message: 'You are not logged in. Log in to access this feature', 
-      status: 403 
-    };
-  }
-
-  // Verify agent exists and has correct role
-  const agentUserDetails = await User.findOne({ 
-    _id: agentUserId, 
-    role: 'agent' 
-  });
-
-  if (!agentUserDetails) {
-    return { 
-      success: false, 
-      message: 'Agent does not exist', 
-      status: 403 
-    };
-  }
-
-  // Verify property exists
-  const property = await Apartment.findOne({ 
-    propertyIdTag: propertyId 
-  });
-
-  if (!property) {
-    return { 
-      success: false, 
-      message: 'Apartment does not exist', 
-      status: 403 
-    };
-  }
-
   try {
-    // =============================================
-    // CREATE TRANSACTION RECORD
-    // =============================================
-    
-    const newTransactionData = {
+    // Parallel data fetching for better performance
+    const [agentUserDetails, property] = await Promise.all([
+      User.findOne({ _id: agentUserId, role: 'agent' }),
+      Apartment.findOne({ propertyIdTag: propertyId })
+    ]);
+
+    if (!agentUserDetails) {
+      return { 
+        success: false, 
+        message: 'Agent does not exist', 
+        status: 404 
+      };
+    }
+
+    if (!property) {
+      return { 
+        success: false, 
+        message: 'Apartment does not exist', 
+        status: 404 
+      };
+    }
+
+    const transactionData = {
       amount,
-      user: current_user._id,
+      user: authResult.currentUser!._id,
       apartment: propertyId,
       agent: agentUserDetails.agentId,
       status: 'pending',
@@ -127,73 +122,39 @@ export const initiateTransaction = async ({ values }: { values: transactionProps
       currency,
       paymentMethod
     };
-    
-    // Save transaction to database
-    const newTransaction = await Transaction.create(newTransactionData);
-    newTransaction.save();
 
-    // =============================================
-    // UPDATE RENTOUT OR SELLOUT RECORD
-    // =============================================
-    
-    if (property.propertyTag === 'for-rent') {
-      // Update rentout record for rental properties
-      await Rentout.findOneAndUpdate(
-        { 
-          user: current_user._id, 
-          agent: agentUserDetails.agentId, 
-          apartment: property._id, 
-          status: 'initiated' 
-        }, 
-        { 
-          status: 'pending', 
-          totalAmount: amount 
-        }
-      );
-    } else {
-      // Update sellout record for property purchases
-      await Sellout.findOneAndUpdate(
-        { 
-          user: current_user._id, 
-          agent: agentUserDetails.agentId, 
-          apartment: property._id, 
-          status: 'initiated' 
-        }, 
-        { 
-          status: 'pending', 
-          totalAmount: amount 
-        }
-      );
-    }
+    // Create transaction and notification in parallel
+    const [newTransaction, newNotification] = await Promise.all([
+      Transaction.create(transactionData),
+      createNotification({
+        title: 'Transaction Initiated',
+        content: `The transaction for the payment of ${currency}${amount.toLocaleString()} for ${property.propertyTypeTag === 'for-rent' ? 'property rent' : 'property purchase'} has been successfully initiated for the property with the ID: ${propertyId}. In case you haven't forwarded your payment receipt, go ahead and do that.`,
+        recipient: authResult.currentUser!._id,
+        issuer: authResult.currentUser!._id,
+        type: 'payment',
+        propertyId: propertyId
+      })
+    ]);
 
-    // =============================================
-    // CREATE NOTIFICATION
-    // =============================================
-    
-    const notificationData = {
-      title: 'Transaction Initiated',
-      content: `The transaction for the payment of ${currency}${amount.toLocaleString()} for ${property.propertyTypeTag === 'for-rent' ? 'property rent' : 'property purchase'} has been successfully initiated for the property with the ID: ${propertyId}. In case you haven't forwarded your payment receipt, go ahead and do that.`,
-      recipient: current_user._id,
-      issuer: current_user._id,
-      type: 'payment',
-      propertyId: propertyId
+    // Update rentout/sellout based on property type
+    const updateQuery = {
+      user: authResult.currentUser!._id,
+      agent: agentUserDetails.agentId,
+      apartment: property._id,
+      status: 'initiated'
     };
 
-    // Save notification to database
-    const newNotification = await Notification.create(notificationData);
-    newNotification.save();
+    const updateData = {
+      status: 'pending',
+      totalAmount: amount
+    };
 
-    // Link notification to user
-    await User.updateOne(
-      { _id: current_user._id }, 
-      { $push: { notifications: newNotification._id } }
-    );
+    if (property.propertyTag === 'for-rent') {
+      await Rentout.findOneAndUpdate(updateQuery, updateData);
+    } else {
+      await Sellout.findOneAndUpdate(updateQuery, updateData);
+    }
 
-    // =============================================
-    // FINALIZE OPERATION
-    // =============================================
-    
-    // Revalidate the page to show updated data
     revalidatePath(path);
     
     return { 
@@ -203,9 +164,7 @@ export const initiateTransaction = async ({ values }: { values: transactionProps
     };
     
   } catch (error) {
-    // Handle any errors that occur during the process
     console.error('Transaction initiation error:', error);
-    
     return { 
       success: false, 
       message: 'Internal server error', 
