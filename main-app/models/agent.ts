@@ -129,16 +129,6 @@ agentSchema.index({ verificationStatus: 1 });
 agentSchema.index({ agentVerified: 1 });
 agentSchema.index({ agencyName: 1 });
 
-// FIXED: Comment out less critical indexes to reduce potential duplicates
-// agentSchema.index({ officeNumber: 1 });
-// agentSchema.index({ officeAddress: 1 });
-// agentSchema.index({ getListings: 1 });
-// agentSchema.index({ isACollaborator: 1 });
-// agentSchema.index({ agentRatings: 1 });
-// agentSchema.index({ agencyWebsite: 1 });
-// agentSchema.index({ inspectionFeePerHour: 1 });
-// agentSchema.index({ createdAt: 1 });
-
 // Compound indexes for common query patterns
 agentSchema.index({ verificationStatus: 1, agentVerified: 1 });
 agentSchema.index({ verificationStatus: 1, createdAt: -1 });
@@ -162,10 +152,6 @@ agentSchema.index({
   officeAddress: 'text',
   licenseNumber: 'text'
 });
-
-// FIXED: Remove potentially problematic nested field indexes
-// agentSchema.index({ 'coverImage.public_id': 1 }, { sparse: true });
-// agentSchema.index({ 'coverImage.secure_url': 1 }, { sparse: true });
 
 // Sparse indexes for optional fields
 agentSchema.index({ agencyWebsite: 1 }, { sparse: true });

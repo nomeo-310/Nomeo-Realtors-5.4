@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import SuspendedUserClient from '@/components/dashboard-features/manage-app-users/suspended-user-client';
+import SuspendedUsersClient from '@/components/dashboard-features/manage-app-users/suspended-users-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
@@ -19,7 +19,7 @@ const SuspendedUsers = async () => {
     return notFound();
   };
   
-  return <SuspendedUserClient user={user}/>;
+  return <SuspendedUsersClient currentUser={user}/>;
 }
 
 export default SuspendedUsers

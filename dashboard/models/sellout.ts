@@ -15,38 +15,43 @@ const selloutSchema: Schema<ISellout> = new Schema(
   {
     user: { 
       type: Schema.Types.ObjectId, 
-      ref: 'User',
-      index: true 
+      ref: 'User'
     },
     apartment: { 
       type: String, 
-      required: true,
-      index: true 
+      required: true
     },
     agent: { 
       type: Schema.Types.ObjectId, 
-      ref: 'Agent',
-      index: true 
+      ref: 'Agent'
     },
     sold: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     status: { 
       type: String, 
       enum: ['initiated', 'completed', 'cancelled', 'pending'], 
-      default: 'initiated',
-      index: true 
+      default: 'initiated'
     },
     totalAmount: { 
       type: Number, 
-      default: undefined,
-      index: true 
+      default: undefined
     }
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+  }
 );
+
+// FIXED: Keep only essential single field indexes
+selloutSchema.index({ user: 1 });
+selloutSchema.index({ apartment: 1 });
+selloutSchema.index({ agent: 1 });
+selloutSchema.index({ sold: 1 });
+selloutSchema.index({ status: 1 });
+selloutSchema.index({ createdAt: -1 });
 
 // Compound indexes for common query patterns
 selloutSchema.index({ user: 1, sold: 1 });
@@ -55,19 +60,20 @@ selloutSchema.index({ agent: 1, sold: 1 });
 selloutSchema.index({ agent: 1, status: 1 });
 selloutSchema.index({ sold: 1, status: 1 });
 selloutSchema.index({ status: 1, createdAt: -1 });
-selloutSchema.index({ sold: 1, createdAt: -1 });
-selloutSchema.index({ apartment: 1, sold: 1 });
-selloutSchema.index({ totalAmount: -1, sold: 1 });
-selloutSchema.index({ user: 1, agent: 1, sold: 1 });
 
-// Text search index for apartment search
-selloutSchema.index({ apartment: 'text' });
+// FIXED: Improved model creation with better caching
+let Sellout: Model<ISellout>;
 
-// Sparse index for totalAmount (optional field)
-selloutSchema.index({ totalAmount: 1 }, { sparse: true });
-
-// Fixed model creation (removed duplicate assignment)
-const Sellout: Model<ISellout> = mongoose.models.Sellout || 
-  mongoose.model<ISellout>('Sellout', selloutSchema);
+if (mongoose.models.Sellout) {
+  Sellout = mongoose.models.Sellout;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached Sellout model');
+  }
+} else {
+  Sellout = mongoose.model<ISellout>('Sellout', selloutSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new Sellout model');
+  }
+}
 
 export default Sellout;

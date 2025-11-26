@@ -11,11 +11,11 @@ import EmptyState from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/formatDate'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { BadgeCheck, Bell, Eye, MoreHorizontalIcon, Trash2 } from 'lucide-react'
+import { Eye, MoreHorizontalIcon, RotateCcw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import TableLoading from '../table-loading'
 import Pagination from '@/components/ui/pagination'
-import { useDeleteUserModal, UserForRestriction, useVerificationReminderModal } from '@/hooks/general-store'
+import { useDeleteUserModal, UserForRestriction } from '@/hooks/general-store'
 
 interface ApiResponse {
   users: ExtendedUserProps[];
@@ -28,12 +28,12 @@ type mobileItemProps = {
   toggleTable: () => void;
 };
 
-const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
+const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
   const { search, sortOrder } = useFilterStore();
 
   const [currentPage, setCurrentPage] = React.useState(1);
   const [currentIndex, setCurrentIndex] = React.useState(-1);
-
+  
   const queryData = React.useMemo(() => ({
     queryText: search,
     sortOrder: sortOrder,
@@ -42,21 +42,21 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
 
   const fetchData = async (): Promise<ApiResponse> => {
     try {
-      const response = await axios.post<ApiResponse>('/api/admin/users/unverified', queryData);
+      const response = await axios.post<ApiResponse>('/api/admin/users/deleted', queryData);
 
       if (response.status !== 200) {
         throw new Error(`API returned status: ${response.status}`);
       }
 
-      return response.data;
-    } catch (error: any) {
+    return response.data;
+    } catch (error:any) {
       const errorMessage = error.response?.data?.error || error.message || 'Something went wrong';
       throw new Error(errorMessage);
     }
   };
 
   const { data, status } = useQuery<ApiResponse>({
-    queryKey: ['unverified-users', search, sortOrder, currentPage],
+    queryKey: ['deleted-users', search, sortOrder, currentPage],
     queryFn: fetchData,
     retry: 2,
   });
@@ -64,7 +64,7 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
   React.useEffect(() => {
     setCurrentPage(1);
   }, [search, sortOrder]);
-
+  
   const users = data?.users || [];
   const pagination = data?.pagination || null;
 
@@ -77,19 +77,19 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
 
   const toggleItem = React.useCallback((index: number) => {
     setCurrentIndex((currentValue) => (currentValue !== index ? index : -1));
-  }, []);
+  },[]);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = (page:number) => {
     setCurrentPage(page)
   };
 
-  const header = ['s/n', 'username', 'surname', 'lastname', 'email', 'verification', 'city', 'state', 'date joined', 'action'];
+  const header = ['s/n', 'username', 'surname', 'lastname', 'email',  'verification', 'city', 'state', 'date joined', 'action'];
 
   const UserListHeader = () => {
     return (
       <TableHeader className="rounded-lg h-11 [&_tr]:border-b">
         <TableRow className="bg-white hover:bg-white border-b-0 dark:bg-[#424242]">
-          {header.map((item: string) => (
+          {header.map((item:string) => (
             <TableHead className="text-center font-semibold uppercase border-r text-xs last:border-r-0">{item}</TableHead>
           ))}
         </TableRow>
@@ -97,7 +97,7 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
     )
   };
 
-  const UserListItem = ({ user, index }: { user: ExtendedUserProps, index: number }) => {
+  const UserListItem = ({user, index}:{user:ExtendedUserProps, index:number}) => {
     return (
       <TableRow className='border'>
         <TableCell className="text-xs md:text-sm text-center border-r">{startingSerial + index}</TableCell>
@@ -110,16 +110,15 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{user.state}</TableCell>
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{formatDate(user.createdAt)}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
-          <Menu user={user} />
+          <Menu user={user}/>
         </TableCell>
       </TableRow>
     )
   };
 
-  const Menu = ({ user }: { user: ExtendedUserProps }) => {
+  const Menu = ({user}:{user:ExtendedUserProps}) => {
     const [showMenu, setShowMenu] = React.useState(false);
 
-    const verificationReminderModal = useVerificationReminderModal();
     const deleteUserModal = useDeleteUserModal();
 
     const handleDeleteUser = (user: ExtendedUserProps) => {
@@ -137,49 +136,31 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
       deleteUserModal.onOpen(userForBlocking);
     };
 
-    const handleSendReminder = (user: ExtendedUserProps) => {
-      const unverifiedUser = {
-        id: user._id,
-        surName: user.surName,
-        lastName: user.lastName,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        userType: user.role,
-        registrationDate: user.createdAt
-      };
-
-      verificationReminderModal.onOpen(unverifiedUser);
-    };
-
     return (
       <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
         <DropdownMenuTrigger className='outline-none focus:outline-none'>
-          <MoreHorizontalIcon />
+          <MoreHorizontalIcon/>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64 min-w-[220px]" align="end">
-          {/* Verification Actions */}
+        <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
+          {/* Recovery & Information */}
           <div className="p-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Verification</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Actions</p>
             <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1">
-              <BadgeCheck className="w-4 h-4" />
-              Verify User
+              <RotateCcw className="w-4 h-4" />
+              Restore User
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50 mb-1" onClick={() => handleSendReminder(user)}>
-              <Bell className="w-4 h-4" />
-              Send Verification Reminder
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50 mb-1">
               <Eye className="w-4 h-4" />
-              View Verification Details
+              View Details
             </DropdownMenuItem>
           </div>
 
-          {/* Danger Zone */}
+          {/* Permanent Actions */}
           <div className="p-2 border-t border-gray-100">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10 mb-1" onClick={() => handleDeleteUser(user)}>
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteUser(user)}>
               <Trash2 className="w-4 h-4" />
-              Delete User
+              Delete Permanently
             </DropdownMenuItem>
           </div>
         </DropdownMenuContent>
@@ -187,9 +168,9 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
     )
   };
 
-  const MobileItem = ({ open, toggleTable, user }: mobileItemProps) => {
+  const MobileItem = ({open, toggleTable, user }:mobileItemProps) => {
     return (
-      <div className={cn("shadow-sm border-b last:border-b-0 w-full h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto' : '')} onClick={toggleTable}>
+      <div className={cn("shadow-sm border-b last:border-b-0 w-full h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
         <div className="flex items-center justify-between">
           <p className="text-sm capitalize font-semibold">{user.surName}</p>
           <p className="text-sm capitalize font-semibold">{user.lastName}</p>
@@ -198,7 +179,7 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
           <p className={cn("text-center text-sm")}>{user.email}</p>
           <p className="text-sm">{user.city}, {user.state}</p>
         </div>
-        <div className="border-b border-black my-3" />
+        <div className="border-b border-black my-3"/>
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">Verification Status</p>
           <p className="text-sm capitalize text-green-600 font-semibold">{user.userVerified ? 'verified' : 'unverified'}</p>
@@ -222,34 +203,34 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
         <div className='min-h-[300px] max-h-[490px] h-[560px]'>
           {status === 'pending' &&
             <div className='w-full'>
-              <TableLoading tableHeader={header} />
+              <TableLoading tableHeader={header}/>
             </div>
           }
           {status === 'error' &&
             <div className='w-full h-full items-center '>
-              <ErrorState message='An error occurred while fetching users. Try again later.' />
+              <ErrorState message='An error occurred while fetching users. Try again later.'/>
             </div>
           }
           {status === 'success' && users.length === 0 &&
             <div className='w-full h-full items-center'>
-              <EmptyState message={search !== '' ? 'No user found for the search query' : 'No unverified users at the moment.'} />
+              <EmptyState message={ search !== '' ? 'No user found for the search query' : 'No deleted users at the moment.'}/>
             </div>
           }
           {status === 'success' && users && users.length > 0 &&
             <React.Fragment>
               <div className="hidden md:block">
                 <Table className='w-full border'>
-                  <UserListHeader />
+                  <UserListHeader/>
                   <TableBody>
-                    {users.map((user: ExtendedUserProps, index: number) => (
-                      <UserListItem user={user} index={index} />
+                    {users.map((user:ExtendedUserProps, index:number) => (
+                      <UserListItem user={user} index={index}/>
                     ))}
                   </TableBody>
                 </Table>
                 <Pagination currentPage={currentPage} totalPages={pagination?.totalPages ?? 1} onPageChange={handlePageChange} />
               </div>
               <div className="flex flex-col md:hidden">
-                {users.map((user: ExtendedUserProps, index: number) => (
+                {users.map((user:ExtendedUserProps, index:number) => (
                   <React.Fragment key={index}>
                     <MobileItem
                       open={currentIndex === index}
@@ -268,16 +249,16 @@ const UnverifiedUserClient = ({ user }: { user: AdminDetailsProps }) => {
   };
 
   return (
-    <UsersWrapper
+    <UsersWrapper 
       user={user}
-      placeholder='search unverified users...'
+      placeholder='search deleted users...'
       searchDelay={400}
-      namespace='unverified_users'
+      namespace='deleted_users'
       maxWidth='max-w-4xl'
     >
-      <TableList />
+      <TableList/>
     </UsersWrapper>
   )
 }
 
-export default UnverifiedUserClient
+export default DeletedUsersClient

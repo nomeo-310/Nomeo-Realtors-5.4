@@ -17,6 +17,7 @@ export interface ExtendedUserProps extends BasicUserProps {
   createdAt: string;
   phoneNumber: string;
   userAccountSuspended: boolean;
+  suspendedBy: string;
 }
 
 export interface BasicAgentProps extends ExtendedUserProps {
@@ -45,22 +46,37 @@ export interface AdminDetailsProps {
   adminPermissions: string[];
   adminId: string;
   isActivated: boolean;
-  activatedAt: Date;
+  isSuspended: boolean;
+  adminOnboarded: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export interface FullAdminDetailsProps extends AdminDetailsProps {
+  activatedAt: string;
   activatedBy: string;
+  suspendedAt: string;
+  suspendedBy: string;
+  suspensionReason: string;
+  password?: string;
+  passwordAdded: boolean;
   accessId: string;
-  accessIdExpires?:  number;
+  accessIdExpires?: number;
   otp?: string;
   otpExpiresIn?: number;
   resetAccessIdOtp?: string;
   resetAccessIdOtpExpiresIn?: number;
-  lockUntil?: Date;
-  deactivatedAt: Date;
+  lockUntil?: string;
+  deactivatedAt: string;
   deactivatedBy: string;
+  deactivationReason: string;
+  reactivatedAt: string;
+  reactivatedBy: string;
   adminOnboarded: boolean;
-  createdBy:  string;
+  createdBy: string;
   createdAt: Date;
   updatedAt: Date;
-};
+}
 
 export interface NotificationProps {
   _id: string;
@@ -290,3 +306,41 @@ export interface PropertyProps {
   propertyApproval: string;
   bookmarks: string[];
 };
+
+interface SuspensionHistoryEntry {
+  _id: string;
+  action: 'suspension' | 'lift' | 'extension' | 'appeal' | 'appeal_approved' | 'appeal_rejected' | 'auto_lift',
+  description: string;
+  performedBy: string;
+  performedAt: string;
+  reason: string;
+  data?: {
+    category?: string;
+    suspensionCount?: number;
+    originalSuspensionId?: string;
+    appealDate?: string;
+  };
+  duration?: '3_days' | '7_days' | '30_days' | 'permanent';
+}
+
+interface SuspendedUser {
+  _id: string;
+  email: string;
+  role: string;
+  additionalPhoneNumber?: string;
+  bio?: string;
+  city: string;
+  lastName: string;
+  phoneNumber: string;
+  profilePicture: string;
+  state: string;
+  surName: string;
+}
+
+export interface SuspensionData {
+  _id: string;
+  user: SuspendedUser;
+  isActive: boolean;
+  suspendedUntil: string;
+  history: SuspensionHistoryEntry[];
+}

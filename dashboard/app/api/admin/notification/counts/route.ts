@@ -12,7 +12,7 @@ export const GET = async () => {
   }
 
   try {
-    const notifications = await Notification.countDocuments({recipient: current_user._id, seen: false})
+    const notifications = await Notification.countDocuments({recipient: current_user.userId._id, seen: false})
     const data = {count: notifications};
 
     return Response.json(data);

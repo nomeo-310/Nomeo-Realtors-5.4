@@ -25,8 +25,9 @@ const BreadCrumbs = () => {
 
     const isBlogId = index === 2 && pathSegments[index - 1] === 'create-blog';
     const isApartmentId = index === 3 && pathSegments[index - 1] === 'apartments';
+    const isSuspendedUserId = index === 3 && pathSegments[index - 1] === 'suspended';
 
-    const text = isApartmentId ? 'Single Apartment' : isBlogId ? 'Edit Blog' : pathNamesMap[segment] || segment.replace(/-/g, ' ');
+    const text = isApartmentId ? 'Single Apartment' : isBlogId ? 'Edit Blog' : isSuspendedUserId ? 'Suspended User' : pathNamesMap[segment] || segment.replace(/-/g, ' ');
 
     return (
       <React.Fragment key={href}>

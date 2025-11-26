@@ -46,6 +46,7 @@ export const POST = async (request: Request) => {
       role: 'agent',
       userAccountDeleted: false, 
       userAccountSuspended: true,
+      ...(current_user.role !== 'superAdmin' && { suspendedBy: current_user.userId._id}),
       _id: { $ne: current_user.userId },
       ...(queryText && {
         $or: [

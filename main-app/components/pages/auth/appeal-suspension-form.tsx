@@ -13,12 +13,16 @@ import { appealSchema, AppealFormValues } from "@/lib/form-validations";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useSuspendedAccountModal } from "@/hooks/general-store";
+import { usePathname, useRouter } from "next/navigation";
+import { appealSuspension } from "@/actions/user-actions";
 
 
 const AppealSuspensionForm = () => {
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const { context } = useSuspendedAccountModal()
+  const { context } = useSuspendedAccountModal();
+  const path = usePathname();
+  const router = useRouter();
 
   const form = useForm<AppealFormValues>({
     resolver: zodResolver(appealSchema),
@@ -36,14 +40,23 @@ const AppealSuspensionForm = () => {
     setIsLoading(true);
 
     try {
-      // Handle form submission here
-      console.log("Appeal data:", values);
+      const appealData = {
+        email: values.email,
+        appealReason: values.appealMessage,
+        role: values.role,
+        licenseNumber: values.licenseNumber,
+        path: path,
+      };
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await appealSuspension(appealData);
 
-      toast.success("Appeal submitted successfully! We'll review your case shortly.");
-      form.reset();
+      if (response.success) {
+        toast.success(response.message);
+        form.reset();
+        router.push('/');
+      } else {
+        toast.error(response.message);
+      }
     } catch (error) {
       console.error('Appeal submission error:', error);
       toast.error("Something went wrong! Please try again later.");

@@ -1,4 +1,3 @@
-// components/admin/suspend-user-modal.tsx
 "use client";
 
 import React from "react";
@@ -7,25 +6,32 @@ import CustomSelect from "../ui/custom-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useSuspendUserModal } from "@/hooks/general-store";
+import { usePathname } from "next/navigation";
+import { suspendUser } from "@/actions/suspension-actions";
+import { SuspensionCategory, SuspensionDuration } from "@/models/suspension";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const SuspendUserModal = () => {
   const { onClose, isOpen, user } = useSuspendUserModal();
+  const queryClient = useQueryClient();
 
   const [currentStep, setCurrentStep] = React.useState<'confirmation' | 'suspension'>('confirmation');
   const [suspensionReason, setSuspensionReason] = React.useState("");
   const [selectedDuration, setSelectedDuration] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("");
-  const [notifyUser, setNotifyUser] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [suspendedUntil, setSuspendedUntil] = React.useState<Date | null>(null);
 
-  // Suspension durations
+  const path = usePathname();
+
+  // Suspension durations with time calculations
   const suspensionDurations = [
-    { label: '24 Hours', value: '24_hours' },
-    { label: '3 Days', value: '3_days' },
-    { label: '7 Days', value: '7_days' },
-    { label: '30 Days', value: '30_days' },
-    { label: 'Indefinite', value: 'indefinite' },
-    { label: 'Custom', value: 'custom' }
+    { label: '24 Hours', value: '24_hours', hours: 24 },
+    { label: '3 Days', value: '3_days', hours: 72 },
+    { label: '7 Days', value: '7_days', hours: 168 },
+    { label: '30 Days', value: '30_days', hours: 720 },
+    { label: 'Indefinite', value: 'indefinite', hours: null } // null represents indefinite
   ];
 
   // Suspension categories
@@ -39,6 +45,45 @@ const SuspendUserModal = () => {
     { label: 'Other', value: 'other' }
   ];
 
+  // Calculate suspended until date based on duration
+  const calculateSuspendedUntil = (durationValue: string): Date | null => {
+    const duration = suspensionDurations.find(d => d.value === durationValue);
+    if (!duration) return null;
+
+    if (duration.value === 'indefinite') {
+      return null; // null represents indefinite suspension
+    }
+
+    if (duration.hours) {
+      const until = new Date();
+      until.setHours(until.getHours() + duration.hours);
+      return until;
+    }
+
+    return null;
+  };
+
+  // Format date for display
+  const formatSuspendedUntil = (date: Date | null): string => {
+    if (!date) return 'Indefinite';
+
+    return date.toLocaleString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Handle duration change
+  const handleDurationChange = (duration: string) => {
+    setSelectedDuration(duration);
+    const untilDate = calculateSuspendedUntil(duration);
+    setSuspendedUntil(untilDate);
+  };
+
   // Initialize form
   React.useEffect(() => {
     if (user) {
@@ -46,7 +91,7 @@ const SuspendUserModal = () => {
       setSuspensionReason("");
       setSelectedDuration("");
       setSelectedCategory("");
-      setNotifyUser(true);
+      setSuspendedUntil(null);
     }
   }, [user]);
 
@@ -60,15 +105,15 @@ const SuspendUserModal = () => {
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    // Pre-fill reason based on category
+    // Pre-fill reason based on category with concise content
     if (category && category !== 'other') {
       const predefinedReasons: Record<string, string> = {
-        'policy_violation': 'Violation of platform policies and terms of service.',
-        'suspicious_activity': 'Suspicious activity detected requiring temporary account suspension.',
-        'payment_issues': 'Payment-related issues requiring account suspension.',
-        'content_violation': 'Inappropriate or prohibited content posted by user.',
-        'security_concerns': 'Security concerns identified requiring temporary suspension.',
-        'behavioral_issues': 'Inappropriate behavior or conduct violations.'
+        'policy_violation': 'Account suspended due to repeated violations of platform policies and terms of service. Multiple policy breaches confirmed that necessitate temporary suspension.',
+        'suspicious_activity': 'Suspended due to unusual account activity indicating potential security risks. Temporary suspension allows for security review and identity verification.',
+        'payment_issues': 'Account suspended due to unresolved payment matters and financial discrepancies. Suspension remains until financial issues are resolved.',
+        'content_violation': 'Suspended for posting content that violates community standards. Multiple warnings were issued prior to this suspension.',
+        'security_concerns': 'Suspended due to identified security risks requiring immediate attention. Account secured pending security verification.',
+        'behavioral_issues': 'Account suspended due to behavioral violations and inappropriate conduct. Multiple community reports and warnings documented.'
       };
       setSuspensionReason(predefinedReasons[category] || '');
     } else if (category === 'other') {
@@ -81,26 +126,30 @@ const SuspendUserModal = () => {
 
     setIsSubmitting(true);
     try {
-      // API call to suspend user
-      console.log('Suspending user:', {
+      const suspensionData = {
         userId: user.id,
-        userType: user.userType,
-        suspensionReason,
-        category: selectedCategory,
-        duration: selectedDuration,
-        notifyUser
-      });
+        reason: suspensionReason,
+        category: selectedCategory as SuspensionCategory,
+        duration: selectedDuration as SuspensionDuration,
+        path
+      };
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Success
-      alert(`User suspended successfully! ${user.surName} has been temporarily suspended.`);
-      onClose();
-      resetForm();
+      await suspendUser(suspensionData)
+        .then((response) => {
+          const untilText = suspendedUntil ? `until ${formatSuspendedUntil(suspendedUntil)}` : 'indefinitely';
+          if (response.success) {
+            toast.success(`User suspended successfully! ${user.surName} has been suspended ${untilText}.`);
+            queryClient.invalidateQueries({ queryKey: ['active-users'] });
+            queryClient.invalidateQueries({ queryKey: ['suspended-users'] });
+            onClose();
+            resetForm();
+          } else {
+            toast.error(response.message);
+          }
+        })
     } catch (error) {
       console.error('Error suspending user:', error);
-      alert('Failed to suspend user. Please try again.');
+      toast.error('Failed to suspend user. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -111,7 +160,7 @@ const SuspendUserModal = () => {
     setSuspensionReason("");
     setSelectedDuration("");
     setSelectedCategory("");
-    setNotifyUser(true);
+    setSuspendedUntil(null);
     setIsSubmitting(false);
   };
 
@@ -196,7 +245,7 @@ const SuspendUserModal = () => {
                 </h4>
                 <div className="text-sm text-amber-700 space-y-2">
                   <p>
-                    Suspending {displayName} will temporarily restrict their account access. 
+                    Suspending {displayName} will temporarily restrict their account access.
                     This action is reversible and should be used for temporary restrictions.
                   </p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
@@ -232,7 +281,7 @@ const SuspendUserModal = () => {
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Back Button */}
           <button
             onClick={handleBackToConfirmation}
@@ -253,12 +302,22 @@ const SuspendUserModal = () => {
               placeholder="Select suspension duration..."
               options={suspensionDurations}
               value={selectedDuration}
-              onChange={setSelectedDuration}
+              onChange={handleDurationChange}
               style="border-gray-300 rounded-md"
               height="h-10"
               placeholderStyle="lg:text-sm text-sm"
               itemText="lg:text-sm text-sm"
             />
+            {suspendedUntil && (
+              <p className="text-sm text-green-600 font-medium -mt-2">
+                User will be suspended until: {formatSuspendedUntil(suspendedUntil)}
+              </p>
+            )}
+            {selectedDuration === 'indefinite' && (
+              <p className="text-sm text-amber-600 font-medium -mt-2">
+                User will be suspended indefinitely until manually reinstated
+              </p>
+            )}
           </div>
 
           {/* Suspension Category */}
@@ -289,32 +348,11 @@ const SuspendUserModal = () => {
               value={suspensionReason}
               onChange={(e) => setSuspensionReason(e.target.value)}
               rows={4}
-              className="resize-none"
+              className="resize-none text-sm leading-relaxed"
             />
-          </div>
-
-          {/* Notification Toggle */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white">
-            <div className="space-y-0.5">
-              <Label htmlFor="notification-toggle" className="text-sm font-semibold text-gray-900">
-                Notify User
-              </Label>
-              <p className="text-xs text-gray-500">
-                {notifyUser 
-                  ? 'User will be notified about suspension and duration'
-                  : 'User will not be notified about suspension'
-                }
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="notification-toggle"
-                checked={notifyUser}
-                onChange={(e) => setNotifyUser(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-            </div>
+            <p className="text-xs text-gray-500">
+              The reason will be visible to the user if notifications are enabled. Provide clear and professional explanation for the suspension.
+            </p>
           </div>
 
           {/* Action Buttons */}

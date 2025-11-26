@@ -98,9 +98,10 @@ interface ResetPasswordValues {
 }
 
 interface AppealSuspensionParams {
-  suspensionId: string;
+  email: string;
   appealReason: string;
-  userId: string;
+  licenseNumber?: string;
+  role: string;
   path: string;
 }
 
@@ -247,10 +248,10 @@ export const createUser = async (values: SignUpValues): Promise<ApiResponse> => 
     if (existingUser) {
       // Check for suspended account first
       if (existingUser.userAccountSuspended) {
-        const suspensionMessage = existingUser.suspensionReason 
+        const suspensionMessage = existingUser.suspensionReason
           ? `Your account has been suspended for: ${existingUser.suspensionReason}. Please contact support to appeal.`
           : "Your account has been suspended. Please contact support to appeal this decision.";
-        
+
         return {
           success: false,
           message: suspensionMessage,
@@ -267,7 +268,7 @@ export const createUser = async (values: SignUpValues): Promise<ApiResponse> => 
       // Check for deleted account
       if (existingUser.userAccountDeleted) {
         const isWithinRecoveryPeriod = checkIfWithinRecoveryPeriod(existingUser.deletedAt);
-        
+
         if (!isWithinRecoveryPeriod) {
           return {
             success: false,
@@ -363,11 +364,11 @@ export const restoreUser = async (values: {
 
       const otp = generateOtp();
       await User.findByIdAndUpdate(existingUser._id, {
-      userAccountDeleted: false,
-      otp,
-      otpExpiresIn: Date.now() + OTP_EXPIRY_MS,
-      userVerified: false,
-    });
+        userAccountDeleted: false,
+        otp,
+        otpExpiresIn: Date.now() + OTP_EXPIRY_MS,
+        userVerified: false,
+      });
       return {
         success: true,
         message: "New OTP sent to your email",
@@ -443,10 +444,10 @@ export const createAgent = async (values: SignUpValues): Promise<ApiResponse> =>
     if (existingUser) {
       // Check for suspended account first
       if (existingUser.userAccountSuspended) {
-        const suspensionMessage = existingUser.suspensionReason 
+        const suspensionMessage = existingUser.suspensionReason
           ? `Your account has been suspended for: ${existingUser.suspensionReason}. Please contact support to appeal.`
           : "Your account has been suspended. Please contact support to appeal this decision.";
-        
+
         return {
           success: false,
           message: suspensionMessage,
@@ -463,7 +464,7 @@ export const createAgent = async (values: SignUpValues): Promise<ApiResponse> =>
       // Check for deleted account
       if (existingUser.userAccountDeleted) {
         const isWithinRecoveryPeriod = checkIfWithinRecoveryPeriod(existingUser.deletedAt);
-        
+
         if (!isWithinRecoveryPeriod) {
           return {
             success: false,
@@ -1382,74 +1383,156 @@ export const toggleCollaborator = async (values: { userId: string; path: string 
 
 // Appeal suspension
 export const appealSuspension = async (values: AppealSuspensionParams): Promise<ApiResponse> => {
-  const { suspensionId, appealReason, userId, path } = values;
-
-  await connectToMongoDB();
-  const currentUser = await getCurrentUser();
-
-  const accessError = validateUserAccess(currentUser, userId);
-  if (accessError) return accessError;
+  const { email, appealReason, role, path, licenseNumber } = values;
 
   try {
-    const suspension = await Suspension.findOne({ _id: suspensionId, isActive: true });
+    await connectToMongoDB();
+
+    // Input validation
+    if (!email || !appealReason?.trim() || !role) {
+      return { 
+        success: false, 
+        message: "Missing required fields", 
+        status: 400 
+      };
+    }
+
+    const currentUser = await getUserByEmail(email);
+
+    if (!currentUser) {
+      return { 
+        success: false, 
+        message: "User not found", 
+        status: 404 
+      };
+    }
+
+    // Role validation
+    if (currentUser.role !== role) {
+      return { 
+        success: false, 
+        message: "You are not authorized to appeal this suspension", 
+        status: 403 
+      };
+    }
+
+    // License validation for agents
+    if (role === 'agent') {
+      if (!licenseNumber?.trim()) {
+        return { 
+          success: false, 
+          message: "License number is required for agents", 
+          status: 400 
+        };
+      }
+
+      const agent = await Agent.findOne({ 
+        userId: currentUser._id, 
+        licenseNumber: licenseNumber.trim() 
+      });
+
+      if (!agent) {
+        return { 
+          success: false, 
+          message: "Agent license not found or does not match", 
+          status: 404 
+        };
+      }
+    }
+
+    // Suspension status check
+    if (!currentUser.userAccountSuspended) {
+      return { 
+        success: false, 
+        message: "Your account is not suspended", 
+        status: 400 
+      };
+    }
+
+    const suspension = await Suspension.findOne({ 
+      user: currentUser._id, 
+      isActive: true 
+    });
 
     if (!suspension) {
-      return {
-        success: false,
-        message: "Active suspension not found",
-        status: 404
+      return { 
+        success: false, 
+        message: "Active suspension not found", 
+        status: 404 
       };
     }
 
-    // Verify the suspension belongs to the current user
-    if (suspension.user.toString() !== userId) {
+    // Rate limiting check
+    const recentAppeals = await Suspension.countDocuments({
+      user: currentUser._id,
+      'history.action': 'appeal',
+      'history.performedAt': { 
+        $gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
+      }
+    });
+
+    if (recentAppeals > 2) {
       return {
         success: false,
-        message: "Not authorized to appeal this suspension",
-        status: 403
+        message: "Too many appeals filed recently. Please wait before submitting another.",
+        status: 429
       };
     }
 
-    // Check if appeal already exists
+    // Appeal duplication check
     const existingAppeal = suspension.history.find(
       (entry: any) => entry.action === 'appeal'
     );
 
     if (existingAppeal) {
-      return {
-        success: false,
-        message: "Appeal already filed for this suspension",
-        status: 409
+      return { 
+        success: false, 
+        message: "An appeal has already been filed for this suspension", 
+        status: 409 
       };
     }
+    console.log('✅ No duplicate appeal found');
 
     // Add appeal to history
-    suspension.history.push({
-      action: 'appeal',
-      description: `Appeal filed: ${appealReason}`,
-      performedBy: new mongoose.Types.ObjectId(userId),
+    const appealEntry = {
+      action: 'appeal' as const,
+      description: `Appeal filed: ${appealReason.trim()}`,
+      performedBy: new mongoose.Types.ObjectId(currentUser._id),
       performedAt: new Date(),
-      reason: appealReason
-    });
+      reason: appealReason.trim(),
+      data: {
+        originalSuspensionId: suspension._id,
+        appealDate: new Date()
+      }
+    };
+    
+    suspension.history.push(appealEntry);
+    suspension.markModified('history');
+    
+    const savedSuspension = await suspension.save();
 
-    await suspension.save();
-
-    // Create notification for admin
-    await Notification.create({
-      type: "appeal",
-      title: "New Suspension Appeal",
-      content: `User ${currentUser!.username} has filed an appeal for suspension ${suspensionId}. Review It.`,
-      recipient: suspension.history.find((entry: any) => entry.action === 'suspend')?.performedBy.toString(),
-    });
+    const suspensionEntry = suspension.history.find(
+      (entry: any) => entry.action === 'suspend'
+    );
+    
+    if (suspensionEntry?.performedBy) {
+      await Notification.create({
+        type: "notification",
+        title: "New Suspension Appeal Filed",
+        content: `User ${currentUser.username} (${currentUser.email}) has filed an appeal regarding their suspension. Please review it.`,
+        recipient: suspensionEntry.performedBy,
+      });
+    }
 
     revalidatePath(path);
     return {
       success: true,
-      message: "Appeal filed successfully",
-      status: 200
+      message: "Appeal filed successfully. Our team will review your case shortly.",
+      status: 200,
     };
 
   } catch (error) {
+    console.error('❌ Appeal suspension error:', error);
     return handleServerError(error);
   }
 };

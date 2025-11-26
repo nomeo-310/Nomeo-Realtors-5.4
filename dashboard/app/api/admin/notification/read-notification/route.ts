@@ -11,7 +11,7 @@ export const PUT = async () => {
   }
 
   try {
-    await Notification.updateMany({recipient: current_user._id, seen: false}, {seen: true})
+    await Notification.updateMany({recipient: current_user.userId._id, seen: false}, {seen: true})
 
     return Response.json({success: 'All notifications read'}, {status: 200})
   } catch (error) {

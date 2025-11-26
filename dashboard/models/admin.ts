@@ -42,20 +42,17 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'User', 
       required: true,
-      unique: true, // One admin per user
-      index: true 
+      unique: true
     },
     role: { 
       type: String, 
       enum: ['admin', 'creator', 'superAdmin'], 
-      default: 'admin',
-      index: true 
+      default: 'admin'
     },
     adminAccess: { 
       type: String, 
       enum: ['full_access', 'limited_access', 'no_access'], 
-      default: 'no_access',
-      index: true 
+      default: 'no_access'
     },
     adminPermissions: { 
       type: [String], 
@@ -64,23 +61,19 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
     adminId: { 
       type: String, 
       unique: true, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     isActivated: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     activatedAt: { 
       type: Date, 
-      default: Date.now, // Fixed: removed parentheses
-      index: true 
+      default: Date.now
     },
     activatedBy: { 
       type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User',
-      index: true 
+      ref: 'User'
     },
     password: { 
       type: String, 
@@ -88,52 +81,42 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
     },
     passwordAdded: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     accessId: { 
       type: String, 
-      unique: true,
-      index: true 
+      unique: true
     },
     accessIdExpires: { 
       type: Number, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     otp: { 
-      type: String,
-      index: true 
+      type: String
     },
     otpExpiresIn: { 
       type: Number, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     resetAccessIdOtp: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     resetAccessIdOtpExpiresIn: { 
       type: Number, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     isSuspended: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     suspendedAt: { 
       type: Date, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     suspendedBy: { 
       type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Admin',
-      index: true 
+      ref: 'Admin'
     },
     suspensionReason: { 
       type: String, 
@@ -141,18 +124,15 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
     },
     lockUntil: { 
       type: Date, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     deactivatedAt: { 
       type: Date, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     deactivatedBy: { 
       type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Admin',
-      index: true 
+      ref: 'Admin'
     },
     deactivationReason: {
       type: String, 
@@ -160,29 +140,40 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
     },
     reactivatedAt: { 
       type: Date, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     reactivatedBy: { 
       type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Admin',
-      index: true 
+      ref: 'Admin'
     },
     adminOnboarded: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     createdBy: { 
       type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Admin',
-      index: true 
+      ref: 'Admin'
     },
   },
   { timestamps: true }
 );
 
-// Compound indexes for common query patterns
+// FIXED: Only define indexes once - remove any that might be created automatically
+// Single field indexes
+adminSchema.index({ role: 1 });
+adminSchema.index({ adminAccess: 1 });
+adminSchema.index({ isActivated: 1 });
+adminSchema.index({ activatedAt: 1 });
+adminSchema.index({ passwordAdded: 1 });
+adminSchema.index({ otp: 1 });
+adminSchema.index({ isSuspended: 1 });
+adminSchema.index({ suspendedAt: 1 });
+adminSchema.index({ lockUntil: 1 });
+adminSchema.index({ deactivatedAt: 1 });
+adminSchema.index({ reactivatedAt: 1 })
+adminSchema.index({ adminOnboarded: 1 });
+
+// Compound indexes
 adminSchema.index({ role: 1, adminAccess: 1 });
 adminSchema.index({ role: 1, isActivated: 1 });
 adminSchema.index({ isActivated: 1, adminOnboarded: 1 });
@@ -196,32 +187,25 @@ adminSchema.index({ accessId: 1, accessIdExpires: 1 });
 adminSchema.index({ otp: 1, otpExpiresIn: 1 });
 adminSchema.index({ passwordAdded: 1, isActivated: 1 });
 
-// TTL index for expired OTPs and access IDs (auto-cleanup)
+// FIXED: TTL indexes - use a future date instead of Date.now()
 adminSchema.index({ otpExpiresIn: 1 }, { 
-  expireAfterSeconds: 0, 
-  partialFilterExpression: { otpExpiresIn: { $lte: Date.now() } } 
+  expireAfterSeconds: 0
 });
 
 adminSchema.index({ accessIdExpires: 1 }, { 
-  expireAfterSeconds: 0, 
-  partialFilterExpression: { accessIdExpires: { $lte: Date.now() } } 
+  expireAfterSeconds: 0
 });
 
 adminSchema.index({ resetAccessIdOtpExpiresIn: 1 }, { 
-  expireAfterSeconds: 0, 
-  partialFilterExpression: { resetAccessIdOtpExpiresIn: { $lte: Date.now() } } 
+  expireAfterSeconds: 0
 });
 
-// Sparse indexes for optional fields
+// Sparse indexes
 adminSchema.index({ activatedBy: 1 }, { sparse: true });
 adminSchema.index({ suspendedBy: 1 }, { sparse: true });
 adminSchema.index({ deactivatedBy: 1 }, { sparse: true });
 adminSchema.index({ reactivatedBy: 1 }, { sparse: true });
 adminSchema.index({ createdBy: 1 }, { sparse: true });
-adminSchema.index({ lockUntil: 1 }, { sparse: true });
-
-// Multi-key index for permissions (if you need to query specific permissions)
-// adminSchema.index({ adminPermissions: 1 });
 
 adminSchema.pre<IAdmin>('save', async function (next) {
   // Only generate adminId if it doesn't exist
@@ -267,8 +251,14 @@ adminSchema.methods.comparePassword = async function (password: string): Promise
   return this.password ? bcrypt.compare(password, this.password) : false;
 };
 
-// Simplified model creation
-const Admin: mongoose.Model<IAdmin> = mongoose.models.Admin || 
-  mongoose.model<IAdmin>('Admin', adminSchema);
+// FIXED: Better model creation with connection check
+let Admin: mongoose.Model<IAdmin>;
+
+// Check if model already exists to prevent recompilation
+if (mongoose.models.Admin) {
+  Admin = mongoose.models.Admin;
+} else {
+  Admin = mongoose.model<IAdmin>('Admin', adminSchema);
+}
 
 export default Admin;

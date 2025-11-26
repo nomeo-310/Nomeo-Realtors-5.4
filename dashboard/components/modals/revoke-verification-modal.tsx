@@ -14,7 +14,6 @@ const RevokeVerificationModal = () => {
   const [revocationReason, setRevocationReason] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [notifyUser, setNotifyUser] = React.useState(true);
 
   // Revocation reason categories
   const revocationCategories = [
@@ -32,21 +31,20 @@ const RevokeVerificationModal = () => {
     if (user) {
       setRevocationReason("");
       setSelectedCategory("");
-      setNotifyUser(true);
     }
   }, [user]);
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    // Pre-fill reason based on category
+    // Pre-fill reason based on category with slightly expanded content
     if (category && category !== 'other') {
       const predefinedReasons: Record<string, string> = {
-        'suspicious_activity': 'Suspicious activity detected in account behavior and transactions.',
-        'inconsistent_info': 'Inconsistencies found in provided personal information and documentation.',
-        'document_failure': 'Submitted documents failed verification checks or appear to be invalid.',
-        'security_concerns': 'Security concerns identified that require re-verification of identity.',
-        'policy_violation': 'Violation of platform policies requiring re-verification.',
-        'data_accuracy': 'Data accuracy issues identified in user profile information.'
+        'suspicious_activity': 'Verification revoked due to detection of unusual account activity patterns and suspicious transactions that require additional security review and identity confirmation.',
+        'inconsistent_info': 'Verification revoked after identifying significant inconsistencies between provided personal information, contact details, and supporting documentation that require clarification.',
+        'document_failure': 'Verification revoked because submitted identification documents failed authentication checks, appear altered, or do not meet our verification standards for validity and clarity.',
+        'security_concerns': 'Verification revoked due to security concerns including potential account compromise, unusual access patterns, or privacy risks that necessitate re-verification.',
+        'policy_violation': 'Verification revoked following violation of platform terms of service, community guidelines, or verification policies that require account re-assessment.',
+        'data_accuracy': 'Verification revoked due to data accuracy concerns including outdated personal information, incorrect contact details, or incomplete profile data that needs updating.'
       };
       setRevocationReason(predefinedReasons[category] || '');
     } else if (category === 'other') {
@@ -65,12 +63,11 @@ const RevokeVerificationModal = () => {
         userType: user.role,
         revocationReason,
         category: selectedCategory,
-        notifyUser
       });
 
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       // Success
       alert(`Verification revoked successfully! ${user.surName} will need to complete verification again.`);
       onClose();
@@ -86,7 +83,6 @@ const RevokeVerificationModal = () => {
   const resetForm = () => {
     setRevocationReason("");
     setSelectedCategory("");
-    setNotifyUser(true);
     setIsSubmitting(false);
   };
 
@@ -130,11 +126,10 @@ const RevokeVerificationModal = () => {
             <p><span className="font-medium">Name:</span> {displayName}</p>
             <p><span className="font-medium">Email:</span> {user.email}</p>
             <p><span className="font-medium">User Role:</span> {userTypeLabel}</p>
-            <p><span className="font-medium">Verification Status:</span> <span className={`font-semibold ${
-                user.isVerified ? 'text-green-600' : 'text-red-600'
+            <p><span className="font-medium">Verification Status:</span> <span className={`font-semibold ${user.isVerified ? 'text-green-600' : 'text-red-600'
               }`}>
-                {user.isVerified ? 'Verified' : 'Not Verified'}
-              </span></p>
+              {user.isVerified ? 'Verified' : 'Not Verified'}
+            </span></p>
           </div>
         </div>
 
@@ -176,30 +171,6 @@ const RevokeVerificationModal = () => {
           <p className="text-xs text-gray-500">
             This reason will be recorded in the audit log and may be shared with the user if notification is enabled.
           </p>
-        </div>
-
-        {/* Notification Toggle */}
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white">
-          <div className="space-y-0.5">
-            <Label htmlFor="notification-toggle" className="text-sm font-semibold text-gray-900">
-              Notify User
-            </Label>
-            <p className="text-xs text-gray-500">
-              {notifyUser 
-                ? 'User will be notified about verification revocation and re-verification requirements'
-                : 'User will not be notified (use only for security-sensitive cases)'
-              }
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="notification-toggle"
-              checked={notifyUser}
-              onChange={(e) => setNotifyUser(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-          </div>
         </div>
 
         {/* Action Buttons */}

@@ -50,43 +50,35 @@ const apartmentSchema: Schema<IApartment> = new Schema(
     propertyTag: { 
       type: String, 
       enum: ['for-rent', 'for-sale'], 
-      default: 'for-rent',
-      index: true 
+      default: 'for-rent'
     },
     propertyTypeTag: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     propertyIdTag: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     title: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     description: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     address: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     city: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     state: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     mainAmenities: [{ 
       type: String, 
@@ -98,43 +90,35 @@ const apartmentSchema: Schema<IApartment> = new Schema(
     }],
     monthlyRent: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     propertyPrice: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     annualRent: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     bedrooms: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     bathrooms: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     toilets: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     squareFootage: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     hideProperty: {
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     mainFees: [{ 
       name: { type: String, default: undefined }, 
@@ -150,13 +134,11 @@ const apartmentSchema: Schema<IApartment> = new Schema(
     }],
     apartmentImages: { 
       type: Schema.Types.ObjectId, 
-      ref: 'Attachment',
-      index: true 
+      ref: 'Attachment'
     },
     agent: { 
       type: Schema.Types.ObjectId, 
-      ref: 'Agent',
-      index: true 
+      ref: 'Agent'
     },
     bookmarks: [{ 
       type: Schema.Types.ObjectId, 
@@ -173,47 +155,51 @@ const apartmentSchema: Schema<IApartment> = new Schema(
     availabilityStatus: { 
       type: String, 
       enum: ['available', 'rented', 'pending'], 
-      default: 'available',
-      index: true 
+      default: 'available'
     },
     propertyApproval: { 
       type: String, 
       enum: ['approved', 'pending', 'unapproved'], 
-      default: 'unapproved',
-      index: true 
+      default: 'unapproved'
     },
     furnitureStatus: { 
       type: String, 
       enum: ['furnished', 'non furnished'], 
-      default: 'non furnished',
-      index: true 
+      default: 'non furnished'
     },
     facilityStatus: { 
       type: String, 
       enum: ['service', 'non service'], 
-      default: 'non service',
-      index: true 
+      default: 'non service'
     },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+  }
 );
+
+// FIXED: Keep only essential single field indexes
+apartmentSchema.index({ propertyTag: 1 });
+apartmentSchema.index({ city: 1 });
+apartmentSchema.index({ state: 1 });
+apartmentSchema.index({ monthlyRent: 1 });
+apartmentSchema.index({ propertyPrice: 1 });
+apartmentSchema.index({ bedrooms: 1 });
+apartmentSchema.index({ agent: 1 });
+apartmentSchema.index({ availabilityStatus: 1 });
+apartmentSchema.index({ propertyApproval: 1 });
 
 // Compound indexes for common query patterns
 apartmentSchema.index({ propertyTag: 1, availabilityStatus: 1 });
 apartmentSchema.index({ propertyTag: 1, propertyApproval: 1 });
 apartmentSchema.index({ city: 1, state: 1 });
 apartmentSchema.index({ city: 1, propertyTag: 1 });
-apartmentSchema.index({ state: 1, propertyTag: 1 });
 apartmentSchema.index({ monthlyRent: 1, propertyTag: 1 });
 apartmentSchema.index({ propertyPrice: 1, propertyTag: 1 });
-apartmentSchema.index({ bedrooms: 1, bathrooms: 1 });
-apartmentSchema.index({ squareFootage: 1, propertyTag: 1 });
 apartmentSchema.index({ agent: 1, propertyApproval: 1 });
-apartmentSchema.index({ agent: 1, availabilityStatus: 1 });
 apartmentSchema.index({ availabilityStatus: 1, propertyApproval: 1 });
 apartmentSchema.index({ createdAt: -1, propertyApproval: 1 });
-apartmentSchema.index({ updatedAt: -1, propertyApproval: 1 });
-apartmentSchema.index({ furnitureStatus: 1, facilityStatus: 1 });
 
 // Price range indexes
 apartmentSchema.index({ monthlyRent: 1, bedrooms: 1, city: 1 });
@@ -221,8 +207,6 @@ apartmentSchema.index({ propertyPrice: 1, bedrooms: 1, city: 1 });
 
 // Multi-key indexes for array fields
 apartmentSchema.index({ mainAmenities: 1 });
-apartmentSchema.index({ optionalAmenities: 1 });
-apartmentSchema.index({ bookmarks: 1 });
 apartmentSchema.index({ likes: 1 });
 
 // Text search index for property search
@@ -234,23 +218,27 @@ apartmentSchema.index({
   state: 'text'
 });
 
-// Geospatial index (if you add coordinates later)
-// apartmentSchema.index({ location: '2dsphere' });
-
-// Sparse indexes for optional fields
-apartmentSchema.index({ propertyIdTag: 1 }, { sparse: true });
-apartmentSchema.index({ apartmentImages: 1 }, { sparse: true });
 
 // Popular properties index (based on engagement)
 apartmentSchema.index({ 
   likes: -1, 
-  bookmarks: -1, 
   propertyApproval: 1,
   availabilityStatus: 1 
 });
 
-// Simplified model creation
-const Apartment: Model<IApartment> = mongoose.models.Apartment || 
-  mongoose.model<IApartment>('Apartment', apartmentSchema);
+// FIXED: Improved model creation with better caching
+let Apartment: Model<IApartment>;
+
+if (mongoose.models.Apartment) {
+  Apartment = mongoose.models.Apartment;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached Apartment model');
+  }
+} else {
+  Apartment = mongoose.model<IApartment>('Apartment', apartmentSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new Apartment model');
+  }
+}
 
 export default Apartment;

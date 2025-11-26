@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import DeletedAgentClient from '@/components/dashboard-features/manage-app-users/deleted-agent-client';
+import DeletedAgentClient from '@/components/dashboard-features/manage-app-users/deleted-agents-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'

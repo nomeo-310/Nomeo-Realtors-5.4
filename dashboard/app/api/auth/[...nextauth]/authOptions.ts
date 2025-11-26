@@ -12,7 +12,7 @@ declare module 'next-auth' {
   interface User extends DefaultUser {
     role: 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin';
     adminId?: string;
-    userId?: string; // Add userId for reference
+    userId?: string;
   }
 
   interface Session extends DefaultSession {
@@ -47,42 +47,41 @@ export const authOptions: AuthOptions = {
 
           // 1. Find user by email
           const user = await getUserByEmail(email);
-          if (!user || !user?.password) {
+          if (!user) {
             throw new Error('Invalid email or password');
           }
 
-          // 2. Verify USER password
-          const userPasswordMatch = await bcryptjs.compare(password, user.password);
-          if (!userPasswordMatch) {
-            throw new Error('Invalid email or password');
-          }
-
-          // 3. Check if user has admin role
+          // 2. Check if user has admin role
           if (!['admin', 'creator', 'superAdmin'].includes(user.role)) {
             throw new Error('Access denied. Admin privileges required.');
           }
 
-          // 4. Find admin record
+          // 3. Find admin record
           const admin = await getAdminByUserId(user._id);
           if (!admin) {
             throw new Error('Admin account not found');
           }
 
-          // 5. Verify ADMIN password (this ensures it's the actual admin)
-          if (admin.password) {
-            const adminPasswordMatch = await bcryptjs.compare(password, admin.password);
-            if (!adminPasswordMatch) {
-              throw new Error('Admin authentication failed');
-            }
-          } else {
-            // If admin doesn't have password, it might be a newly created admin
-            // You can choose to allow login or require password setup
-            throw new Error('Admin password not set. Please contact administrator.');
-          }
-
-          // 6. Check if admin is activated
+          // 4. Check if admin is activated
           if (!admin.isActivated) {
             throw new Error('Admin account is deactivated');
+          }
+
+          // 5. Verify password - check both user and admin passwords
+          let passwordMatch = false;
+
+          // First check user password
+          if (user.password) {
+            passwordMatch = await bcryptjs.compare(password, user.password);
+          }
+
+          // If user password doesn't match, check admin password
+          if (!passwordMatch && admin.password) {
+            passwordMatch = await bcryptjs.compare(password, admin.password);
+          }
+
+          if (!passwordMatch) {
+            throw new Error('Invalid email or password');
           }
 
           // Return with both user and admin IDs
@@ -90,7 +89,7 @@ export const authOptions: AuthOptions = {
             id: admin._id.toString(),
             adminId: admin._id.toString(),
             userId: user._id.toString(),
-            name: `${user.surName} ${user.lastName}`,
+            name: `${user.surName || ''} ${user.lastName || ''}`.trim() || user.email,
             email: user.email,
             role: user.role,
           };
@@ -104,9 +103,18 @@ export const authOptions: AuthOptions = {
       },
     }),
   ],
-  pages: { signIn: '/' },
-  session: { strategy: 'jwt', maxAge: 24 * 60 * 60 },
-  jwt: { secret: process.env.NEXTAUTH_SECRET, maxAge: 24 * 60 * 60 },
+  pages: { 
+    signIn: '/',
+    error: '/',
+  },
+  session: { 
+    strategy: 'jwt', 
+    maxAge: 24 * 60 * 60 // 24 hours
+  },
+  jwt: { 
+    secret: process.env.NEXTAUTH_SECRET, 
+    maxAge: 24 * 60 * 60 // 24 hours
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -114,6 +122,8 @@ export const authOptions: AuthOptions = {
         token.adminId = user.adminId;
         token.userId = user.userId;
         token.role = user.role;
+        token.name = user.name;
+        token.email = user.email;
       }
       return token;
     },
@@ -129,6 +139,13 @@ export const authOptions: AuthOptions = {
         };
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
     },
   },
   debug: process.env.NODE_ENV === 'development',

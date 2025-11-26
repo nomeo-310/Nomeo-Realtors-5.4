@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import DeletedUserClient from '@/components/dashboard-features/manage-app-users/deleted-user-client';
+import DeletedUsersClient from '@/components/dashboard-features/manage-app-users/deleted-users-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
@@ -19,7 +19,7 @@ const DeletedUsers = async () => {
     return notFound();
   };
   
-  return <DeletedUserClient user={user}/>;
+  return <DeletedUsersClient user={user}/>;
 }
 
 export default DeletedUsers

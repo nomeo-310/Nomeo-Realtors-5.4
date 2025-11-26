@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import ActiveUserClient from '@/components/dashboard-features/manage-app-users/active-user-client';
+import ActiveUsersClient from '@/components/dashboard-features/manage-app-users/active-user-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
@@ -19,7 +19,7 @@ const ActiveUsers = async () => {
     return notFound();
   };
   
-  return <ActiveUserClient user={user}/>;
+  return <ActiveUsersClient user={user}/>;
 }
 
 export default ActiveUsers

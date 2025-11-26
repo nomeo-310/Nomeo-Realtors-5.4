@@ -19,7 +19,7 @@ export const POST = async (request:Request) => {
   };
 
   try {
-    const notifications = await Notification.find({recipient: current_user._id})
+    const notifications = await Notification.find({recipient: current_user.userId._id})
     .populate({
       path:'issuer', 
       model: User,

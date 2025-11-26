@@ -12,42 +12,44 @@ const subscriptionSchema: Schema<ISubscription> = new Schema({
   email: { 
     type: String, 
     required: true,
-    unique: true, // Added unique constraint
-    lowercase: true, // Added for consistency
-    index: true 
+    unique: true,
+    lowercase: true
   },
   isUser: { 
     type: Boolean, 
-    required: true,
-    index: true 
+    required: true
   },
   userId: { 
     type: Schema.Types.ObjectId, 
-    ref: 'User',
-    index: true 
+    ref: 'User'
   },
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+});
 
-// Compound indexes for common query patterns
-subscriptionSchema.index({ email: 1, isUser: 1 });
-subscriptionSchema.index({ isUser: 1, createdAt: -1 });
-subscriptionSchema.index({ userId: 1 }, { sparse: true });
-subscriptionSchema.index({ createdAt: -1 });
-subscriptionSchema.index({ updatedAt: -1 });
+subscriptionSchema.index({ isUser: 1 });
 
-// Unique compound index for user-specific subscriptions
+// This is the ONLY custom index needed
 subscriptionSchema.index({ userId: 1 }, { 
   unique: true, 
   sparse: true,
   partialFilterExpression: { userId: { $type: 'objectId' } }
 });
 
+// FIXED: Improved model creation with better caching
 let Subscription: Model<ISubscription>;
 
-try {
-  Subscription = mongoose.model<ISubscription>('Subscription');
-} catch (error) {
+if (mongoose.models.Subscription) {
+  Subscription = mongoose.models.Subscription;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached Subscription model');
+  }
+} else {
   Subscription = mongoose.model<ISubscription>('Subscription', subscriptionSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new Subscription model');
+  }
 }
 
 export default Subscription;

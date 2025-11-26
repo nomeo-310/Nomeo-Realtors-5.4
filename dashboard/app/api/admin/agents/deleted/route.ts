@@ -45,6 +45,7 @@ export const POST = async (request: Request) => {
     const searchFilter = {
       role: 'agent',
       userAccountDeleted: true, 
+      ...(current_user.role !== 'superAdmin' && { deletedBy: current_user.userId._id}),
       _id: { $ne: current_user.userId },
       ...(queryText && {
         $or: [

@@ -37,7 +37,7 @@ export const deleteAllNotifications = async () => {
   };
 
   try {
-    await Notification.deleteMany({recipient: currentUser._id, seen: true})
+    await Notification.updateMany({recipient: currentUser._id, seen: true}, { isDeleted: true })
 
     await User.findOneAndUpdate({_id: currentUser._id}, {notifications: []})
     return {success: true, message: 'All notifications successfully cleared', status: 200}
@@ -57,7 +57,7 @@ export const deleteSingleNotification = async (id:string) => {
   };
 
   try {
-    await Notification.deleteOne({_id: id, recipient: currentUser._id, seen: true})
+    await Notification.updateOne({_id: id, recipient: currentUser._id, seen: true}, {isDeleted: true})
 
     await User.findOneAndUpdate({_id: currentUser._id}, {$pull: {notifications: new ObjectId(id)}})
     return {success: true, message: 'Notifications successfully deleted', status: 200}

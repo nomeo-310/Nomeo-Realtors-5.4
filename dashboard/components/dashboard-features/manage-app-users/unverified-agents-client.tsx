@@ -27,7 +27,7 @@ type mobileItemProps = {
   toggleTable: () => void;
 };
 
-const UnverifiedAgentClient = ({user}:{user:AdminDetailsProps}) => {
+const UnverifiedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
   const { search, sortOrder } = useFilterStore();
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -261,4 +261,4 @@ const UnverifiedAgentClient = ({user}:{user:AdminDetailsProps}) => {
   )
 }
 
-export default UnverifiedAgentClient
+export default UnverifiedAgentsClient

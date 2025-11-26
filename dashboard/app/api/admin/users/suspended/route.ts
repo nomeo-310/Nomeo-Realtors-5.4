@@ -45,6 +45,7 @@ export const POST = async (request: Request) => {
       role: 'user',
       userAccountDeleted: false, 
       userAccountSuspended: true,
+      ...(current_user.role !== 'superAdmin' && { suspendedBy: current_user.userId._id}),
       _id: { $ne: current_user.userId },
       ...(queryText && {
         $or: [
@@ -61,7 +62,7 @@ export const POST = async (request: Request) => {
     // Execute queries in parallel for better performance
     const [users, totalUsers] = await Promise.all([
       User.find(searchFilter)
-        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor phoneNumber createdAt role userAccountSuspended')
+        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor phoneNumber createdAt role userAccountSuspended suspendedBy')
         .limit(RESULTS_PER_PAGE)
         .skip(skip)
         .sort({ createdAt: getSortValue(sortOrder) })

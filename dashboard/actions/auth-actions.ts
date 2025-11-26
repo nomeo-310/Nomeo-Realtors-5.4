@@ -1,7 +1,7 @@
 'use server'
 
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
-import { AdminDetailsProps, BasicUserProps } from "@/lib/types";
+import { AdminDetailsProps, BasicUserProps, FullAdminDetailsProps } from "@/lib/types";
 import Admin from "@/models/admin";
 import User from "@/models/user";
 import { connectToMongoDB } from "@/utils/connectToMongoDB";
@@ -41,7 +41,7 @@ export const getAdminByUserId = async (id:string) => {
 
   const adminData = JSON.parse(JSON.stringify(admin));
 
-  return adminData as AdminDetailsProps;
+  return adminData as FullAdminDetailsProps;
 };
 
 export const getAdminByAdminId = async (adminId: string) => {
@@ -60,7 +60,7 @@ export const getAdminByAdminId = async (adminId: string) => {
 
   const adminData = JSON.parse(JSON.stringify(admin));
 
-  return adminData as AdminDetailsProps;
+  return adminData as FullAdminDetailsProps;
 };
 
 export const getUserSession = async () => {
@@ -78,7 +78,7 @@ export const getCurrentUser = async () => {
 
   try {
     const user = await Admin.findById(currentUserSession?.user?.adminId)
-    .select('-password -passwordAdded')
+    .select('_id userId role adminAccess adminPermissions adminId isActivated isSuspended adminOnboarded')
       .populate({
         model: User,
         path: 'userId',

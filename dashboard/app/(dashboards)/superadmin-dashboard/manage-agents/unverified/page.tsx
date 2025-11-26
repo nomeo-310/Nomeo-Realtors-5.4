@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import UnverifiedAgentClient from '@/components/dashboard-features/manage-app-users/unverified-agent-client';
+import UnverifiedAgentClient from '@/components/dashboard-features/manage-app-users/unverified-agents-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'

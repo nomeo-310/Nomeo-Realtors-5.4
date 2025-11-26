@@ -28,7 +28,7 @@ type mobileItemProps = {
   toggleTable: () => void;
 };
 
-const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
+const ActiveUsersClient = ({user}:{user:AdminDetailsProps}) => {
   const { search, sortOrder } = useFilterStore();
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -337,4 +337,4 @@ const ActiveUserClient = ({user}:{user:AdminDetailsProps}) => {
   )
 };
 
-export default ActiveUserClient
+export default ActiveUsersClient

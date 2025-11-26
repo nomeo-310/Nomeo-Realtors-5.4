@@ -15,16 +15,16 @@ import { Loader2 } from 'lucide-react';
 import React from 'react'
 import { toast } from 'sonner';
 
-const NotificationClient = ({user}:{user:userProps}) => {
+const NotificationClient = ({ user }: { user: userProps }) => {
   const queryClient = useQueryClient();
 
   const [showDelete, setShowDelete] = React.useState(false);
   const [clearing, setClearing] = React.useState(false);
 
-  const fetchNotifications = async ({pageParam}:{pageParam: number}) => {
+  const fetchNotifications = async ({ pageParam }: { pageParam: number }) => {
     const response = await axios.post('/api/notification/user-notifications', { page: pageParam })
 
-    if (response.status !== 200 ) {
+    if (response.status !== 200) {
       throw new Error('Something went wrong, try again later');
     }
 
@@ -40,7 +40,7 @@ const NotificationClient = ({user}:{user:userProps}) => {
     }
   };
 
-  const { mutate:readAllNotifications } = useMutation({
+  const { mutate: readAllNotifications } = useMutation({
     mutationFn: readNotifications,
     onSuccess: () => {
       queryClient.setQueryData(['unread-notification-count'], { count: 0 });
@@ -74,16 +74,16 @@ const NotificationClient = ({user}:{user:userProps}) => {
     getNextPageParam: (lastPage) => lastPage.nextPage
   });
 
-  const notifications:notificationProps[] = data?.pages.flatMap(page => page.notifications) || [];
+  const notifications: notificationProps[] = data?.pages.flatMap(page => page.notifications) || [];
 
   //This makes all notification to be seen 5 seconds after page loads
   React.useEffect(() => {
 
     const timer = setTimeout(() => {
       readAllNotifications();
-    }, 5000);
+    }, 15000);
     return () => clearTimeout(timer);
-  },[]);
+  }, []);
 
   //This makes delete all button to show 
   React.useEffect(() => {
@@ -92,35 +92,35 @@ const NotificationClient = ({user}:{user:userProps}) => {
     } else {
       setShowDelete(false);
     }
-  },[notifications, notifications.length]);
+  }, [notifications, notifications.length]);
 
   const NotificationList = () => {
 
     if (status === 'pending') {
-      return <NotificationsSkeleton/>
+      return <NotificationsSkeleton />
     };
-  
+
     if (status === 'success' && !notifications.length && !hasNextPage) {
-      return <EmptyState message='No notifications yet.' className='w-full'/>;  
+      return <EmptyState message='No notifications yet.' className='w-full' />;
     };
-  
+
     if (status === 'error') {
-      return <ErrorState message='An error occur while loading your notifications.' className=''/>;
+      return <ErrorState message='An error occur while loading your notifications.' className='' />;
     };
 
     return (
       <React.Fragment>
         <InfiniteScrollClient onBottomReached={() => hasNextPage && !isFetching && fetchNextPage()}>
           <div className="flex flex-col gap-4">
-            { notifications.map((item:notificationProps, index:number) => (
-              <NotificationCard notification={item} key={item._id} index={index} user={user}/>
+            {notifications.map((item: notificationProps, index: number) => (
+              <NotificationCard notification={item} key={item._id} index={index} user={user} />
             ))}
           </div>
         </InfiniteScrollClient>
-        { isFetchingNextPage && 
+        {isFetchingNextPage &&
           <div className="w-full">
-            <Loader2 className='mx-auto animate-spin my-3 size-5 lg:size-6'/>
-          </div> }
+            <Loader2 className='mx-auto animate-spin my-3 size-5 lg:size-6' />
+          </div>}
       </React.Fragment>
     )
   };
@@ -129,15 +129,15 @@ const NotificationClient = ({user}:{user:userProps}) => {
     <div className='w-full lg:w-[80%] xl:w-[70%] md:w-[80%] h-full flex flex-col gap-6 md:gap-8 lg:gap-10 py-6'>
       <div className="items-center flex justify-between w-full">
         <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>Notifications</h2>
-        { showDelete &&
-          <button type="button" className='text-sm py-1.5 lg:py-2 px-4 bg-red-600 text-white rounded-lg flex items-center gap-2' onClick={() =>clearAllNotifications()} disabled={clearing}>
-            <HugeiconsIcon icon={Delete01Icon} className='md:size-5 size-4'/>
-            { clearing ? 'Clearing All Notifications...' : 'Clear All' }
-            {clearing && <Loader2 className='animate-spin size-5'/>}
+        {showDelete &&
+          <button type="button" className='text-sm py-1.5 lg:py-2 px-4 bg-red-600 text-white rounded-lg flex items-center gap-2' onClick={() => clearAllNotifications()} disabled={clearing}>
+            <HugeiconsIcon icon={Delete01Icon} className='md:size-5 size-4' />
+            {clearing ? 'Clearing All Notifications...' : 'Clear All'}
+            {clearing && <Loader2 className='animate-spin size-5' />}
           </button>
         }
       </div>
-      <NotificationList/>
+      <NotificationList />
     </div>
   )
 }

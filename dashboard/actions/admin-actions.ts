@@ -14,10 +14,16 @@ interface agentDetails {
   path: string;
 }
 
-type userDetails = {
+interface userDetails {
   userId: string;
   path: string;
   reason: string;
+}
+
+interface suspendAccountProps extends userDetails {
+  category: string;
+  suspendedAt: string;
+  suspendedUntil: string;
 }
 
 interface AdminActionParams {
@@ -42,8 +48,8 @@ const validateSuperAdminAccess = async (): Promise<{ success: boolean; user?: an
   return { success: true, user: current_user };
 };
 
-export const suspendAccount = async (values: userDetails) => {
-  const { userId, path, reason } = values;
+export const suspendAccount = async (values:suspendAccountProps) => {
+  const { userId, path, reason, category, suspendedAt, suspendedUntil } = values;
 
   await connectToMongoDB();
 
@@ -81,14 +87,14 @@ export const suspendAccount = async (values: userDetails) => {
     return { success: false, message: 'You cannot suspend other admin accounts', status: 403 };
   }
 
-  const updateData = { userAccountSuspended: true, suspensionReason: reason, suspendedAt: new Date(), suspendedBy: current_user.userId._id }
+  const updateData = { userAccountSuspended: true, suspensionReason: reason, suspendedAt: suspendedAt, suspendedBy: current_user.userId._id }
 
   try {
+    const newSuspension = 
     await User.findByIdAndUpdate(userId, updateData);
 
     // Create notification for the suspended user
     const suspensionNotification = await Notification.create({
-      type: 'account_suspension',
       title: 'Account Suspended',
       content: reason ? `Your account has been suspended. Reason: ${reason}` : 'Your account has been suspended due to violation of our terms of service.',
       recipient: userId,

@@ -18,13 +18,11 @@ const attachmentSchema: Schema<IAttachment> = new Schema(
   {
     agent: { 
       type: Schema.Types.ObjectId, 
-      ref: 'Agent',
-      index: true 
+      ref: 'Agent'
     },
     property: { 
       type: Schema.Types.ObjectId, 
-      ref: 'Apartment',
-      index: true 
+      ref: 'Apartment'
     },
     images: [{ 
       type: String, 
@@ -33,30 +31,30 @@ const attachmentSchema: Schema<IAttachment> = new Schema(
     attachments: [{ 
       public_id: { 
         type: String, 
-        default: '',
-        index: true 
+        default: ''
       }, 
       secure_url: { 
         type: String, 
-        default: '',
-        index: true 
+        default: ''
       } 
     }],
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+  }
 );
+
+// FIXED: Keep only essential single field indexes
+attachmentSchema.index({ agent: 1 });
+attachmentSchema.index({ property: 1 });
 
 // Compound indexes for common query patterns
 attachmentSchema.index({ agent: 1, property: 1 });
-attachmentSchema.index({ property: 1, createdAt: -1 });
-attachmentSchema.index({ agent: 1, createdAt: -1 });
-attachmentSchema.index({ 'attachments.public_id': 1 });
-attachmentSchema.index({ 'attachments.secure_url': 1 });
 
-// Multi-key indexes for array fields
+
+// FIXED: Keep only essential multi-key index
 attachmentSchema.index({ images: 1 });
-attachmentSchema.index({ 'attachments.public_id': 1 }, { sparse: true });
-attachmentSchema.index({ 'attachments.secure_url': 1 }, { sparse: true });
 
 // Unique compound index to prevent duplicate attachments for same property
 attachmentSchema.index(
@@ -64,19 +62,18 @@ attachmentSchema.index(
   { unique: true }
 );
 
-// Text search index for image URLs and public_ids (if search is needed)
-attachmentSchema.index({
-  'images': 'text',
-  'attachments.public_id': 'text',
-  'attachments.secure_url': 'text'
-});
+let Attachment: Model<IAttachment>;
 
-// Sparse indexes for optional relationships
-attachmentSchema.index({ agent: 1 }, { sparse: true });
-attachmentSchema.index({ property: 1 }, { sparse: true });
-
-// Simplified model creation
-const Attachment: Model<IAttachment> = mongoose.models.Attachment || 
-  mongoose.model<IAttachment>('Attachment', attachmentSchema);
+if (mongoose.models.Attachment) {
+  Attachment = mongoose.models.Attachment;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached Attachment model');
+  }
+} else {
+  Attachment = mongoose.model<IAttachment>('Attachment', attachmentSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new Attachment model');
+  }
+}
 
 export default Attachment;

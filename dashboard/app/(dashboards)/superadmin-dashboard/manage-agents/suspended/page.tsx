@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import SuspendedAgentClient from '@/components/dashboard-features/manage-app-users/suspended-agent-client';
+import SuspendedAgentClient from '@/components/dashboard-features/manage-app-users/suspended-agents-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
