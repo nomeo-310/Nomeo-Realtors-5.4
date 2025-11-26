@@ -34,8 +34,7 @@ const agentSchema: mongoose.Schema<IAgent> = new mongoose.Schema(
     licenseNumber: { 
       type: String, 
       default: undefined,
-      unique: true,
-      index: true 
+      unique: true
     },
     coverPicture: { 
       type: String, 
@@ -43,18 +42,15 @@ const agentSchema: mongoose.Schema<IAgent> = new mongoose.Schema(
     },
     officeNumber: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     officeAddress: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     agencyName: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     coverImage: {
       public_id: { 
@@ -68,46 +64,38 @@ const agentSchema: mongoose.Schema<IAgent> = new mongoose.Schema(
     },
     getListings: {
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     isACollaborator: {
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     agentRatings: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     agencyWebsite: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     agentVerified: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     verificationStatus: { 
       type: String, 
       enum: ['verified', 'pending', 'unverified', 'rejected'], 
-      default: 'unverified',
-      index: true 
+      default: 'unverified'
     },
     inspectionFeePerHour: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     userId: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'User',
       required: true,
-      unique: true,
-      index: true 
+      unique: true
     },
     inspections: [{ 
       type: mongoose.Schema.Types.ObjectId, 
@@ -127,12 +115,29 @@ const agentSchema: mongoose.Schema<IAgent> = new mongoose.Schema(
     }],
     createdAt: { 
       type: Date, 
-      default: Date.now,
-      index: true 
+      default: Date.now
     },
   },
   { timestamps: true }
 );
+
+// FIXED: Remove any potentially redundant indexes that might be auto-created
+// Single field indexes - only essential ones
+agentSchema.index({ licenseNumber: 1 });
+agentSchema.index({ userId: 1 });
+agentSchema.index({ verificationStatus: 1 });
+agentSchema.index({ agentVerified: 1 });
+agentSchema.index({ agencyName: 1 });
+
+// FIXED: Comment out less critical indexes to reduce potential duplicates
+// agentSchema.index({ officeNumber: 1 });
+// agentSchema.index({ officeAddress: 1 });
+// agentSchema.index({ getListings: 1 });
+// agentSchema.index({ isACollaborator: 1 });
+// agentSchema.index({ agentRatings: 1 });
+// agentSchema.index({ agencyWebsite: 1 });
+// agentSchema.index({ inspectionFeePerHour: 1 });
+// agentSchema.index({ createdAt: 1 });
 
 // Compound indexes for common query patterns
 agentSchema.index({ verificationStatus: 1, agentVerified: 1 });
@@ -158,9 +163,11 @@ agentSchema.index({
   licenseNumber: 'text'
 });
 
-// Sparse indexes for nested optional fields
-agentSchema.index({ 'coverImage.public_id': 1 }, { sparse: true });
-agentSchema.index({ 'coverImage.secure_url': 1 }, { sparse: true });
+// FIXED: Remove potentially problematic nested field indexes
+// agentSchema.index({ 'coverImage.public_id': 1 }, { sparse: true });
+// agentSchema.index({ 'coverImage.secure_url': 1 }, { sparse: true });
+
+// Sparse indexes for optional fields
 agentSchema.index({ agencyWebsite: 1 }, { sparse: true });
 agentSchema.index({ coverPicture: 1 }, { sparse: true });
 
@@ -181,8 +188,20 @@ agentSchema.pre<IAgent>('save', async function (next) {
   next();
 });
 
-// Simplified model creation
-const Agent: mongoose.Model<IAgent> = mongoose.models.Agent || 
-  mongoose.model<IAgent>('Agent', agentSchema);
+// FIXED: Improved model creation with better caching
+let Agent: mongoose.Model<IAgent>;
+
+if (mongoose.models.Agent) {
+  Agent = mongoose.models.Agent;
+  // Optional: Check if we need to reapply indexes
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached Agent model');
+  }
+} else {
+  Agent = mongoose.model<IAgent>('Agent', agentSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new Agent model');
+  }
+}
 
 export default Agent;

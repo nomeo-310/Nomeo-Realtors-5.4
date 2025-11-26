@@ -20,8 +20,8 @@ const DeleteProperty = ({user}:{user:userDetails}) => {
   const Initiate = () => {
     return (
       <div className="mt-5 w-full flex items-center justify-between">
-        <button type="button" className='py-2 px-4 rounded-full border-black/50 border dark:border-white/70 text-sm cursor-pointer' onClick={onClose}>Cancel</button>
-        <button type="button" className='py-2 px-4 rounded-full bg-black text-white text-sm border-black border cursor-pointer' onClick={() => setLevel('start')}>Proceed</button>
+        <button type="button" className='py-2 px-4 rounded border-black/50 border dark:border-white/70 text-sm cursor-pointer' onClick={onClose}>Cancel</button>
+        <button type="button" className='py-2 px-4 rounded bg-black text-white text-sm border-black border cursor-pointer' onClick={() => setLevel('start')}>Proceed</button>
       </div>
     )
   };
@@ -82,6 +82,7 @@ const DeleteProperty = ({user}:{user:userDetails}) => {
       title={level === 'initiate' ? 'Delete Properties' : 'Confirm Deletion'}
       description={level === 'initiate' ? 'Are you sure you want to delete all uploaded properties? This means you will loose all your data and this action cannot be reversed.' : 'To continue with this process, add ypur email address'}
       useCloseButton
+      useSeparator
       width="lg:w-[550px] xl:w-[550px] md:w-[500px]"
     >
       {level === 'initiate' ? <Initiate/> : <Start/>}

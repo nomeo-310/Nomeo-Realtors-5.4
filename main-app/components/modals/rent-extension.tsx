@@ -34,7 +34,7 @@ const RentExtensionsModal = () => {
     date.setDate(date.getDate() + parseInt(days));
     return date.toISOString();
   };
-  
+
   const formattedDate = formatDate(proposedDate?.toISOString() || calculateProposedDate(extensionDays.split('')[0]))
 
   const body = `Dear ${details?.property.agent.userId.surName} ${details?.property.agent.userId.lastName},
@@ -78,6 +78,7 @@ ${details?.user.phoneNumber ? `Phone: ${details?.user.phoneNumber}` : ""}`;
       title="Request Payment Extension"
       width="lg:w-[600px] xl:w-[700px] md:w-[550px]"
       useCloseButton
+      useSeparator
     >
       <div className="space-y-4">
         {showPreview ? (
@@ -96,13 +97,13 @@ ${details?.user.phoneNumber ? `Phone: ${details?.user.phoneNumber}` : ""}`;
             <div className="flex gap-3 justify-end pt-4">
               <button
                 onClick={() => setShowPreview(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
               >
                 Back to Editor
               </button>
               <button
                 onClick={handleSendReminder}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
               >
                 Send Email
               </button>
@@ -147,7 +148,7 @@ ${details?.user.phoneNumber ? `Phone: ${details?.user.phoneNumber}` : ""}`;
                 style="border-black/80 rounded-md"
                 height="h-10"
               />
-              { extensionDays === "custom days" && (
+              {extensionDays === "custom days" && (
                 <Popover open={open} onOpenChange={setOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -207,13 +208,13 @@ ${details?.user.phoneNumber ? `Phone: ${details?.user.phoneNumber}` : ""}`;
             <div className="flex gap-3 justify-end pt-4">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendReminder}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm"
               >
                 Open in Email Client
               </button>

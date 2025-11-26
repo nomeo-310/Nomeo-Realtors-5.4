@@ -583,6 +583,7 @@ ${details?.user.email}`);
       title="Contact Agent"
       width='lg:w-[600px] xl:w-[700px] md:w-[550px]'
       useCloseButton
+      useSeparator
     >
       <div className="py-2">
         {showPreview ? renderPreview() : renderEditor()}

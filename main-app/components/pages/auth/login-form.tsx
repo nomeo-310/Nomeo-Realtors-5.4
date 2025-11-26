@@ -12,6 +12,8 @@ import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useRestoreAccountModal, useSuspendedAccountModal } from '@/hooks/general-store'
+import { protectSignIn } from '@/actions/auth'
 
 const LoginForm = () => {
 
@@ -26,27 +28,79 @@ const LoginForm = () => {
   const router = useRouter();
   const nextUrl = localStorage.getItem('nextUrl')
 
+  const restoreAccountModal = useRestoreAccountModal();
+  const suspendedAccountModal = useSuspendedAccountModal ();
 
   const [isLoading, setIsLoading] = React.useState(false);
 
-  const submitForm = async (values:loginValues) => {
-    setIsLoading(true)
-    signIn("credentials", {...values, redirect: false})
-    .then((callback) => {
-      if (callback?.ok) {
-        setIsLoading(false);
-        router.push(nextUrl ? nextUrl : '/');
-        toast.success('Login was successful');
-        localStorage.removeItem('nextUrl');
-        router.refresh();
+  const submitForm = async (values: loginValues) => {
+    setIsLoading(true);
+  
+  try {
+    const checkEmailValidation = await protectSignIn(values.email);
+    if (!checkEmailValidation.success) {
+      toast.error(checkEmailValidation.error);
+      return;
+    }
+
+    const callback = await signIn("credentials", { ...values, redirect: false });
+    
+    if (callback?.ok) {
+      toast.success('Login was successful');
+      localStorage.removeItem('nextUrl');
+      router.push(nextUrl ? nextUrl : '/');
+      router.refresh();
+      return;
+    }
+
+    if (callback?.error) {
+      console.log('Login error:', callback.error);
+      
+      const errorConfig = {
+        account_deleted_by_admin: {
+          message: 'Account was deleted by admin.',
+          action: () => router.push('/account-deleted?deleted=admin')
+        },
+        account_deleted_by_self_user: {
+          message: 'Account was deleted. Would you like to restore it?',
+          action: () => restoreAccountModal.onOpen({ type: 'login', role: 'user' })
+        },
+        account_deleted_by_self_agent: {
+          message: 'Account was deleted. Would you like to restore it?',
+          action: () => restoreAccountModal.onOpen({ type: 'login', role: 'agent' })
+        },
+        account_suspended_user: {
+          message: 'Your account has been suspended.',
+          action: () => suspendedAccountModal.onOpen({ type: 'login', role: 'user' })
+        },
+        account_suspended_agent: {
+          message: 'Your account has been suspended.',
+          action: () => suspendedAccountModal.onOpen({ type: 'login', role: 'agent' })
+        },
+        invalid_credentials: {
+          message: 'Invalid email or password',
+          action: null
+        }
       };
 
-      if (callback?.error) {
-        setIsLoading(false);
-        return toast.error(callback.error)
-      };
-    })
-  };
+      const config = errorConfig[callback.error as keyof typeof errorConfig];
+      
+      if (config) {
+        toast.error(config.message);
+        if (config.action) {
+          setTimeout(config.action, 2000);
+        }
+      } else {
+        toast.error('Authentication failed');
+      }
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    toast.error('Authentication failed');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <React.Fragment>
@@ -67,7 +121,7 @@ const LoginForm = () => {
           <FormField
             control={form.control}
             name="email"
-            render={({field}) => (
+            render={({ field }) => (
               <FormItem>
                 <FormControl>
                   <InputWithIcon
@@ -88,7 +142,7 @@ const LoginForm = () => {
           <FormField
             control={form.control}
             name="password"
-            render={({field}) => (
+            render={({ field }) => (
               <FormItem>
                 <FormControl>
                   <InputWithIcon

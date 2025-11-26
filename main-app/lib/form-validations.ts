@@ -64,6 +64,8 @@ const profile = z.object({
   }),
 });
 
+// ... your existing schemas remain the same ...
+
 export const loginSchema = auth.pick({
   email: true,
   password: true,
@@ -152,8 +154,8 @@ export const userProfileSchema = profile
     userBio: true,
   })
   .refine((data) => data.phoneNumber !== data.additionalPhoneNumber, {
-    message: "Your office and personal number should not be the same",
-    path: ["officeNumber"],
+    message: "Your personal and additional numbers should not be the same",
+    path: ["additionalPhoneNumber"], // Fixed path
   });
 export type userProfileValues = z.infer<typeof userProfileSchema>;
 
@@ -235,3 +237,20 @@ export const createBlogSchema = z.object({
 });
 
 export type createBlogValues = z.infer<typeof createBlogSchema>;
+
+export const appealSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  role: z.enum(["user", "agent"]),
+  licenseNumber: z.string().optional(),
+  appealMessage: z.string().min(10, "Appeal message must be at least 10 characters").max(1000, "Appeal message too long"),
+}).refine((data) => {
+  if (data.role === "agent") {
+    return data.licenseNumber && data.licenseNumber.length > 0;
+  }
+  return true;
+}, {
+  message: "License number is required for agents",
+  path: ["licenseNumber"],
+});
+
+export type AppealFormValues = z.infer<typeof appealSchema>;

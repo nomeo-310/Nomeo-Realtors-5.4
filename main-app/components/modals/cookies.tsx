@@ -14,6 +14,7 @@ const Cookies = () => {
       onClose={cookieControl.onClose}
       useCloseButton
       title={cookies_settings.title}
+      useSeparator
       width='lg:w-[600px] xl:w-[700px] md:w-[550px]'
     >
       <p className="text-sm lg:mt-5 mt-3">{cookies_settings.content}</p>

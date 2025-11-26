@@ -90,6 +90,28 @@ export const protectSignIn = async (email?: string) => {
   return { success: true };
 };
 
+export const protectVerification = async (email?: string) => {
+  const decision = await protectWithRules(protectSignInRules, { email });
+
+  if (decision.isDenied()) {
+    if (decision.reason.isBot()) {
+      return {
+        error: 'Bot activity detected!',
+        success: false,
+        status: 403
+      };
+    } else if (decision.reason.isRateLimit()) {
+      return {
+        error: 'Too many verification attempts! Please try again in 5 minutes.',
+        success: false,
+        status: 429
+      };
+    }
+  }
+
+  return { success: true };
+};
+
 // 3. API Protection
 export const protectApi = async (endpoint?: string) => {
   const decision = await protectWithRules(protectApiRules);

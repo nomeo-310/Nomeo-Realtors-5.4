@@ -100,6 +100,7 @@ ${details?.property.agent.agencyName ? details?.property.agent.agencyName : ''}`
       title="Send Rent Reminder"
       width='lg:w-[600px] xl:w-[700px] md:w-[550px]'
       useCloseButton
+      useSeparator
     >
       <div className="space-y-4">
         {showPreview ?

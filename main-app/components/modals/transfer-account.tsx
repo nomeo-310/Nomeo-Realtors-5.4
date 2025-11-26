@@ -88,6 +88,7 @@ const TransferAccount = () => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      useSeparator
       title={level === 'initiate' ? 'Transfer Account' : 'Transfer Confirmation'}
       description={level === 'initiate' ? 'Are you sure you want to transfer this account? This means you will loose data and information but will be transferred to the new account' : ''}
       useCloseButton

@@ -19,6 +19,8 @@ import ContactUserModal from '@/components/modals/contact-user'
 import RentExtensionsModal from '@/components/modals/rent-extension'
 import ContactAgent from '@/components/modals/contact-agent'
 import ManualTransferModal from '@/components/modals/manual-transfer-modal'
+import RestoreAccount from '@/components/modals/restore-account'
+import SuspendedAccount from '@/components/modals/suspended-account'
 
 const ModalProvider = async () => {
   const user:userDetails = await getCurrentUserDetails();
@@ -31,19 +33,21 @@ const ModalProvider = async () => {
       <PrivacyPolicy/>
       {user && user.role === 'user' && <UserOnBoarding user={user}/>}
       {user && user.role === 'agent' && <AgentOnBoarding user={user}/>}
-      <InspectionTerms/>
-      <StartRentOut/>
-      <TransactionModal user={user}/>
-      <PaymentModal/>
+      {user && user.role === 'agent' && <DeleteProperty user={user}/>}
       {user && <DeleteAccount />}
       {user && user.role === 'agent' &&<TransferAccount/>}
+      <TransactionModal user={user}/>
+      <InspectionTerms/>
+      <StartRentOut/>
+      <PaymentModal/>
       <TransferAccount/>
-      {user && user.role === 'agent' && <DeleteProperty user={user}/>}
       <RenewalReminder/>
       <ContactUserModal/>
       <ContactAgent/>
       <RentExtensionsModal/>
       <ManualTransferModal/>
+      <RestoreAccount/>
+      <SuspendedAccount/>
     </React.Fragment>
   )
 }

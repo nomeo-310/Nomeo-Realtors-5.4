@@ -35,29 +35,24 @@ const blogSchema: Schema<IBlog> = new Schema(
   {
     title: { 
       type: String, 
-      required: true,
-      index: true 
+      required: true
     },
     description: { 
       type: String, 
-      required: true,
-      index: true 
+      required: true
     },
     content: { 
       type: String, 
-      default: '',
-      index: true 
+      default: ''
     },
     author: { 
       type: Schema.Types.ObjectId, 
       ref: "User", 
-      required: true,
-      index: true 
+      required: true
     },
     collaboration: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     collaborators: [{ 
       type: Schema.Types.ObjectId, 
@@ -69,23 +64,19 @@ const blogSchema: Schema<IBlog> = new Schema(
     },
     total_likes: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     total_comments: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     total_saves: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     total_reads: { 
       type: Number, 
-      default: 0,
-      index: true 
+      default: 0
     },
     likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
     reads: [{ type: Schema.Types.ObjectId, ref: "User" }],
@@ -93,82 +84,77 @@ const blogSchema: Schema<IBlog> = new Schema(
     saves: [{ type: Schema.Types.ObjectId, ref: "User" }],
     is_draft: { 
       type: Boolean, 
-      default: true,
-      index: true 
+      default: true
     },
     is_published: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     is_deleted: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     read_time: { 
       type: Number, 
       default: 0, 
-      required: true,
-      index: true 
+      required: true
     },
     blog_approval: { 
       type: String, 
       enum: ['approved', 'pending', 'unapproved'], 
-      default: 'unapproved',
-      index: true 
+      default: 'unapproved'
     },
     guest_readers: [{ type: String }],
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+  }
 );
+
+// FIXED: Keep only essential single field indexes
+blogSchema.index({ author: 1 });
+blogSchema.index({ is_published: 1 });
+blogSchema.index({ blog_approval: 1 });
+blogSchema.index({ is_draft: 1 });
+blogSchema.index({ created_at: -1 });
 
 // Compound indexes for common query patterns
 blogSchema.index({ author: 1, is_published: 1 });
-blogSchema.index({ author: 1, is_draft: 1 });
 blogSchema.index({ is_published: 1, blog_approval: 1 });
-blogSchema.index({ is_published: 1, is_deleted: 1 });
 blogSchema.index({ blog_approval: 1, created_at: -1 });
 blogSchema.index({ total_likes: -1, is_published: 1 });
-blogSchema.index({ total_reads: -1, is_published: 1 });
-blogSchema.index({ total_saves: -1, is_published: 1 });
-blogSchema.index({ read_time: 1, is_published: 1 });
-blogSchema.index({ collaboration: 1, is_published: 1 });
-blogSchema.index({ created_at: -1, is_published: 1 });
-blogSchema.index({ updated_at: -1, is_published: 1 });
 
-// Text search index for blog content search
+// Text search index for blog content search (keep this - very important for blogs)
 blogSchema.index({
   title: 'text',
   description: 'text',
   content: 'text'
 });
 
-// Multi-key index for collaborators array
-blogSchema.index({ collaborators: 1 });
-
-// Index for guest readers (if frequently queried)
-blogSchema.index({ guest_readers: 1 }, { sparse: true });
 
 // Popular blogs index (combination of engagement metrics)
 blogSchema.index({ 
   total_likes: -1, 
   total_reads: -1, 
-  total_comments: -1, 
   is_published: 1 
 });
 
-// Admin moderation index
-blogSchema.index({ 
-  blog_approval: 1, 
-  is_published: 1, 
-  created_at: -1 
-});
+// FIXED: Improved model creation with better caching
+let Blog: Model<IBlog>;
 
-// Simplified model creation
-const Blog: Model<IBlog> = mongoose.models.Blog || 
-  mongoose.model<IBlog>("Blog", blogSchema);
+if (mongoose.models.Blog) {
+  Blog = mongoose.models.Blog;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached Blog model');
+  }
+} else {
+  Blog = mongoose.model<IBlog>("Blog", blogSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new Blog model');
+  }
+}
 
 export default Blog;

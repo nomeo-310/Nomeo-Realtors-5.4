@@ -122,6 +122,7 @@ const ManualTransferModal = () => {
       isOpen={isOpen}
       onClose={onClose}
       useCloseButton
+      useSeparator
       width="max-w-xl"
     >
       <div className="space-y-4 mt-4">
@@ -151,7 +152,7 @@ const ManualTransferModal = () => {
             </div>
             <button
               onClick={() => copyToClipboard(paymentDetails.accountName, 'Account Name')}
-              className="h-8 w-8 bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition-all duration-300 flex items-center justify-center flex-none"
+              className="h-8 w-8 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-all duration-300 flex items-center justify-center flex-none"
             >
               {copiedField === 'Account Name' ? (
                 <div className="animate-pulse">
@@ -171,7 +172,7 @@ const ManualTransferModal = () => {
             </div>
             <button
               onClick={() => copyToClipboard(paymentDetails.accountNumber, 'Account Number')}
-              className="h-8 w-8 bg-gray-200 text-gray-600 rounded-full hover:bg-gray-300 transition-all duration-300 flex items-center justify-center flex-none"
+              className="h-8 w-8 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-all duration-300 flex items-center justify-center flex-none"
             >
               {copiedField === 'Account Number' ? (
                 <div className="animate-pulse">
@@ -226,7 +227,7 @@ const ManualTransferModal = () => {
         <button
           disabled={loading}
           onClick={handlePaymentConfirmation}
-          className="w-full h-10 text-sm lg:text-base bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all duration-300 flex items-center justify-center gap-2"
+          className="w-full h-10 text-sm lg:text-base bg-green-600 text-white rounded font-semibold hover:bg-green-700 transition-all duration-300 flex items-center justify-center gap-2"
         >
           {loading ? <Loader2 className='size-4 animate-spin'/> : <CheckIcon className="size-4"/>}
           {loading ? 'Initiating Transaction' : 'I Have Made Payment'}

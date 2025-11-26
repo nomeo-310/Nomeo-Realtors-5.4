@@ -7,7 +7,7 @@ type Image = {
   secure_url: string;
 };
 
-interface IUser extends Document {
+export interface IUser extends Document {
   username: string;
   email: string;
   password?: string;
@@ -32,6 +32,8 @@ interface IUser extends Document {
   userVerified: boolean;
   userIsAnAgent: boolean;
   userAccountDeleted: boolean;
+  deletedAt: Date;
+  deletedBy: Types.ObjectId;
   userAccountSuspended: boolean;
   suspensionReason: string;
   suspendedAt: Date;
@@ -67,22 +69,19 @@ const userSchema: Schema<IUser> = new Schema(
       type: String, 
       required: true, 
       unique: true, 
-      lowercase: true,
-      index: true 
+      lowercase: true
     },
     email: { 
       type: String, 
       required: true, 
       unique: true, 
-      lowercase: true,
-      index: true 
+      lowercase: true
     },
     password: stringField,
     role: { 
       type: String, 
       enum: ['user', 'agent', 'admin', 'creator', 'superAdmin'], 
-      default: 'user',
-      index: true 
+      default: 'user'
     },
     surName: stringField,
     lastName: stringField,
@@ -92,25 +91,27 @@ const userSchema: Schema<IUser> = new Schema(
       secure_url: stringField,
     },
     bio: stringField,
-    phoneNumber: { ...stringField, index: true },
+    phoneNumber: stringField,
     additionalPhoneNumber: stringField,
     address: stringField,
-    city: { ...stringField, index: true },
-    state: { ...stringField, index: true },
+    city: stringField,
+    state: stringField,
     otp: stringField,
     otpExpiresIn: { type: Number, default: undefined },
     resetPasswordOtp: stringField,
     placeholderColor: { type: String, default: '' },
     resetPasswordOtpExpiresIn: { type: Number, default: undefined },
-    userOnboarded: { ...booleanField, index: true },
-    profileCreated: { ...booleanField, index: true },
-    userVerified: { ...booleanField, index: true },
-    userIsAnAgent: { ...booleanField, index: true },
-    userAccountDeleted: { ...booleanField, index: true },
-    userAccountSuspended: { ...booleanField, index: true },
+    userOnboarded: booleanField,
+    profileCreated: booleanField,
+    userVerified: booleanField,
+    userIsAnAgent: booleanField,
+    userAccountDeleted: booleanField,
+    userAccountSuspended: booleanField,
     suspensionReason: { type: String, default: '' },
     suspendedAt: { type: Date, default: undefined },
     suspendedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    deletedAt: { type: Date, default: undefined },
+    deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     showLikedApartments: booleanField,
     showBookmarkedApartments: booleanField,
     showLikedBlogs: booleanField,
@@ -119,7 +120,7 @@ const userSchema: Schema<IUser> = new Schema(
     blogCollaborator: booleanField,
     collaborations: [{ type: Schema.Types.ObjectId, ref: 'Blog' }],
     createdBlogs: [{ type: Schema.Types.ObjectId, ref: 'Blog' }],
-    agentId: { type: Schema.Types.ObjectId, ref: 'Agent', index: true },
+    agentId: { type: Schema.Types.ObjectId, ref: 'Agent' },
     notifications: [{ type: Schema.Types.ObjectId, ref: 'Notification' }],
     likedApartments: [{ type: Schema.Types.ObjectId, ref: 'Apartment' }],
     bookmarkedApartments: [{ type: Schema.Types.ObjectId, ref: 'Apartment' }],
@@ -129,8 +130,26 @@ const userSchema: Schema<IUser> = new Schema(
     propertyAgents: [{ type: Schema.Types.ObjectId, ref: 'Agent' }],
     propertiesRented: [{ type: Schema.Types.ObjectId, ref: 'Apartment' }],
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'development' 
+  }
 );
+
+// Single field indexes for non-unique fields
+userSchema.index({ role: 1 });
+userSchema.index({ phoneNumber: 1 });
+userSchema.index({ city: 1 });
+userSchema.index({ state: 1 });
+userSchema.index({ userOnboarded: 1 });
+userSchema.index({ profileCreated: 1 });
+userSchema.index({ userVerified: 1 });
+userSchema.index({ userIsAnAgent: 1 });
+userSchema.index({ userAccountDeleted: 1 });
+userSchema.index({ userAccountSuspended: 1 });
+userSchema.index({ agentId: 1 });
+userSchema.index({ deletedAt: -1 });
+userSchema.index({ deletedBy: 1 });
 
 // Compound indexes for common query patterns
 userSchema.index({ email: 1, role: 1 });
@@ -175,7 +194,19 @@ userSchema.methods.comparePassword = async function (password: string): Promise<
   return this.password ? bcrypt.compare(password, this.password) : false;
 };
 
-// Simplified model creation
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
+// Improved model creation with better caching
+let User: Model<IUser>;
+
+if (mongoose.models.User) {
+  User = mongoose.models.User;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached User model');
+  }
+} else {
+  User = mongoose.model<IUser>('User', userSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new User model');
+  }
+}
 
 export default User;

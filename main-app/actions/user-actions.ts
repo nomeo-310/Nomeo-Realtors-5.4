@@ -1,6 +1,5 @@
 "use server";
 
-// Imports
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import { getServerSession } from "next-auth";
 import { connectToMongoDB } from "@/lib/connectToMongoDB";
@@ -20,12 +19,14 @@ import { VerificationEmailTemplate } from "@/components/email-templates/verifica
 import { TemporaryDeleteEmailTemplate } from "@/components/email-templates/temporary-delete-email-template";
 import { deleteCloudinaryImages } from "./delete-cloudinary-image";
 import { userProps } from "@/lib/types";
+import Suspension from "@/models/suspension";
 
 // Types
 interface ApiResponse {
   success: boolean;
   message: string;
   status: number;
+  data?: any;
 }
 
 interface Image {
@@ -96,6 +97,13 @@ interface ResetPasswordValues {
   password: string;
 }
 
+interface AppealSuspensionParams {
+  suspensionId: string;
+  appealReason: string;
+  userId: string;
+  path: string;
+}
+
 // Constants
 const OTP_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const RESET_OTP_EXPIRY_MS = 30000;
@@ -114,32 +122,32 @@ const validateUserAccess = (currentUser: userProps | null, userId: string): ApiR
   if (!currentUser) {
     return { success: false, message: "You are not logged in", status: 403 };
   }
-  
+
   if (currentUser._id !== userId) {
-    return { 
-      success: false, 
-      message: "You are not authorized to access this feature", 
-      status: 403 
+    return {
+      success: false,
+      message: "You are not authorized to access this feature",
+      status: 403
     };
   }
-  
+
   return null;
 };
 
 const sendVerificationEmail = async (
-  email: string, 
-  username: string, 
-  otp: string, 
+  email: string,
+  username: string,
+  otp: string,
   subject: string,
   customMessage?: string
 ): Promise<boolean> => {
   try {
     const emailTemplate = await render(
-      VerificationEmailTemplate({ 
-        username, 
-        title: subject, 
-        otp, 
-        message: customMessage || "Your one-time password (OTP) is: " 
+      VerificationEmailTemplate({
+        username,
+        title: subject,
+        otp,
+        message: customMessage || "Your one-time password (OTP) is: "
       })
     );
 
@@ -154,7 +162,7 @@ const sendVerificationEmail = async (
 // User functions
 export const getUserByEmail = async (email: string): Promise<userProps | undefined> => {
   await connectToMongoDB();
-  const user = await User.findOne({ email, userAccountDeleted: false }).lean().exec();
+  const user = await User.findOne({ email }).lean().exec();
   return user ? JSON.parse(JSON.stringify(user)) : undefined;
 };
 
@@ -171,7 +179,7 @@ export const getUserSession = async () => {
 export const getCurrentUser = async (): Promise<userProps | null> => {
   await connectToMongoDB();
   const currentUserSession = await getUserSession();
-  
+
   if (!currentUserSession?.user?.email) {
     return null;
   }
@@ -196,7 +204,7 @@ export const getCurrentUser = async (): Promise<userProps | null> => {
 export const getCurrentUserDetails = async (): Promise<any> => {
   await connectToMongoDB();
   const currentUserSession = await getUserSession();
-  
+
   if (!currentUserSession?.user?.email) {
     return undefined;
   }
@@ -221,22 +229,65 @@ export const getCurrentUserDetails = async (): Promise<any> => {
   }
 };
 
+// Helper function to check if account is within recovery period
+const checkIfWithinRecoveryPeriod = (deletedAt: Date): boolean => {
+  const deletionDate = new Date(deletedAt);
+  const thirtyDaysAfterDeletion = new Date(deletionDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+  return new Date() <= thirtyDaysAfterDeletion;
+};
+
 // Auth functions
 export const createUser = async (values: SignUpValues): Promise<ApiResponse> => {
   const { role, username, email, password } = values;
   await connectToMongoDB();
 
   try {
-    const existingUser = await User.findOne({ email }).lean();
+    const existingUser = await User.findOne({ email }).lean().exec();
 
     if (existingUser) {
-      if (existingUser.userAccountDeleted) {
+      // Check for suspended account first
+      if (existingUser.userAccountSuspended) {
+        const suspensionMessage = existingUser.suspensionReason 
+          ? `Your account has been suspended for: ${existingUser.suspensionReason}. Please contact support to appeal.`
+          : "Your account has been suspended. Please contact support to appeal this decision.";
+        
         return {
           success: false,
-          message: "Account was deleted. Will you like to restore it?",
-          status: 408,
+          message: suspensionMessage,
+          status: existingUser.role === 'user' ? 423 : 424,
+          data: {
+            accountStatus: 'suspended',
+            canAppeal: true,
+            role: existingUser.role,
+            suspensionReason: existingUser.suspensionReason
+          }
         };
       }
+
+      // Check for deleted account
+      if (existingUser.userAccountDeleted) {
+        const isWithinRecoveryPeriod = checkIfWithinRecoveryPeriod(existingUser.deletedAt);
+        
+        if (!isWithinRecoveryPeriod) {
+          return {
+            success: false,
+            message: "This account was permanently deleted and cannot be restored. Please create a new account.",
+            status: 410,
+          };
+        }
+
+        return {
+          success: false,
+          message: "Account was deleted. Would you like to restore it?",
+          status: existingUser.role === 'user' ? 407 : 408,
+          data: {
+            accountStatus: 'deleted',
+            canRestore: true,
+            role: existingUser.role
+          }
+        };
+      }
+
       return {
         success: false,
         message: "User already exists, go ahead and login",
@@ -291,19 +342,36 @@ export const restoreUser = async (values: {
     }
 
     if (!existingUser.password) {
-      return { 
-        success: false, 
-        message: "Invalid account data", 
-        status: 500 
+      return {
+        success: false,
+        message: "Invalid account data",
+        status: 500
       };
     }
 
     const passwordMatch = await bcrypt.compare(password, existingUser.password);
     if (!passwordMatch) {
-      return { 
-        success: false, 
-        message: "Invalid credentials", 
-        status: 401 
+      return {
+        success: false,
+        message: "Invalid credentials",
+        status: 401
+      };
+    }
+
+
+    if (!existingUser.userAccountDeleted && (existingUser.otp !== null && existingUser.otpExpiresIn !== null)) {
+
+      const otp = generateOtp();
+      await User.findByIdAndUpdate(existingUser._id, {
+      userAccountDeleted: false,
+      otp,
+      otpExpiresIn: Date.now() + OTP_EXPIRY_MS,
+      userVerified: false,
+    });
+      return {
+        success: true,
+        message: "New OTP sent to your email",
+        status: 200,
       };
     }
 
@@ -321,6 +389,8 @@ export const restoreUser = async (values: {
       otp,
       otpExpiresIn: Date.now() + OTP_EXPIRY_MS,
       userVerified: false,
+      deletedAt: null,
+      deletedBy: null,
     });
 
     const emailSent = await sendVerificationEmail(
@@ -368,10 +438,55 @@ export const createAgent = async (values: SignUpValues): Promise<ApiResponse> =>
   try {
     await connectToMongoDB();
 
-    if (await User.findOne({ email }).lean()) {
+    const existingUser = await User.findOne({ email }).lean().exec();
+
+    if (existingUser) {
+      // Check for suspended account first
+      if (existingUser.userAccountSuspended) {
+        const suspensionMessage = existingUser.suspensionReason 
+          ? `Your account has been suspended for: ${existingUser.suspensionReason}. Please contact support to appeal.`
+          : "Your account has been suspended. Please contact support to appeal this decision.";
+        
+        return {
+          success: false,
+          message: suspensionMessage,
+          status: existingUser.role === 'user' ? 423 : 424,
+          data: {
+            accountStatus: 'suspended',
+            canAppeal: true,
+            role: existingUser.role,
+            suspensionReason: existingUser.suspensionReason
+          }
+        };
+      }
+
+      // Check for deleted account
+      if (existingUser.userAccountDeleted) {
+        const isWithinRecoveryPeriod = checkIfWithinRecoveryPeriod(existingUser.deletedAt);
+        
+        if (!isWithinRecoveryPeriod) {
+          return {
+            success: false,
+            message: "This account was permanently deleted and cannot be restored. Please create a new account.",
+            status: 410,
+          };
+        }
+
+        return {
+          success: false,
+          message: "Account was deleted. Would you like to restore it?",
+          status: existingUser.role === 'user' ? 407 : 408,
+          data: {
+            accountStatus: 'deleted',
+            canRestore: true,
+            role: existingUser.role
+          }
+        };
+      }
+
       return {
         success: false,
-        message: "Email already used!",
+        message: "User already exists, go ahead and login",
         status: 409,
       };
     }
@@ -636,10 +751,10 @@ export const resendOtp = async (email: string): Promise<ApiResponse> => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return { 
-        success: false, 
-        message: "User does not exist!", 
-        status: 404 
+      return {
+        success: false,
+        message: "User does not exist!",
+        status: 404
       };
     }
 
@@ -652,9 +767,9 @@ export const resendOtp = async (email: string): Promise<ApiResponse> => {
     }
 
     const otp = generateOtp();
-    await User.findByIdAndUpdate(user._id, { 
-      otp, 
-      otpExpiresIn: Date.now() + OTP_EXPIRY_MS 
+    await User.findByIdAndUpdate(user._id, {
+      otp,
+      otpExpiresIn: Date.now() + OTP_EXPIRY_MS
     });
 
     const emailSent = await sendVerificationEmail(
@@ -688,10 +803,10 @@ export const forgotPassword = async (email: string): Promise<ApiResponse> => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return { 
-        success: false, 
-        message: "User not found!", 
-        status: 404 
+      return {
+        success: false,
+        message: "User not found!",
+        status: 404
       };
     }
 
@@ -729,20 +844,20 @@ export const forgotPassword = async (email: string): Promise<ApiResponse> => {
 
 export const resetPassword = async (values: ResetPasswordValues): Promise<ApiResponse> => {
   const { email, password, otp } = values;
-  
+
   await connectToMongoDB();
 
   try {
-    const user = await User.findOne({ 
-      email, 
-      resetPasswordOtp: otp 
+    const user = await User.findOne({
+      email,
+      resetPasswordOtp: otp
     });
 
     if (!user) {
-      return { 
-        success: false, 
-        message: "Invalid OTP or user not found!", 
-        status: 404 
+      return {
+        success: false,
+        message: "Invalid OTP or user not found!",
+        status: 404
       };
     }
 
@@ -853,9 +968,9 @@ export const changeEmailStart = async (values: {
   }
 
   const otp = generateOtp();
-  await User.findByIdAndUpdate(userId, { 
-    otp, 
-    otpExpiresIn: Date.now() + OTP_EXPIRY_MS 
+  await User.findByIdAndUpdate(userId, {
+    otp,
+    otpExpiresIn: Date.now() + OTP_EXPIRY_MS
   });
 
   const emailSent = await sendVerificationEmail(
@@ -941,7 +1056,7 @@ export const changeAgencyAddress = async (values: {
 }): Promise<ApiResponse> => {
   const { agentId, newAddress, path } = values;
   await connectToMongoDB();
-  
+
   const { agent, error } = await validateAgentAccess(agentId);
   if (error) return error;
 
@@ -961,7 +1076,7 @@ export const changeInspectionFee = async (values: {
 }): Promise<ApiResponse> => {
   const { agentId, newFee, path } = values;
   await connectToMongoDB();
-  
+
   const { agent, error } = await validateAgentAccess(agentId);
   if (error) return error;
 
@@ -981,7 +1096,7 @@ export const changeOfficeNumber = async (values: {
 }): Promise<ApiResponse> => {
   const { agentId, newNumber, path } = values;
   await connectToMongoDB();
-  
+
   const { agent, error } = await validateAgentAccess(agentId);
   if (error) return error;
 
@@ -1012,10 +1127,10 @@ export const toggleListings = async (values: {
   try {
     await Agent.findByIdAndUpdate(agentId, { getListings: newValue });
     revalidatePath(path);
-    return { 
-      success: true, 
-      message: newValue ? "Getting client listings" : "Stopped getting listings", 
-      status: 200 
+    return {
+      success: true,
+      message: newValue ? "Getting client listings" : "Stopped getting listings",
+      status: 200
     };
   } catch (error) {
     return handleServerError(error);
@@ -1071,16 +1186,16 @@ const toggleUserPreference = async (
   }
 };
 
-export const toggleLikedApartments = async (values: { userId: string; path: string }): Promise<ApiResponse> => 
+export const toggleLikedApartments = async (values: { userId: string; path: string }): Promise<ApiResponse> =>
   toggleUserPreference(values, 'showLikedApartments', 'Showing liked apartments', 'Hiding liked apartments');
 
-export const toggleBookmarkedApartments = async (values: { userId: string; path: string }): Promise<ApiResponse> => 
+export const toggleBookmarkedApartments = async (values: { userId: string; path: string }): Promise<ApiResponse> =>
   toggleUserPreference(values, 'showBookmarkedApartments', 'Showing bookmarked apartments', 'Hiding bookmarked apartments');
 
-export const toggleLikedBlogs = async (values: { userId: string; path: string }): Promise<ApiResponse> => 
+export const toggleLikedBlogs = async (values: { userId: string; path: string }): Promise<ApiResponse> =>
   toggleUserPreference(values, 'showLikedBlogs', 'Showing liked blogs', 'Hiding liked blogs');
 
-export const toggleBookmarkedBlogs = async (values: { userId: string; path: string }): Promise<ApiResponse> => 
+export const toggleBookmarkedBlogs = async (values: { userId: string; path: string }): Promise<ApiResponse> =>
   toggleUserPreference(values, 'showBookmarkedBlogs', 'Showing bookmarked blogs', 'Hiding bookmarked blogs');
 
 // Account management
@@ -1105,7 +1220,7 @@ export const deleteAccount = async (values: { email: string; path: string }): Pr
     const emailTemplate = await render(TemporaryDeleteEmailTemplate({ name }));
     await sendEmail({ email, subject: "Account Deleted", html: emailTemplate });
 
-    await User.findByIdAndUpdate(currentUser._id, { userAccountDeleted: true });
+    await User.findByIdAndUpdate(currentUser._id, { userAccountDeleted: true, deletedAt: new Date(), deletedBy: currentUser._id });
     revalidatePath(path);
     return { success: true, message: "Account deleted", status: 200 };
   } catch (error) {
@@ -1163,7 +1278,7 @@ export const transferAccount = async (values: {
     const properties = await Apartment.find({ agent: currentUser.agentId });
     if (properties.length > 0) {
       const propertyIds = properties.map(item => item._id);
-      
+
       await Promise.all([
         Apartment.updateMany(
           { _id: { $in: propertyIds } },
@@ -1187,7 +1302,7 @@ export const transferAccount = async (values: {
     const notifications = await Notification.find({ recipient: currentUser._id });
     if (notifications.length > 0) {
       const notificationIds = notifications.map(item => item._id);
-      
+
       await Promise.all([
         Notification.updateMany(
           { _id: { $in: notificationIds } },
@@ -1255,11 +1370,85 @@ export const toggleCollaborator = async (values: { userId: string; path: string 
     revalidatePath(path);
     return {
       success: true,
-      message: newCollaboratorStatus 
-        ? "You are now a collaborator on blogs" 
+      message: newCollaboratorStatus
+        ? "You are now a collaborator on blogs"
         : "You are no longer a collaborator on blogs",
       status: 200,
     };
+  } catch (error) {
+    return handleServerError(error);
+  }
+};
+
+// Appeal suspension
+export const appealSuspension = async (values: AppealSuspensionParams): Promise<ApiResponse> => {
+  const { suspensionId, appealReason, userId, path } = values;
+
+  await connectToMongoDB();
+  const currentUser = await getCurrentUser();
+
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
+
+  try {
+    const suspension = await Suspension.findOne({ _id: suspensionId, isActive: true });
+
+    if (!suspension) {
+      return {
+        success: false,
+        message: "Active suspension not found",
+        status: 404
+      };
+    }
+
+    // Verify the suspension belongs to the current user
+    if (suspension.user.toString() !== userId) {
+      return {
+        success: false,
+        message: "Not authorized to appeal this suspension",
+        status: 403
+      };
+    }
+
+    // Check if appeal already exists
+    const existingAppeal = suspension.history.find(
+      (entry: any) => entry.action === 'appeal'
+    );
+
+    if (existingAppeal) {
+      return {
+        success: false,
+        message: "Appeal already filed for this suspension",
+        status: 409
+      };
+    }
+
+    // Add appeal to history
+    suspension.history.push({
+      action: 'appeal',
+      description: `Appeal filed: ${appealReason}`,
+      performedBy: new mongoose.Types.ObjectId(userId),
+      performedAt: new Date(),
+      reason: appealReason
+    });
+
+    await suspension.save();
+
+    // Create notification for admin
+    await Notification.create({
+      type: "appeal",
+      title: "New Suspension Appeal",
+      content: `User ${currentUser!.username} has filed an appeal for suspension ${suspensionId}. Review It.`,
+      recipient: suspension.history.find((entry: any) => entry.action === 'suspend')?.performedBy.toString(),
+    });
+
+    revalidatePath(path);
+    return {
+      success: true,
+      message: "Appeal filed successfully",
+      status: 200
+    };
+
   } catch (error) {
     return handleServerError(error);
   }

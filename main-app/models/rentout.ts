@@ -17,48 +17,51 @@ const rentoutSchema: Schema<IRentout> = new Schema(
   {
     user: { 
       type: Schema.Types.ObjectId, 
-      ref: 'User',
-      index: true 
+      ref: 'User'
     },
     apartment: { 
       type: Schema.Types.ObjectId, 
-      ref: 'Apartment',
-      index: true 
+      ref: 'Apartment'
     },
     agent: { 
       type: Schema.Types.ObjectId, 
-      ref: 'Agent',
-      index: true 
+      ref: 'Agent'
     },
     startDate: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     endDate: { 
       type: String, 
-      default: undefined,
-      index: true 
+      default: undefined
     },
     rented: { 
       type: Boolean, 
-      default: false,
-      index: true 
+      default: false
     },
     status: { 
       type: String, 
       enum: ['initiated', 'completed', 'cancelled', 'pending'], 
-      default: 'initiated',
-      index: true 
+      default: 'initiated'
     },
     totalAmount: { 
       type: Number, 
-      default: undefined,
-      index: true 
+      default: undefined
     }
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+  }
 );
+
+// FIXED: Keep only essential single field indexes
+rentoutSchema.index({ user: 1 });
+rentoutSchema.index({ apartment: 1 });
+rentoutSchema.index({ agent: 1 });
+rentoutSchema.index({ status: 1 });
+rentoutSchema.index({ rented: 1 });
+rentoutSchema.index({ createdAt: -1 });
 
 // Compound indexes for common query patterns
 rentoutSchema.index({ user: 1, rented: 1 });
@@ -66,26 +69,22 @@ rentoutSchema.index({ user: 1, status: 1 });
 rentoutSchema.index({ agent: 1, rented: 1 });
 rentoutSchema.index({ agent: 1, status: 1 });
 rentoutSchema.index({ apartment: 1, rented: 1 });
-rentoutSchema.index({ apartment: 1, status: 1 });
 rentoutSchema.index({ rented: 1, status: 1 });
 rentoutSchema.index({ status: 1, createdAt: -1 });
-rentoutSchema.index({ rented: 1, createdAt: -1 });
-rentoutSchema.index({ startDate: 1, endDate: 1 });
-rentoutSchema.index({ startDate: 1, rented: 1 });
-rentoutSchema.index({ endDate: 1, rented: 1 });
-rentoutSchema.index({ totalAmount: -1, rented: 1 });
-rentoutSchema.index({ user: 1, agent: 1, rented: 1 });
 
-// Date range queries for rental periods
-rentoutSchema.index({ startDate: 1, endDate: 1, rented: 1 });
+// FIXED: Improved model creation with better caching
+let Rentout: Model<IRentout>;
 
-// Sparse indexes for optional fields
-rentoutSchema.index({ totalAmount: 1 }, { sparse: true });
-rentoutSchema.index({ startDate: 1 }, { sparse: true });
-rentoutSchema.index({ endDate: 1 }, { sparse: true });
-
-// Fixed model creation (removed duplicate assignment)
-const Rentout: Model<IRentout> = mongoose.models.Rentout || 
-  mongoose.model<IRentout>('Rentout', rentoutSchema);
+if (mongoose.models.Rentout) {
+  Rentout = mongoose.models.Rentout;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached Rentout model');
+  }
+} else {
+  Rentout = mongoose.model<IRentout>('Rentout', rentoutSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new Rentout model');
+  }
+}
 
 export default Rentout;

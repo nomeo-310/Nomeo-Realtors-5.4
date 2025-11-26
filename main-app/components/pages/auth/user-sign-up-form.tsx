@@ -11,7 +11,7 @@ import { LoadingButton } from "@/components/ui/loading-button";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useTermsAndConditionModal } from "@/hooks/general-store";
+import { useRestoreAccountModal, useSuspendedAccountModal, useTermsAndConditionModal } from "@/hooks/general-store";
 import { createUser } from "@/actions/user-actions";
 import { protectSignUp } from "@/actions/auth";
 
@@ -19,6 +19,8 @@ const UserSignUpForm = () => {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const { onOpen } = useTermsAndConditionModal();
+  const restoreAccountModal = useRestoreAccountModal();
+  const suspendedAccountModal = useSuspendedAccountModal();
 
   const router = useRouter();
 
@@ -36,27 +38,25 @@ const UserSignUpForm = () => {
   const submitForm = async (value: signupValues) => {
     setIsLoading(true);
     const data = { ...value, role: "user" };
-    const checkEmailValidation = await protectSignUp(data.email);
-
-    if (!checkEmailValidation.success) {
-      toast.error(checkEmailValidation.error);
-      setIsLoading(false);
-      return;
-    }
-
-    const newUserData = {
-      username: data.username,
-      email: data.email,
-      password: data.password,
-      role: data.role,
-    };
-
+    
     try {
+      const checkEmailValidation = await protectSignUp(data.email);
+      if (!checkEmailValidation.success) {
+        toast.error(checkEmailValidation.error);
+        return;
+      }
+
+      const newUserData = {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+      };
+
       const response = await createUser(newUserData);
 
       if (response.success && response.status === 201) {
         toast.success(response.message);
-        setIsLoading(false);
         localStorage.setItem(
           "user-details",
           JSON.stringify({ email: value.email, password: value.password })
@@ -66,26 +66,36 @@ const UserSignUpForm = () => {
       }
 
       if (!response.success) {
-        if (response.status === 408) {
-          toast.error(response.message, {
-            action: {
-              label: "Restore Account",
-              onClick: () => {
-                router.push(`/restore-account`);
-                localStorage.setItem(
-                  "restore-details",
-                  JSON.stringify({ email: value.email, password: value.password, username: value.username })
-                );
-              },
-            },
-          });
+        // Common data for all restore/suspended cases
+        const restoreData = {
+          email: value.email,
+          password: value.password,
+          username: value.username
+        };
+
+        const modalActions = {
+          407: () => restoreAccountModal.onOpen({ type: 'signup', role: 'user' }),
+          408: () => restoreAccountModal.onOpen({ type: 'signup', role: 'agent' }),
+          423: () => suspendedAccountModal.onOpen({ type: 'signup', role: 'user' }),
+          424: () => suspendedAccountModal.onOpen({ type: 'signup', role: 'agent' })
+        };
+
+        const action = modalActions[response.status as keyof typeof modalActions];
+        
+        if (action) {
+          toast.error(response.message);
+          setTimeout(() => {
+            localStorage.setItem("restore-details", JSON.stringify(restoreData));
+            action();
+          }, 2000);
         } else {
           toast.error(response.message);
         }
-        setIsLoading(false);
       }
     } catch (error) {
+      console.error('Signup error:', error);
       toast.error("Something went wrong! Try again later");
+    } finally {
       setIsLoading(false);
     }
   };

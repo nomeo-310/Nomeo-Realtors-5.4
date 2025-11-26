@@ -10,13 +10,14 @@ type modalProps = {
   isOpen: boolean
   title: string
   description?: string
+  extraDescription?: string
   onClose: () => void
   useCloseButton?: boolean
   useSeparator?:boolean
   width?:string
 }
 
-const Modal = ({useCloseButton, description, children, isOpen, title, onClose, useSeparator, width}: modalProps) => {
+const Modal = ({useCloseButton, description, extraDescription, children, isOpen, title, onClose, useSeparator, width}: modalProps) => {
   const [showModal, setShowModal] = React.useState(isOpen);
 
   React.useEffect(() => {
@@ -46,6 +47,7 @@ const Modal = ({useCloseButton, description, children, isOpen, title, onClose, u
                 </div>
                 <div className='xl:p-5 md:p-4 p-3 xl:pt-0 md:pt-0 pt-0'>
                   {description && <div className="sm:text-base text-sm my-4 w-full">{description}</div>}
+                  {extraDescription && <div className="sm:text-base text-sm -mt-2 mb-4 w-full">{extraDescription}</div>}
                   {useSeparator && <hr className='xl:my-4 my-3 -mx-3 xl:-mx-5 md:-mx-4 dark:border-white/70'/>}
                   {children}
                 </div>

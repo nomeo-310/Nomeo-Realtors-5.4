@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useTermsAndConditionModal } from '@/hooks/general-store'
 import { restoreUser } from '@/actions/user-actions'
-import { protectSignUp } from '@/actions/auth'
+import { protectVerification } from '@/actions/auth'
 
 const RestoreAccountForm = () => {
   const [isLoading, setIsLoading] = React.useState(false);
@@ -40,40 +40,34 @@ const RestoreAccountForm = () => {
     }
   });
 
-  const submitForm = async (value:restoreValues) => {
+  const submitForm = async (value: restoreValues) => {
     setIsLoading(true);
-    const data = {...value};
-    const checkEmailValidation = await protectSignUp(data.email);
+    const data = { ...value };
+    const checkEmailValidation = await protectVerification(data.email);
 
     if (!checkEmailValidation.success) {
       toast.error(checkEmailValidation.error)
-    };
-
-  const newUserData = {username: data.username, email: data.email, password: data.password}
-  await restoreUser(newUserData).then((response) => {
-    if (response.success && response.status === 200) {
-      toast.success(response.message);
       setIsLoading(false);
-      localStorage.setItem('user-details', JSON.stringify({email: value.email, password: value.password}))
-      router.push(`/verify-email?email=${data.email}`)
+      return;
     };
 
-    if (!response.success) {
-      if (response.status === 408) {
-        toast.error(response.message, 
-          { action: {
-            label: 'Restore Account',
-            onClick: () => {router.push(`/restore-account`)}
-          }});
-      } else {
+    const newUserData = { username: data.username, email: data.email, password: data.password }
+    await restoreUser(newUserData).then((response) => {
+      if (response.success && response.status === 200) {
+        toast.success(response.message);
+        setIsLoading(false);
+        router.push(`/verify-email?email=${data.email}`)
+        localStorage.setItem('user-details', JSON.stringify({ email: value.email, password: value.password }))
+      };
+
+      if (!response.success) {
         toast.error(response.message);
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }
-  }).catch((error) => {
-    if (error) {
-      toast.error('Something went wrong! Try again later')
-      setIsLoading(false);
+    }).catch((error) => {
+      if (error) {
+        toast.error('Something went wrong! Try again later')
+        setIsLoading(false);
       }
     });
   };
@@ -87,7 +81,7 @@ const RestoreAccountForm = () => {
             <p className="lg:text-base text-sm">Welcome back to Nomeo Realtors, we are glad to have you. Please make sure to use the exact details used in creating the account initially inorder to have an effective account restoration.</p>
           </div>
           <div className="lg:flex flex-col gap-1 hidden">
-           <p className='mt-1 text-sm md:text-base'>Would you rather clear the old data and start afresh? <button className='font-semibold' onClick={() =>{}}>Signup</button></p>
+            <p className='mt-1 text-sm md:text-base'>Would you rather clear the old data and start afresh? <button className='font-semibold' onClick={() => { }}>Signup</button></p>
             <p className='text-sm md:text-base'>Already have an account? <Link href={'/log-in'} className='font-semibold'>Login</Link></p>
           </div>
         </div>
@@ -97,7 +91,7 @@ const RestoreAccountForm = () => {
           <FormField
             control={form.control}
             name="username"
-            render={({field}) => (
+            render={({ field }) => (
               <FormItem>
                 <FormControl>
                   <InputWithIcon
@@ -118,7 +112,7 @@ const RestoreAccountForm = () => {
           <FormField
             control={form.control}
             name="email"
-            render={({field}) => (
+            render={({ field }) => (
               <FormItem>
                 <FormControl>
                   <InputWithIcon
@@ -139,7 +133,7 @@ const RestoreAccountForm = () => {
           <FormField
             control={form.control}
             name="password"
-            render={({field}) => (
+            render={({ field }) => (
               <FormItem>
                 <FormControl>
                   <InputWithIcon
@@ -166,7 +160,7 @@ const RestoreAccountForm = () => {
           />
           <p className='text-center text-sm lg:text-base'>By completing this actions, you agree to our <button type="button" className='underline' onClick={onOpen}>terms and conditions.</button></p>
           <div className="flex flex-col gap-1 lg:hidden">
-           <p className='mt-1 text-sm md:text-base'>Are you intetested in being one of our agents? <Link href={'/sign-up/agent'} className='font-semibold'>Agent Signup</Link></p>
+            <p className='mt-1 text-sm md:text-base'>Are you intetested in being one of our agents? <Link href={'/sign-up/agent'} className='font-semibold'>Agent Signup</Link></p>
             <p className='text-sm md:text-base'>Already have an account? <Link href={'/log-in'} className='font-semibold'>Login</Link></p>
           </div>
         </form>

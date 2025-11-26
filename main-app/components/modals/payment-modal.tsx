@@ -167,6 +167,7 @@ const PaymentModal = () => {
       description='Are you sure you want to proceed with the payment?'
       useCloseButton
       isOpen={isOpen}
+      useSeparator
       onClose={onClose}
     >
       <div className="flex flex-col space-y-4 mt-5">
@@ -183,13 +184,13 @@ const PaymentModal = () => {
             <div className="flex items-center justify-between gap-4">
               <PaystackButton
                 text={isLoading ? 'Processing...' : 'Make Online Transfer'}
-                className='py-2 px-4 rounded-md bg-secondary-blue text-white text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex-1 text-center'
+                className='py-2 px-4 rounded bg-secondary-blue text-white text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex-1 text-center'
                 {...paystackConfig}
                 disabled={isLoading}
               />
               <button
                 type="button"
-                className='py-2 px-4 rounded-md border dark:border-white/70 text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex-1'
+                className='py-2 px-4 rounded border dark:border-white/70 text-sm lg:text-base disabled:opacity-50 disabled:cursor-not-allowed flex-1'
                 onClick={() => { onOpen(); onClose(); }}
                 disabled={isLoading}
               >

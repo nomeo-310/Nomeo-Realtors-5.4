@@ -20,8 +20,8 @@ const DeleteAccount = () => {
   const Initiate = () => {
     return (
       <div className="mt-5 w-full flex items-center justify-between">
-        <button type="button" className='py-2 px-4 rounded-full border-black/50 border dark:border-white/70 text-sm cursor-pointer' onClick={onClose}>Cancel</button>
-        <button type="button" className='py-2 px-4 rounded-full bg-black text-white text-sm border-black border cursor-pointer' onClick={() => setLevel('start')}>Proceed</button>
+        <button type="button" className='py-2 px-4 rounded border-black/50 border dark:border-white/70 text-sm cursor-pointer' onClick={onClose}>Cancel</button>
+        <button type="button" className='py-2 px-4 rounded bg-black text-white text-sm border-black border cursor-pointer' onClick={() => setLevel('start')}>Proceed</button>
       </div>
     )
   };
@@ -30,25 +30,25 @@ const DeleteAccount = () => {
     const [accountEmail, setAccountEmail] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
 
-  const deleteUserAccount = async () => {
-    const values = { email: accountEmail, path: pathname }
+    const deleteUserAccount = async () => {
+      const values = { email: accountEmail, path: pathname }
 
-    setIsLoading(true);
-    await deleteAccount(values).then((response) => {
-      if (response && response.status === 200) {
-        toast.success(response.message)
-        onClose();
-        signOut();
-      };
+      setIsLoading(true);
+      await deleteAccount(values).then((response) => {
+        if (response && response.status === 200) {
+          toast.success(response.message)
+          onClose();
+          signOut();
+        };
 
-      if (response && response.status !== 200) {
-        toast.error(response.message)
-      }
-    }).catch((error) => {
+        if (response && response.status !== 200) {
+          toast.error(response.message)
+        }
+      }).catch((error) => {
 
-      toast.error('Something went wrong')
-    }).finally(() => setIsLoading(false))
-  };
+        toast.error('Something went wrong')
+      }).finally(() => setIsLoading(false))
+    };
 
     return (
       <React.Fragment>
@@ -62,11 +62,11 @@ const DeleteAccount = () => {
           onChange={(e) => setAccountEmail(e.target.value)}
         />
         <div className="mt-5 w-full flex items-center justify-between">
-          <button type="button" className='py-2 px-4 rounded-full border-black/50 border dark:border-white/70 text-sm' onClick={() => {setLevel('initiate'); onClose();}}>Cancel</button>
+          <button type="button" className='py-2 px-4 rounded-full border-black/50 border dark:border-white/70 text-sm' onClick={() => { setLevel('initiate'); onClose(); }}>Cancel</button>
           <LoadingButton
             label='Delete My Account'
             loadingLabel='Deleting Account...'
-            onClick={() =>deleteUserAccount()}
+            onClick={() => deleteUserAccount()}
             isLoading={isLoading}
             className='py-2 px-4 rounded-full bg-black text-white text-sm border-black border'
             type='button'
@@ -79,13 +79,13 @@ const DeleteAccount = () => {
   return (
     <Modal
       isOpen={isOpen}
-      onClose={() => {setLevel('initiate'); onClose();}}
+      onClose={() => { setLevel('initiate'); onClose(); }}
       title={level === 'initiate' ? 'Delete Account' : 'Confirm Deletion'}
       description={level === 'initiate' ? 'Are you sure you want to delete this account? This means you will loose all your data and this action cannot be reversed.' : 'To continue with this process, enter your email address'}
       useCloseButton
       width="lg:w-[550px] xl:w-[550px] md:w-[500px]"
     >
-      {level === 'initiate' ? <Initiate/> : <Start/>}
+      {level === 'initiate' ? <Initiate /> : <Start />}
     </Modal>
   )
 }

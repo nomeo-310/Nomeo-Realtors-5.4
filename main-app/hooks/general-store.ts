@@ -2,7 +2,7 @@ import { ClientProps } from "@/lib/types";
 import { create } from "zustand";
 
 type modalControlProps = {
-  isOpen:boolean
+  isOpen: boolean
   onOpen: () => void
   onClose: () => void
 };
@@ -23,14 +23,37 @@ interface contactUserModalProps extends modalControlProps {
   clearDetails: () => void;
 }
 
-type togglePageProps ={
+interface UserModalContext {
+  type: 'login' | 'signup';
+  role?: 'user' | 'agent'; 
+}
+
+interface SuspensionModalContext extends UserModalContext {
+  suspensionReason?: string
+}
+
+interface restoreAccountModalProps {
+  isOpen: boolean;
+  context?: UserModalContext;
+  onOpen: (context: UserModalContext) => void;
+  onClose: () => void;
+}
+
+interface suspendedAccountModalProps {
+  isOpen: boolean;
+  context?: SuspensionModalContext;
+  onOpen: (context: SuspensionModalContext) => void;
+  onClose: () => void;
+}
+
+type togglePageProps = {
   page: "newsletter" | "contact";
   setPage: (page: "newsletter" | "contact") => void
 }
 
 type breadcrumbsProps = {
   currentPage: string;
-  setCurrentPage: (page:string) => void;
+  setCurrentPage: (page: string) => void;
   clearCurrentPage: () => void;
 };
 
@@ -42,8 +65,8 @@ interface ActiveTabState {
 
 export const useBreadCrumbs = create<breadcrumbsProps>((set) => ({
   currentPage: '',
-  setCurrentPage: (page:string) => set({currentPage: page}),
-  clearCurrentPage: () => set({currentPage: ""})
+  setCurrentPage: (page: string) => set({ currentPage: page }),
+  clearCurrentPage: () => set({ currentPage: "" })
 }))
 
 export const useOpenMobileMenu = create<modalControlProps>((set) => ({
@@ -147,50 +170,64 @@ export const togglePage = create<togglePageProps>((set) => ({
   setPage: (page: "newsletter" | "contact") => set({ page }),
 }));
 
-export const useRenewalReminderModal =  create<rentRenewalModalProps>((set) => ({
+export const useRenewalReminderModal = create<rentRenewalModalProps>((set) => ({
   isOpen: false,
   details: null,
   isOverdue: false,
   overdueDays: null,
-  setDetails: (details) => set({details: details}),
-  setIsOverdue: (isOverdue) => set({isOverdue: isOverdue}),
-  setOverdueDays: (overdueDays) => set({overdueDays: overdueDays}),
+  setDetails: (details) => set({ details: details }),
+  setIsOverdue: (isOverdue) => set({ isOverdue: isOverdue }),
+  setOverdueDays: (overdueDays) => set({ overdueDays: overdueDays }),
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
   clearDetails: () => set({ details: null }),
 }));
 
-export const useContactUserModal =  create<contactUserModalProps>((set) => ({
+export const useContactUserModal = create<contactUserModalProps>((set) => ({
   isOpen: false,
   details: null,
-  setDetails: (details) => set({details: details}),
+  setDetails: (details) => set({ details: details }),
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
   clearDetails: () => set({ details: null }),
 }));
 
-export const useContactAgentModal =  create<contactUserModalProps>((set) => ({
+export const useContactAgentModal = create<contactUserModalProps>((set) => ({
   isOpen: false,
   details: null,
-  setDetails: (details) => set({details: details}),
+  setDetails: (details) => set({ details: details }),
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
   clearDetails: () => set({ details: null }),
 }));
 
-export const useRentExtensionModal =  create<contactUserModalProps>((set) => ({
+export const useRentExtensionModal = create<contactUserModalProps>((set) => ({
   isOpen: false,
   details: null,
-  setDetails: (details) => set({details: details}),
+  setDetails: (details) => set({ details: details }),
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
-  clearDetails: () => set({ details: null }), 
+  clearDetails: () => set({ details: null }),
 }));
 
 export const useManualTransferModal = create<modalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
+}));
+
+export const useRestoreAccountModal = create<restoreAccountModalProps>((set) => ({
+  isOpen: false,
+  context: undefined,
+  onOpen: (context: UserModalContext) => set({ isOpen: true, context }),
+  onClose: () => set({ isOpen: false, context: undefined }),
+}));
+
+export const useSuspendedAccountModal = create<suspendedAccountModalProps>((set) => ({
+  isOpen: false,
+  context: undefined,
+  onOpen: (context: SuspensionModalContext) => set({ isOpen: true, context }),
+  onClose: () => set({ isOpen: false, context: undefined }),
 }));
 
 export const useActiveTab = create<ActiveTabState>()((set) => ({

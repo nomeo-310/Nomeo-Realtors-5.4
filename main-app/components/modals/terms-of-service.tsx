@@ -13,6 +13,7 @@ const TermsOfService = () => {
       useCloseButton
       onClose={serviceControl.onClose}
       title={terms_of_service.title}
+      useSeparator
       width='lg:w-[600px] xl:w-[700px] md:w-[550px]'
     >
       <p className="text-sm lg:mt-5 mt-3">{terms_of_service.content}</p>

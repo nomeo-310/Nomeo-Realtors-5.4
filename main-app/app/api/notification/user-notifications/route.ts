@@ -19,7 +19,7 @@ export const POST = async (request:Request) => {
   };
 
   try {
-    const notifications = await Notification.find({recipient: current_user._id})
+    const notifications = await Notification.find({recipient: current_user._id, isDeleted: false})
     .populate({
       path:'issuer', 
       model: User,
@@ -34,7 +34,7 @@ export const POST = async (request:Request) => {
       path: 'agentId', 
       model: Agent,
       select: 'officeAddress agencyName officeNumber userId',
-      match: { _id: { $ne: null } }, // Only populate if agentId field exists and is not null
+      match: { _id: { $ne: null } },
       populate: {
       path: 'userId',
       model: User,

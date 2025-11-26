@@ -11,7 +11,7 @@ import { LoadingButton } from '@/components/ui/loading-button'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { useTermsAndConditionModal } from '@/hooks/general-store'
+import { useRestoreAccountModal, useSuspendedAccountModal, useTermsAndConditionModal } from '@/hooks/general-store'
 import { createAgent } from '@/actions/user-actions'
 import { protectSignUp } from '@/actions/auth'
 
@@ -20,6 +20,8 @@ const AgentSignUpForm = () => {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const { onOpen } = useTermsAndConditionModal();
+  const restoreAccountModal = useRestoreAccountModal();
+  const suspendedAccountModal = useSuspendedAccountModal();
 
   const router = useRouter();
 
@@ -34,36 +36,70 @@ const AgentSignUpForm = () => {
     }
   })
 
-  const submitForm = async (value:signupValues) => {
-    setIsLoading(true);
-    const data = {...value, role: 'agent'};
-    const checkEmailValidation = await protectSignUp(data.email);
+const submitForm = async (value: signupValues) => {
+  setIsLoading(true);
+  const data = { ...value, role: 'agent' };
+  
+  const checkEmailValidation = await protectSignUp(data.email);
+  if (!checkEmailValidation.success) {
+    toast.error(checkEmailValidation.error);
+    setIsLoading(false);
+    return;
+  }
 
-    if (!checkEmailValidation.success) {
-      toast.error(checkEmailValidation.error)
+  const newUserData = { 
+    username: data.username, 
+    email: data.email, 
+    password: data.password, 
+    role: 'agent' 
+  };
+
+  const response = await createAgent(newUserData);
+  
+  if (response.success && response.status === 201) {
+    toast.success(response.message);
+    localStorage.setItem('user-details', JSON.stringify({ 
+      email: value.email, 
+      password: value.password 
+    }));
+    router.push(`/verify-email?email=${data.email}`);
+    setIsLoading(false);
+    return;
+  }
+
+  if (!response.success) {
+    const restoreData = {
+      email: value.email,
+      password: value.password,
+      username: value.username
     };
 
-    const newUserData = {username: data.username, email: data.email, password: data.password, role: 'agent'}
-    await createAgent(newUserData)
-    .then((response) => {
-      if (response.success && response.status === 201) {
-        toast.success(response.message);
-        setIsLoading(false);
-        localStorage.setItem('user-details', JSON.stringify({email: value.email, password: value.password}))
-        router.push(`/verify-email?email=${data.email}`)
-      };
+    const modalConfig = {
+      407: { modal: restoreAccountModal, role: 'user' },
+      408: { modal: restoreAccountModal, role: 'agent' },
+      423: { modal: suspendedAccountModal, role: 'user' },
+      424: { modal: suspendedAccountModal, role: 'agent' }
+    };
 
-      if (!response.success) {
-        toast.error(response.message);
-        setIsLoading(false);
-      }
-    }).catch((error) => {
-      if (error) {
-        toast.error('Something went! Try again later')
-        setIsLoading(false);
-      }
-    })
-  };
+    const config = modalConfig[response.status as keyof typeof modalConfig];
+    
+    if (config) {
+      toast.error(response.message);
+      setTimeout(() => {
+        localStorage.setItem("restore-details", JSON.stringify(restoreData));
+        config.modal.onOpen({ 
+          type: 'signup', 
+          role: config.role as 'user' | 'agent',
+          ...(response.status >= 423 && { suspensionReason: response.data?.suspensionReason })
+        });
+      }, 2000);
+    } else {
+      toast.error(response.message);
+    }
+    
+    setIsLoading(false);
+  }
+};
 
   return (
     <React.Fragment>

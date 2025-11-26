@@ -13,6 +13,7 @@ const InspectionTerms = () => {
       onClose={onClose}
       isOpen={isOpen}
       title={inspection_terms.title}
+      useSeparator
       width='lg:w-[600px] xl:w-[700px] md:w-[550px]'
     >
       <ol className='flex flex-col gap-1 lg:mt-5 mt-3 list-decimal list-inside'>

@@ -266,6 +266,7 @@ const StartRentOut = () => {
       title={title}
       description={description}
       useCloseButton
+      useSeparator
       width="lg:w-[600px] xl:w-[700px] md:w-[550px]"
     >
       <StartRentOutForm />

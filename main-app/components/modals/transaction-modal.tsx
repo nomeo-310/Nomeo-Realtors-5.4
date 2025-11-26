@@ -124,6 +124,7 @@ const TransactionModal = ({user}:{user:userDetails}) => {
       useCloseButton
       isOpen={isOpen}
       onClose={onClose}
+      useSeparator
       description='Make payment and get email notification of your payment'
     >
       <TransactionForm/>

@@ -95,9 +95,10 @@ export const deleteAllNotifications = async () => {
   try {
     // Execute both operations in parallel
     await Promise.all([
-      Notification.deleteMany({ 
-        recipient: authResult.currentUser!._id, 
-        seen: true 
+      Notification.updateMany(
+        {recipient: authResult.currentUser!._id, 
+          seen: true
+        }, { isDeleted: true 
       }),
       User.findByIdAndUpdate(
         authResult.currentUser!._id, 
@@ -151,10 +152,10 @@ export const deleteSingleNotification = async (id: string) => {
 
     // Execute both operations in parallel
     await Promise.all([
-      Notification.deleteOne({ 
+      Notification.updateOne({ 
         _id: id, 
         recipient: authResult.currentUser!._id 
-      }),
+      }, {isDeleted: true}),
       User.findByIdAndUpdate(
         authResult.currentUser!._id, 
         { $pull: { notifications: toObjectId(id) } }
