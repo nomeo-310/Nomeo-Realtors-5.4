@@ -7,6 +7,8 @@ import CustomSelect from "../ui/custom-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useRevokeVerificationModal } from "@/hooks/general-store";
+import { revokeValidation } from "@/actions/admin-actions";
+import { toast } from "sonner";
 
 const RevokeVerificationModal = () => {
   const { onClose, isOpen, user } = useRevokeVerificationModal();
@@ -55,26 +57,26 @@ const RevokeVerificationModal = () => {
   const handleRevokeVerification = async () => {
     if (!user || !revocationReason.trim() || !selectedCategory) return;
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      // API call to revoke verification
-      console.log('Revoking verification:', {
-        userId: user.id,
-        userType: user.role,
-        revocationReason,
-        category: selectedCategory,
+      const result = await revokeValidation({
+        userId: user.id, 
+        path: '',
+        reason: revocationReason,
       });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!result.success) {
+        toast.error(result.message || 'Failed to revoke verification. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
 
-      // Success
-      alert(`Verification revoked successfully! ${user.surName} will need to complete verification again.`);
+      toast.success('User verification revoked successfully.');
       onClose();
       resetForm();
     } catch (error) {
       console.error('Error revoking verification:', error);
-      alert('Failed to revoke verification. Please try again.');
+      toast.error('Failed to revoke verification. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

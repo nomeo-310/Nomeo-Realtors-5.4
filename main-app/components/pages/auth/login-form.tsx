@@ -33,6 +33,8 @@ const LoginForm = () => {
 
   const [isLoading, setIsLoading] = React.useState(false);
 
+  
+
   const submitForm = async (values: loginValues) => {
     setIsLoading(true);
   
@@ -42,6 +44,8 @@ const LoginForm = () => {
       toast.error(checkEmailValidation.error);
       return;
     }
+
+    const verifyUrl = `/verify-email?email=${encodeURIComponent(values.email)}&autoResend=true`;
 
     const callback = await signIn("credentials", { ...values, redirect: false });
     
@@ -54,7 +58,11 @@ const LoginForm = () => {
     }
 
     if (callback?.error) {
-      console.log('Login error:', callback.error);
+      
+    localStorage.setItem('user-details', JSON.stringify({ 
+      email: values.email, 
+      password: values.password 
+    }));
       
       const errorConfig = {
         account_deleted_by_admin: {
@@ -76,6 +84,10 @@ const LoginForm = () => {
         account_suspended_agent: {
           message: 'Your account has been suspended.',
           action: () => suspendedAccountModal.onOpen({ type: 'login', role: 'agent' })
+        },
+        email_not_verified:{
+          message: 'Email not verified. Please verify your email.',
+          action: () => router.push(verifyUrl)
         },
         invalid_credentials: {
           message: 'Invalid email or password',

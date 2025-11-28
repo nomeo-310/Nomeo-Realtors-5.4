@@ -68,7 +68,7 @@ const DeleteAccount = () => {
             loadingLabel='Deleting Account...'
             onClick={() => deleteUserAccount()}
             isLoading={isLoading}
-            className='py-2 px-4 rounded-full bg-black text-white text-sm border-black border'
+            className='py-2 px-4 rounded-full bg-secondary-blue text-white text-sm border-black border'
             type='button'
           />
         </div>

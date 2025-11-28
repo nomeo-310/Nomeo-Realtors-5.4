@@ -12,7 +12,7 @@ const RoleAssignmentModal = () => {
   const { onClose, isOpen, user } = useRoleAssignmentModal();
 
   const [selectedRole, setSelectedRole] = React.useState("");
-  const [isActive, setIsActive] = React.useState(true);
+  const [isActive, setIsActive] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Available roles for assignment

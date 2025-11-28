@@ -29,6 +29,9 @@ interface IApartment extends Document {
   optionalAmenities: string[];
   squareFootage: number;
   hideProperty: boolean;
+  hiddenAt: Date;
+  hiddenReason: string;
+  status: string;
   mainFees: Fee[];
   optionalFees: Fee[];
   closestLandmarks: Landmark[];
@@ -119,6 +122,18 @@ const apartmentSchema: Schema<IApartment> = new Schema(
     hideProperty: {
       type: Boolean, 
       default: false
+    },
+    hiddenAt: { 
+      type: Date, 
+      default: undefined
+    },
+    hiddenReason: { 
+      type: String, 
+      default: undefined
+    },
+    status: { 
+      type: String, 
+      default: undefined
     },
     mainFees: [{ 
       name: { type: String, default: undefined }, 

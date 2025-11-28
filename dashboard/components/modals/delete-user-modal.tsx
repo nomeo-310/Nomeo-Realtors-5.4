@@ -7,15 +7,20 @@ import CustomSelect from "../ui/custom-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useDeleteUserModal } from "@/hooks/general-store";
+import { deleteUser } from "@/actions/admin-actions";
+import { usePathname } from "next/navigation";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const DeleteUserModal = () => {
   const { onClose, isOpen, user } = useDeleteUserModal();
+  const path = usePathname();
+  const queryClient = useQueryClient();
 
   const [currentStep, setCurrentStep] = React.useState<'confirmation' | 'deletion'>('confirmation');
   const [deleteReason, setDeleteReason] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("");
   const [dataRetention, setDataRetention] = React.useState('anonymize');
-  const [notifyUser, setNotifyUser] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Delete categories
@@ -43,7 +48,6 @@ const DeleteUserModal = () => {
       setDeleteReason("");
       setSelectedCategory("");
       setDataRetention('anonymize');
-      setNotifyUser(false);
     }
   }, [user]);
 
@@ -78,26 +82,26 @@ const DeleteUserModal = () => {
 
     setIsSubmitting(true);
     try {
-      // API call to delete user
-      console.log('Deleting user:', {
+      const deleteData = {
         userId: user.id,
-        userType: user.userType,
-        deleteReason,
-        category: selectedCategory,
-        dataRetention,
-        notifyUser
-      });
+        reason: deleteReason,
+        path: path,
+      }
+      const result = await deleteUser(deleteData)
 
-      // Simulate API call
+      if (result && result.success) {
+        toast.success(result.message);
+        queryClient.invalidateQueries({ queryKey: ['active-users'] });
+        onClose();
+        resetForm();
+      } else {
+        toast.error(result?.message || 'Failed to delete user. Please try again.');
+      }
+
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Success
-      alert(`User account deleted successfully! ${user.surName}'s account has been removed.`);
-      onClose();
-      resetForm();
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Failed to delete user account. Please try again.');
+      toast.error('Failed to delete user account. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +112,6 @@ const DeleteUserModal = () => {
     setDeleteReason("");
     setSelectedCategory("");
     setDataRetention('anonymize');
-    setNotifyUser(false);
     setIsSubmitting(false);
   };
 
@@ -302,30 +305,6 @@ const DeleteUserModal = () => {
             <p className="text-xs text-gray-500">
               This reason will be permanently recorded in the audit logs for compliance purposes.
             </p>
-          </div>
-
-          {/* Notification Toggle */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white">
-            <div className="space-y-0.5">
-              <Label htmlFor="notification-toggle" className="text-sm font-semibold text-gray-900">
-                Send Notification
-              </Label>
-              <p className="text-xs text-gray-500">
-                {notifyUser 
-                  ? 'User will receive an email notification about account deletion'
-                  : 'No notification will be sent to the user'
-                }
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="notification-toggle"
-                checked={notifyUser}
-                onChange={(e) => setNotifyUser(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-            </div>
           </div>
 
           {/* Action Buttons */}

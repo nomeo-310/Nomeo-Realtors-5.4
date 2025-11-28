@@ -3,11 +3,25 @@
 import React from 'react'
 import Modal from '../ui/modal'
 import { useRestoreAccountModal } from '@/hooks/general-store'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { permanentDeleteAccount } from '@/actions/user-actions'
+import { toast } from 'sonner'
 
 const RestoreAccount = () => {
   const { isOpen, onClose, context } = useRestoreAccountModal();
   const router = useRouter();
+  const pathname = usePathname();
+  const [clearingDetails, setClearingDetails] = React.useState(false);
+
+  const [restoreEmail, setRestoreEmail] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const email = localStorage.getItem('restoreEmail');
+      setRestoreEmail(email);
+      console.log('Restore Email from localStorage:', email);
+    }
+  }, []);
 
   // Require explicit context - no fallbacks
   if (!context) {
@@ -17,22 +31,49 @@ const RestoreAccount = () => {
 
   const isLoginContext = context.type === 'login';
   const isSignupContext = context.type === 'signup';
-  const role = context.role || 'user'; // role is required for signup, optional for login
+  const role = context.role || 'user';
+
+  // Get restoreEmail safely
 
   const handleRestore = () => {
-    console.log('Restoring account...');
     onClose();
     router.push('/restore-account');
   }
 
-  const handleCreateNew = () => {
-    onClose();
-    if (isSignupContext) {
-      // If signing up, proceed with new account creation for the specific role
-      router.push(`/sign-up/${role}?action=create_new`);
-    } else {
-      // If logging in, redirect to appropriate signup based on context role
-      router.push(`/sign-up/${role}`);
+  const handleCreateNew = async () => {
+    if (!restoreEmail) {
+      console.error('No restore email found');
+      return;
+    }
+
+    setClearingDetails(true);
+    
+    try {
+      const result = await permanentDeleteAccount({ 
+        email: restoreEmail, 
+        path: pathname 
+      });
+      
+      console.log('Permanent deletion result:', result);
+      
+      if (result?.success) {
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('restoreEmail');
+        }
+        toast.success('Previous account data cleared. Proceeding to create a new account.');
+        onClose();
+        router.push(`/sign-up/${role}`);
+      } else {
+        // Handle API error
+        console.error('Permanent deletion failed:', result?.message);
+        toast.error(result?.message || 'Failed to create new account. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error in handleCreateNew:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setClearingDetails(false);
     }
   }
 
@@ -96,15 +137,17 @@ const RestoreAccount = () => {
       <div className="mt-5 lg:mt-10 xl:mt-12 w-full flex items-center justify-between lg:gap-8 gap-4 md:gap-6">
         <button
           type="button"
-          className='py-3 px-6 rounded border border-gray-300 dark:border-gray-600 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex-1'
+          className='py-3 px-6 rounded border border-gray-300 dark:border-gray-600 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed'
           onClick={buttons.secondary.action}
+          disabled={clearingDetails || !restoreEmail}
         >
-          {buttons.secondary.label}
+          {clearingDetails ? 'Clearing old data...' : buttons.secondary.label}
         </button>
         <button
           type="button"
-          className='py-3 px-6 rounded bg-black text-white text-sm font-medium cursor-pointer hover:bg-gray-800 transition-colors flex-1'
+          className='py-3 px-6 rounded bg-secondary-blue text-white text-sm font-medium cursor-pointer hover:bg-secondary-blue/90 transition-colors flex-1 disabled:opacity-50 disabled:cursor-not-allowed'
           onClick={buttons.primary.action}
+          disabled={clearingDetails}
         >
           {buttons.primary.label}
         </button>
@@ -112,11 +155,12 @@ const RestoreAccount = () => {
       
       {/* Additional option for login context */}
       {isLoginContext && (
-        <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
           <button
             type="button"
-            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline"
+            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline disabled:opacity-50"
             onClick={handleContinueLogin}
+            disabled={clearingDetails}
           >
             Try different login credentials
           </button>

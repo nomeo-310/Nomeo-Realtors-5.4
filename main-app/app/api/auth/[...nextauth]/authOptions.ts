@@ -46,6 +46,10 @@ export const authOptions: AuthOptions = {
           throw new Error('invalid_credentials')
         };
 
+        if (user && !user.userVerified) {
+          throw new Error('email_not_verified');
+        }
+
         const passwordMatch = await bcryptjs.compare(password, user.password);
 
         if (user.userAccountDeleted) {

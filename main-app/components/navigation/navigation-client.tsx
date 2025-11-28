@@ -12,6 +12,7 @@ import { LogOutUser } from './logout'
 import { userProps } from '@/lib/types'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
+import { Loader2 } from 'lucide-react';
 
 const NavigationClient = ({ user }: { user: userProps }) => {
 
@@ -40,7 +41,7 @@ const NavigationClient = ({ user }: { user: userProps }) => {
 
   const { setPage } = togglePage();
 
-  const { data } = useQuery({
+  const { data, status } = useQuery({
     queryKey: ['unread-notification-count'],
     queryFn: fetchData,
     refetchInterval: 15000,
@@ -74,9 +75,15 @@ const NavigationClient = ({ user }: { user: userProps }) => {
           </div>
           {user ? (
             <div className="flex items-center gap-2 p-1 pl-2">
+              {status === 'pending' && 
+                <div className="size-10 flex items-center justify-center rounded-full bg-gray-200">
+                  <Loader2 className='animate-spin size-6'/>
+                </div>
+              }
               {data && data.count > 0 && (
-                <Link href={getDashboardPath()}>
-                  <HugeiconsIcon icon={Notification02Icon} className="text-red-600 fill-red-600 fill" />
+                <Link href={getDashboardPath()} className='bg-gray-200 size-10 flex items-center justify-center rounded-full relative'>
+                  <HugeiconsIcon icon={Notification02Icon} className="dark:text-black size-5" />
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white  text-[10px] font-semibold rounded-full px-1.5 py-0.5 tabular-nums">{data.count}</span>
                 </Link>
               )}
               <LogOutUser user={user} notification={!!(data && data.count > 0)} />
@@ -140,11 +147,17 @@ const NavigationClient = ({ user }: { user: userProps }) => {
           Nomeo Realtors
         </div>
         <nav className="flex items-center gap-4">
-          {user ? (
+          {user ? ( 
             <div className="flex items-center gap-2 p-1 pl-2">
+              {status === 'pending' && 
+                <div className="size-10 flex items-center justify-center rounded-full bg-gray-200">
+                  <Loader2 className='animate-spin size-6'/>
+                </div>
+              }
               {data && data.count > 0 && (
-                <Link href={getDashboardPath()}>
-                  <HugeiconsIcon icon={Notification02Icon} className="text-red-600 fill-red-600 fill" />
+                <Link href={getDashboardPath()} className='bg-gray-200 size-10 flex items-center justify-center rounded-full relative'>
+                  <HugeiconsIcon icon={Notification02Icon} className="dark:text-black size-5" />
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white  text-[10px] font-semibold rounded-full px-1.5 py-0.5 tabular-nums">{data.count}</span>
                 </Link>
               )}
               <LogOutUser user={user} notification={!!(data && data.count > 0)} />

@@ -20,7 +20,14 @@ import {
   canCreate,
   canEdit,
   canDelete,
-  hasPermission
+  hasPermission,
+  canViewAdmins,
+  canManageAdmins,
+  canEditAdmins,
+  canAssignAdminRole,
+  canSuspendAdmin,
+  canDeactivateAdmin,
+  canReactivateAdmin
 } from '@/utils/permission-utils';
 
 export class ServerPermissionService {
@@ -94,8 +101,36 @@ export class ServerPermissionService {
   }
 
   canDeleteUsers(): boolean {
-    // Use the generic canDelete method since canDeleteUsers doesn't exist
     return this.canDelete('users');
+  }
+
+    // Admin Management Permissions
+  canViewAdmins(): boolean {
+    return canViewAdmins(this.userRole);
+  }
+
+  canManageAdmins(): boolean {
+    return canManageAdmins(this.userRole);
+  }
+
+  canEditAdmins(): boolean {
+    return canEditAdmins(this.userRole);
+  }
+
+  canAssignAdminRole(): boolean {
+    return canAssignAdminRole(this.userRole);
+  }
+
+  canSuspendAdmin(): boolean {
+    return canSuspendAdmin(this.userRole);
+  }
+
+  canDeactivateAdmin(): boolean {
+    return canDeactivateAdmin(this.userRole);
+  }
+
+  canReactivateAdmin(): boolean {
+    return canReactivateAdmin(this.userRole);
   }
 
   // Blog permissions

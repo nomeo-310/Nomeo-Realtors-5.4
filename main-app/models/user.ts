@@ -32,12 +32,12 @@ export interface IUser extends Document {
   userVerified: boolean;
   userIsAnAgent: boolean;
   userAccountDeleted: boolean;
-  deletedAt: Date;
-  deletedBy: Types.ObjectId;
   userAccountSuspended: boolean;
   suspensionReason: string;
   suspendedAt: Date;
   suspendedBy: Types.ObjectId;
+  deletedAt: Date;
+  deletedBy: Types.ObjectId;
   showLikedApartments: boolean;
   showBookmarkedApartments: boolean;
   showLikedBlogs: boolean;
@@ -55,6 +55,9 @@ export interface IUser extends Document {
   comments?: Types.ObjectId[];
   propertyAgents?: Types.ObjectId[];
   propertiesRented?: Types.ObjectId[];
+  previousRole?: string;
+  roleChangedAt?: Date;
+  roleChangedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -129,6 +132,9 @@ const userSchema: Schema<IUser> = new Schema(
     comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }],
     propertyAgents: [{ type: Schema.Types.ObjectId, ref: 'Agent' }],
     propertiesRented: [{ type: Schema.Types.ObjectId, ref: 'Apartment' }],
+    previousRole: stringField,
+    roleChangedAt: { type: Date, default: undefined },
+    roleChangedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { 
     timestamps: true,
@@ -138,7 +144,6 @@ const userSchema: Schema<IUser> = new Schema(
 
 // Single field indexes for non-unique fields
 userSchema.index({ role: 1 });
-userSchema.index({ phoneNumber: 1 });
 userSchema.index({ city: 1 });
 userSchema.index({ state: 1 });
 userSchema.index({ userOnboarded: 1 });
@@ -147,9 +152,7 @@ userSchema.index({ userVerified: 1 });
 userSchema.index({ userIsAnAgent: 1 });
 userSchema.index({ userAccountDeleted: 1 });
 userSchema.index({ userAccountSuspended: 1 });
-userSchema.index({ agentId: 1 });
-userSchema.index({ deletedAt: -1 });
-userSchema.index({ deletedBy: 1 });
+userSchema.index({ previousRole: 1 });
 
 // Compound indexes for common query patterns
 userSchema.index({ email: 1, role: 1 });

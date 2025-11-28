@@ -319,3 +319,31 @@ export const canViewNewsletters = (userRole: UserRole): boolean => {
 export const canManageNewsletters = (userRole: UserRole): boolean => {
   return hasPermission(userRole, 'newsletters.manage');
 };
+
+export const canViewAdmins = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'admins.view');
+};
+
+export const canManageAdmins = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'admins.manage');
+};
+
+export const canEditAdmins = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'admins.edit');
+};
+
+export const canAssignAdminRole = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'admin.assign_role');
+};
+
+export const canSuspendAdmin = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'admin.suspend');
+};
+
+export const canDeactivateAdmin = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'admin.deactivate');
+};
+
+export const canReactivateAdmin = (userRole: UserRole): boolean => {
+  return hasPermission(userRole, 'admin.reactivate');
+};

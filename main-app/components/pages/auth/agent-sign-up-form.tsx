@@ -68,6 +68,7 @@ const submitForm = async (value: signupValues) => {
   }
 
   if (!response.success) {
+
     const restoreData = {
       email: value.email,
       password: value.password,
@@ -87,6 +88,7 @@ const submitForm = async (value: signupValues) => {
       toast.error(response.message);
       setTimeout(() => {
         localStorage.setItem("restore-details", JSON.stringify(restoreData));
+        localStorage.setItem('restoreEmail', value.email);
         config.modal.onOpen({ 
           type: 'signup', 
           role: config.role as 'user' | 'agent',

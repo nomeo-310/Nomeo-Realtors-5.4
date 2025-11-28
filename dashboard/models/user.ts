@@ -8,6 +8,7 @@ type Image = {
 };
 
 export interface IUser extends Document {
+  _id: Types.ObjectId;
   username: string;
   email: string;
   password?: string;
@@ -53,6 +54,9 @@ export interface IUser extends Document {
   comments?: Types.ObjectId[];
   propertyAgents?: Types.ObjectId[];
   propertiesRented?: Types.ObjectId[];
+  previousRole?: string;
+  roleChangedAt?: Date;
+  roleChangedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -125,6 +129,9 @@ const userSchema: Schema<IUser> = new Schema(
     comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }],
     propertyAgents: [{ type: Schema.Types.ObjectId, ref: 'Agent' }],
     propertiesRented: [{ type: Schema.Types.ObjectId, ref: 'Apartment' }],
+    previousRole: stringField,
+    roleChangedAt: { type: Date, default: undefined },
+    roleChangedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { 
     timestamps: true,
@@ -142,6 +149,7 @@ userSchema.index({ userVerified: 1 });
 userSchema.index({ userIsAnAgent: 1 });
 userSchema.index({ userAccountDeleted: 1 });
 userSchema.index({ userAccountSuspended: 1 });
+userSchema.index({ previousRole: 1 });
 
 // Compound indexes for common query patterns
 userSchema.index({ email: 1, role: 1 });

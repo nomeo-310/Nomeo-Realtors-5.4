@@ -33,7 +33,7 @@ const animationVariants = {
 
 const AnimationWrapper = ({ className, children, keyValue, duration = 0.6, type = 'fade'}: AnimationWrapperProps) => {
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       <motion.div
         variants={animationVariants[type]}
         initial="initial"

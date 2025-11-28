@@ -20,6 +20,7 @@ import { TemporaryDeleteEmailTemplate } from "@/components/email-templates/tempo
 import { deleteCloudinaryImages } from "./delete-cloudinary-image";
 import { userProps } from "@/lib/types";
 import Suspension from "@/models/suspension";
+import { PermanentDeleteEmailTemplate } from "@/components/email-templates/permanent-delete-email-template";
 
 // Types
 interface ApiResponse {
@@ -1199,6 +1200,43 @@ export const toggleLikedBlogs = async (values: { userId: string; path: string })
 export const toggleBookmarkedBlogs = async (values: { userId: string; path: string }): Promise<ApiResponse> =>
   toggleUserPreference(values, 'showBookmarkedBlogs', 'Showing bookmarked blogs', 'Hiding bookmarked blogs');
 
+//helper function to hide all agent apartments
+const hideAgentApartments = async (agentId: string) => {
+  try {
+    // Assuming you have an Apartment model
+    await Apartment.updateMany(
+      { agent: agentId },
+      { 
+        hideProperty: true,
+        hiddenAt: new Date(),
+        hiddenReason: 'Agent account deleted'
+      }
+    );
+    console.log(`Hidden apartments for agent: ${agentId}`);
+  } catch (error) {
+    console.error('Error hiding agent apartments:', error);
+    throw error;
+  }
+};
+
+const hideAgentPropertiesPermanent = async (agentId: string) => {
+  try {
+    await Apartment.updateMany(
+      { agent: agentId },
+      { 
+        hideProperty: true,
+        hiddenAt: new Date(),
+        hiddenReason: 'Agent account permanently deleted - legal compliance',
+        status: 'hidden'
+      }
+    );
+    console.log(`Permanently hidden all properties for agent: ${agentId}`);
+  } catch (error) {
+    console.error('Error hiding agent properties for permanent deletion:', error);
+    throw error;
+  }
+};
+
 // Account management
 export const deleteAccount = async (values: { email: string; path: string }): Promise<ApiResponse> => {
   const { email, path } = values;
@@ -1218,16 +1256,98 @@ export const deleteAccount = async (values: { email: string; path: string }): Pr
   const name = `${surname} ${lastname}`;
 
   try {
+    // If user is an agent, hide all their apartments
+    if (currentUser.role === 'agent') {
+      await hideAgentApartments(currentUser._id);
+    }
+
     const emailTemplate = await render(TemporaryDeleteEmailTemplate({ name }));
     await sendEmail({ email, subject: "Account Deleted", html: emailTemplate });
 
-    await User.findByIdAndUpdate(currentUser._id, { userAccountDeleted: true, deletedAt: new Date(), deletedBy: currentUser._id });
+    await User.findByIdAndUpdate(currentUser._id, { 
+      userAccountDeleted: true, 
+      deletedAt: new Date(), 
+      deletedBy: currentUser._id 
+    });
+    
     revalidatePath(path);
-    return { success: true, message: "Account deleted", status: 200 };
+    return { 
+      success: true, 
+      message: currentUser.role === 'agent' 
+        ? "Account deleted and all listings hidden" 
+        : "Account deleted", 
+      status: 200 
+    };
   } catch (error) {
     return handleServerError(error);
   }
 };
+
+export const permanentDeleteAccount = async (values: { email: string; path: string }): Promise<ApiResponse> => {
+  const { email, path } = values;
+  await connectToMongoDB();
+  const currentUser = await getUserByEmail(email);
+
+  if (!currentUser) {
+    return { success: false, message: "Account does not exist", status: 403 };
+  }
+
+  if (currentUser.email !== email) {
+    return { success: false, message: "Email doesn't match", status: 404 };
+  }
+
+  const surname = capitalizeName(currentUser.surName || "");
+  const lastname = capitalizeName(currentUser.lastName || "");
+  const name = `${surname} ${lastname}`;
+  const userRole = currentUser.role;
+
+  try {
+    // Store user data for email and cleanup
+    const userEmail = currentUser.email;
+    const userImage = currentUser.profileImage;
+    const userId = currentUser._id;
+
+    // If user is an agent, HIDE all their properties (for legal protection)
+    if (userRole === 'agent') {
+      await hideAgentPropertiesPermanent(userId);
+    }
+
+    // Delete user notifications
+    await Notification.deleteMany({ recipient: userId });
+
+    // Delete user account permanently
+    await User.findByIdAndDelete(userId);
+
+    // Delete profile image from Cloudinary if exists
+    if (userImage?.public_id) {
+      await deleteCloudinaryImages(userImage.public_id);
+    }
+
+    // Send permanent deletion email
+    const emailTemplate = await render(PermanentDeleteEmailTemplate({ 
+      name, 
+      userType: userRole 
+    }));
+    await sendEmail({ 
+      email: userEmail, 
+      subject: "Account Permanently Deleted - Nomeo Realtors", 
+      html: emailTemplate 
+    });
+
+    revalidatePath(path);
+    return { 
+      success: true, 
+      message: userRole === 'agent' 
+        ? "Agent account permanently deleted and all properties hidden" 
+        : "Account permanently deleted", 
+      status: 200 
+    };
+  } catch (error) {
+    return handleServerError(error);
+  }
+};
+
+// Helper function to hide agent properties permanently (for legal protection)
 
 export const transferAccount = async (values: {
   oldEmail: string;

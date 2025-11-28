@@ -86,6 +86,7 @@ const UserSignUpForm = () => {
           toast.error(response.message);
           setTimeout(() => {
             localStorage.setItem("restore-details", JSON.stringify(restoreData));
+            localStorage.setItem('restoreEmail', value.email);
             action();
           }, 2000);
         } else {

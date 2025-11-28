@@ -1,6 +1,5 @@
 "use server"
 
-import { PropertyProps } from "@/lib/types";
 import Agent from "@/models/agent";
 import Apartment from "@/models/apartment";
 import Attachment from "@/models/attachment";

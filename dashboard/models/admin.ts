@@ -2,9 +2,11 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { ROLE_PERMISSIONS } from '@/lib/permissions';
 import generateAdminId from '@/utils/generateAdminId';
+import { IUser } from './user';
 
 export interface IAdmin extends mongoose.Document {
-  userId: mongoose.Types.ObjectId;
+  _id: mongoose.Types.ObjectId;
+  userId: IUser |  mongoose.Types.ObjectId;
   role: string;
   adminAccess: 'full_access' | 'limited_access' | 'no_access';
   adminPermissions: string[];
