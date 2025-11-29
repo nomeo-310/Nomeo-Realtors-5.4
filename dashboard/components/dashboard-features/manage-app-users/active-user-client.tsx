@@ -179,7 +179,7 @@ const ActiveUsersClient = ({user}:{user:AdminDetailsProps}) => {
           email: user.email,
           phoneNumber: user.phoneNumber,
           currentRole: user.role || 'user',
-          isActive: true,
+          isActive: false,
         };
         
         roleAssignmentModal.onOpen(userForRoleAssignment);

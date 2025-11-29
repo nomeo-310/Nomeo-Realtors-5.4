@@ -4,9 +4,13 @@
 import React from "react";
 import Modal from "../ui/modal";
 import CustomSelect from "../ui/custom-select";
-import { Switch } from "@/components/ui/switch"; // shadcn/ui switch
+import { Switch } from "@/components/ui/switch"; 
 import { Label } from "@/components/ui/label";
 import { useRoleAssignmentModal } from "@/hooks/general-store";
+import { assignRoleToUser } from "@/actions/admin-actions";
+import { usePathname } from "next/navigation";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const RoleAssignmentModal = () => {
   const { onClose, isOpen, user } = useRoleAssignmentModal();
@@ -14,6 +18,9 @@ const RoleAssignmentModal = () => {
   const [selectedRole, setSelectedRole] = React.useState("");
   const [isActive, setIsActive] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const path = usePathname();
+  const queryClient = useQueryClient();
 
   // Available roles for assignment
   const availableRoles = [
@@ -44,23 +51,27 @@ const RoleAssignmentModal = () => {
 
     setIsSubmitting(true);
     try {
-      // Here you would make your API call to update the user's role
-      console.log('Updating user:', {
+      const updateData = {
         userId: user.id,
         newRole: selectedRole,
-        isActive: isActive
-      });
+        path
+      };
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Success - close modal and show success message
-      alert(`Role updated successfully! ${user.surName} is now ${selectedRole}`);
-      onClose();
-      resetForm();
+      const result = await assignRoleToUser(updateData);
+
+      if (result && result.status === 200) {
+        toast.success(`Role updated successfully! ${user.surName} is now ${selectedRole}`)
+        queryClient.invalidateQueries({queryKey: ['active-users']})
+        queryClient.invalidateQueries({queryKey: ['active-agents']})
+        queryClient.invalidateQueries({queryKey: ['active-admins']})
+        onClose();
+        resetForm();
+      } else {
+        toast.error(result.message)
+      }
     } catch (error) {
       console.error('Error updating role:', error);
-      alert('Failed to update role. Please try again.');
+      toast.error('Failed to update role. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -92,9 +103,6 @@ const RoleAssignmentModal = () => {
         return 'Standard user access to main web application';
     }
   };
-
-  // Warning for admin roles
-  const showAdminWarning = selectedRole === 'admin' || selectedRole === 'superAdmin';
 
   if (!user) return null;
 
@@ -160,38 +168,9 @@ const RoleAssignmentModal = () => {
             id="activation-toggle"
             checked={isActive}
             onCheckedChange={handleActivationToggle}
+            disabled
           />
         </div>
-
-        {/* Admin Role Warning */}
-        {showAdminWarning && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-amber-800 mb-1">
-                  Important: Admin Role Assignment
-                </h4>
-                <div className="text-sm text-amber-700 space-y-1">
-                  <p className="font-medium">When assigned an admin role, this user will:</p>
-                  <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Gain access to the admin dashboard and lose access to the main web app dashboard</li>
-                    <li>Have elevated permissions for user management and system configuration</li>
-                    <li>Be able to modify user roles, access sensitive data, and manage system settings</li>
-                    <li>No longer see or use regular user features in the main application</li>
-                  </ul>
-                  <p className="text-xs font-medium mt-2">
-                    Please ensure this is the intended access level for this user.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* User Role Warning */}
         {selectedRole === 'user' && user.currentRole !== 'user' && (

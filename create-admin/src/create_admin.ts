@@ -25,6 +25,7 @@ const createOrUpdateSuperAdmin = async () => {
     const envEmail = process.env.ADMIN_EMAIL;
     const envSurname = process.env.ADMIN_SURNAME;
     const envLastname = process.env.ADMIN_LASTNAME;
+    const envUsername = process.env.ADMIN_USERNAME;
 
     // Validate environment variables
     if (!envPassword || !envEmail || !envSurname || !envLastname) {
@@ -40,7 +41,8 @@ const createOrUpdateSuperAdmin = async () => {
         surName: envSurname,
         lastName: envLastname,
         email: envEmail,
-        password: envPassword,
+        username: envUsername,
+        password: envPassword, // Will be hashed by User schema pre-save hook
         role: 'superAdmin',
         userOnboarded: true,
         userVerified: true,
@@ -51,18 +53,27 @@ const createOrUpdateSuperAdmin = async () => {
       const savedUser = await newUser.save();
       console.log('SuperAdmin User created successfully.');
 
-      // Step 2: Create the Admin record linked to the User
+      // Step 2: Create Admin record with proper history and tracking
       const newAdmin = new Admin({
         userId: savedUser._id,
         role: 'superAdmin',
         adminAccess: 'full_access',
+        adminPermissions: [],
         isActivated: true,
         activatedAt: new Date(),
-        activatedBy: savedUser._id, // Self-activated for first superadmin
-        password: envPassword, // This will be hashed by the Admin schema pre-save hook
+        activatedBy: savedUser._id,
+        password: envPassword,
         passwordAdded: true,
         adminOnboarded: true,
-        createdBy: savedUser._id, // Self-created for first superadmin
+        createdBy: savedUser._id,
+        updatedAt: new Date(),
+        updatedBy: savedUser._id,
+        adminHistory: [{
+          role: 'superAdmin',
+          changedAt: new Date(),
+          changedBy: savedUser._id,
+          reason: 'Initial superAdmin creation via seeding script'
+        }]
       });
 
       await newAdmin.save();
@@ -77,11 +88,12 @@ const createOrUpdateSuperAdmin = async () => {
       const existingAdmin = await Admin.findOne({ userId: existingUser._id });
       
       if (!existingAdmin) {
-        // Create Admin record if it doesn't exist
+        // Create Admin record if it doesn't exist with proper history
         const newAdmin = new Admin({
           userId: existingUser._id,
           role: 'superAdmin',
           adminAccess: 'full_access',
+          adminPermissions: [],
           isActivated: true,
           activatedAt: new Date(),
           activatedBy: existingUser._id,
@@ -89,28 +101,86 @@ const createOrUpdateSuperAdmin = async () => {
           passwordAdded: true,
           adminOnboarded: true,
           createdBy: existingUser._id,
+          updatedAt: new Date(),
+          updatedBy: existingUser._id,
+          adminHistory: [{
+            role: 'superAdmin',
+            changedAt: new Date(),
+            changedBy: existingUser._id,
+            reason: 'Admin record created for existing superAdmin user via seeding script'
+          }]
         });
         await newAdmin.save();
         console.log('Admin record created for existing SuperAdmin user.');
+      } else {
+        // Update existing admin record with proper tracking
+        const updateData: any = {
+          updatedAt: new Date(),
+          updatedBy: existingUser._id
+        };
+
+        // Check if role needs update and add to history
+        if (existingAdmin.role !== 'superAdmin') {
+          const historyEntry = {
+            role: existingAdmin.role,
+            changedAt: new Date(),
+            changedBy: existingUser._id,
+            reason: 'Role updated to superAdmin via seeding script'
+          };
+
+          updateData.role = 'superAdmin';
+          updateData.$push = { adminHistory: historyEntry };
+        }
+
+        // Update password if changed
+        const passwordMatch = existingAdmin.password ? 
+          await bcrypt.compare(envPassword, existingAdmin.password) : false;
+
+        if (!passwordMatch) {
+          updateData.password = envPassword; // Will be re-hashed by schema hook
+          console.log('Admin password updated.');
+        }
+
+        if (Object.keys(updateData).length > 2) { // More than just updatedAt and updatedBy
+          await Admin.findByIdAndUpdate(existingAdmin._id, updateData);
+          console.log('SuperAdmin admin record updated.');
+        }
       }
 
       // Update user data if environment variables changed
-      const passwordMatch = existingUser.password ? 
-        await bcrypt.compare(envPassword, existingUser.password) : false;
+      const userUpdateData: any = {};
+      let needsUserUpdate = false;
 
-      if (
-          existingUser.email !== envEmail || 
-          existingUser.surName !== envSurname ||
-          existingUser.lastName !== envLastname ||
-          !passwordMatch) {
-        
-        const updateData: any = {};
-        if (existingUser.surName !== envSurname) updateData.surName = envSurname;
-        if (existingUser.lastName !== envLastname) updateData.lastName = envLastname;
-        if (existingUser.email !== envEmail) updateData.email = envEmail;
-        if (!passwordMatch) updateData.password = envPassword;
+      if (existingUser.surName !== envSurname) {
+        userUpdateData.surName = envSurname;
+        needsUserUpdate = true;
+      }
+      if (existingUser.lastName !== envLastname) {
+        userUpdateData.lastName = envLastname;
+        needsUserUpdate = true;
+      }
+      if (existingUser.email !== envEmail) {
+        userUpdateData.email = envEmail;
+        needsUserUpdate = true;
+      }
 
-        await User.findByIdAndUpdate(existingUser._id, updateData);
+      // Check password without comparing hashes (let schema handle it)
+      if (envPassword) {
+        userUpdateData.password = envPassword;
+        needsUserUpdate = true;
+      }
+
+      // Ensure user has superAdmin role
+      if (existingUser.role !== 'superAdmin') {
+        userUpdateData.role = 'superAdmin';
+        userUpdateData.previousRole = existingUser.role;
+        userUpdateData.roleChangedAt = new Date();
+        userUpdateData.roleChangedBy = existingUser._id;
+        needsUserUpdate = true;
+      }
+
+      if (needsUserUpdate) {
+        await User.findByIdAndUpdate(existingUser._id, userUpdateData);
         console.log('SuperAdmin user updated.');
       } else {
         console.log('SuperAdmin user is up to date.');

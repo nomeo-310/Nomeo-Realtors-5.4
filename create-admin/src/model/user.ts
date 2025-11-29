@@ -7,7 +7,8 @@ type Image = {
   secure_url: string;
 };
 
-interface IUser extends Document {
+export interface IUser extends Document {
+  _id: Types.ObjectId;
   username: string;
   email: string;
   password?: string;
@@ -31,16 +32,19 @@ interface IUser extends Document {
   profileCreated: boolean;
   userVerified: boolean;
   userIsAnAgent: boolean;
-  userAccountDeleted:  boolean;
+  userAccountDeleted: boolean;
   userAccountSuspended: boolean;
+  suspensionReason: string;
+  suspendedAt: Date;
+  suspendedBy: Types.ObjectId;
   showLikedApartments: boolean;
   showBookmarkedApartments: boolean;
   showLikedBlogs: boolean;
   showBookmarkedBlogs: boolean;
   subscribedToNewsletter: boolean;
   blogCollaborator: boolean;
-  collaborations: mongoose.Types.ObjectId[];
-  createdBlogs: mongoose.Types.ObjectId[];
+  collaborations: Types.ObjectId[];
+  createdBlogs: Types.ObjectId[];
   agentId?: Types.ObjectId;
   notifications?: Types.ObjectId[];
   likedApartments?: Types.ObjectId[];
@@ -50,48 +54,72 @@ interface IUser extends Document {
   comments?: Types.ObjectId[];
   propertyAgents?: Types.ObjectId[];
   propertiesRented?: Types.ObjectId[];
+  previousRole?: string;
+  roleChangedAt?: Date;
+  roleChangedBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
+// Common schema options for string fields
+const stringField = { type: String, default: undefined };
+const booleanField = { type: Boolean, default: false };
+
 const userSchema: Schema<IUser> = new Schema(
   {
-    username: { type: String, unique: true, lowercase: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
-    password: { type: String, default: undefined },
-    role: { type: String, enum: ['user', 'agent', 'admin', 'creator', 'superAdmin'], default: 'user' },
-    surName: { type: String, default: undefined },
-    lastName: { type: String, default: undefined },
-    profilePicture: { type: String, default: undefined },
-    profileImage: {
-      public_id: { type: String, default: undefined },
-      secure_url: { type: String, default: undefined },
+    username: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      lowercase: true
     },
-    bio: { type: String, default: undefined },
-    phoneNumber: { type: String, default: undefined },
-    additionalPhoneNumber: { type: String, default: undefined },
-    address: { type: String, default: undefined },
-    city: { type: String, default: undefined },
-    state: { type: String, default: undefined },
-    otp: { type: String, default: undefined },
+    email: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      lowercase: true
+    },
+    password: stringField,
+    role: { 
+      type: String, 
+      enum: ['user', 'agent', 'admin', 'creator', 'superAdmin'], 
+      default: 'user'
+    },
+    surName: stringField,
+    lastName: stringField,
+    profilePicture: stringField,
+    profileImage: {
+      public_id: stringField,
+      secure_url: stringField,
+    },
+    bio: stringField,
+    phoneNumber: stringField,
+    additionalPhoneNumber: stringField,
+    address: stringField,
+    city: stringField,
+    state: stringField,
+    otp: stringField,
     otpExpiresIn: { type: Number, default: undefined },
-    resetPasswordOtp: { type: String, default: undefined },
+    resetPasswordOtp: stringField,
     placeholderColor: { type: String, default: '' },
     resetPasswordOtpExpiresIn: { type: Number, default: undefined },
-    userOnboarded: { type: Boolean, default: false },
-    profileCreated: { type: Boolean, default: false },
-    userVerified: { type: Boolean, default: false },
-    userIsAnAgent: { type: Boolean, default: false },
-    userAccountDeleted: { type: Boolean, default: false },
-    userAccountSuspended: { type: Boolean, default: false },
-    showLikedApartments: { type: Boolean, default: false },
-    showBookmarkedApartments: { type: Boolean, default: false },
-    showLikedBlogs: { type: Boolean, default: false },
-    showBookmarkedBlogs: { type: Boolean, default: false },
-    subscribedToNewsletter: { type: Boolean, default: false },
-    blogCollaborator: {type: Boolean, default: false},
-    collaborations: [{ type: mongoose.Schema.ObjectId, ref: 'Blog' }],
-    createdBlogs: [{ type: mongoose.Schema.ObjectId, ref: 'Blog' }],
+    userOnboarded: booleanField,
+    profileCreated: booleanField,
+    userVerified: booleanField,
+    userIsAnAgent: booleanField,
+    userAccountDeleted: booleanField,
+    userAccountSuspended: booleanField,
+    suspensionReason: { type: String, default: '' },
+    suspendedAt: { type: Date, default: undefined },
+    suspendedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    showLikedApartments: booleanField,
+    showBookmarkedApartments: booleanField,
+    showLikedBlogs: booleanField,
+    showBookmarkedBlogs: booleanField,
+    subscribedToNewsletter: booleanField,
+    blogCollaborator: booleanField,
+    collaborations: [{ type: Schema.Types.ObjectId, ref: 'Blog' }],
+    createdBlogs: [{ type: Schema.Types.ObjectId, ref: 'Blog' }],
     agentId: { type: Schema.Types.ObjectId, ref: 'Agent' },
     notifications: [{ type: Schema.Types.ObjectId, ref: 'Notification' }],
     likedApartments: [{ type: Schema.Types.ObjectId, ref: 'Apartment' }],
@@ -101,34 +129,84 @@ const userSchema: Schema<IUser> = new Schema(
     comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }],
     propertyAgents: [{ type: Schema.Types.ObjectId, ref: 'Agent' }],
     propertiesRented: [{ type: Schema.Types.ObjectId, ref: 'Apartment' }],
+    previousRole: stringField,
+    roleChangedAt: { type: Date, default: undefined },
+    roleChangedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'development' 
+  }
 );
 
+// Single field indexes for non-unique fields
+userSchema.index({ role: 1 });
+userSchema.index({ city: 1 });
+userSchema.index({ state: 1 });
+userSchema.index({ userOnboarded: 1 });
+userSchema.index({ profileCreated: 1 });
+userSchema.index({ userVerified: 1 });
+userSchema.index({ userIsAnAgent: 1 });
+userSchema.index({ userAccountDeleted: 1 });
+userSchema.index({ userAccountSuspended: 1 });
+userSchema.index({ previousRole: 1 });
+
+// Compound indexes for common query patterns
+userSchema.index({ email: 1, role: 1 });
+userSchema.index({ username: 1, userVerified: 1 });
+userSchema.index({ role: 1, userIsAnAgent: 1 });
+userSchema.index({ userAccountSuspended: 1, userAccountDeleted: 1 });
+userSchema.index({ city: 1, state: 1 });
+userSchema.index({ createdAt: -1 });
+userSchema.index({ updatedAt: -1 });
+userSchema.index({ userOnboarded: 1, profileCreated: 1 });
+userSchema.index({ suspendedAt: -1 });
+userSchema.index({ phoneNumber: 1, userVerified: 1 });
+
+// Text search index for search functionality
+userSchema.index({
+  username: 'text',
+  email: 'text',
+  surName: 'text',
+  lastName: 'text',
+  bio: 'text'
+});
+
+// Sparse indexes for optional fields that are frequently queried
+userSchema.index({ phoneNumber: 1 }, { sparse: true });
+userSchema.index({ agentId: 1 }, { sparse: true });
+
 userSchema.pre<IUser>('save', async function (next) {
-  if (this.isModified('password')) {
-    if (this.password) {
-      const hashedPassword = await bcrypt.hash(this.password, 10);
-      this.password = hashedPassword;
-    }
+  // Only generate color if it's not already set or for new documents
+  if (!this.placeholderColor) {
+    this.placeholderColor = generatePlaceholderColor();
   }
 
-  const color = generatePlaceholderColor();
-  this.placeholderColor = color;
+  // Only hash password if it's modified and exists
+  if (this.isModified('password') && this.password) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
 
   next();
 });
 
 userSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
-  return bcrypt.compare(password, this.password);
+  return this.password ? bcrypt.compare(password, this.password) : false;
 };
 
+// Improved model creation with better caching
 let User: Model<IUser>;
 
-try {
-  User = mongoose.model<IUser>('User');
-} catch (error) {
+if (mongoose.models.User) {
+  User = mongoose.models.User;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔄 Using cached User model');
+  }
+} else {
   User = mongoose.model<IUser>('User', userSchema);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ Created new User model');
+  }
 }
 
 export default User;

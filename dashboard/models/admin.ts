@@ -4,6 +4,14 @@ import { ROLE_PERMISSIONS } from '@/lib/permissions';
 import generateAdminId from '@/utils/generateAdminId';
 import { IUser } from './user';
 
+// Admin History Interface
+export interface IAdminHistory {
+  role: string;
+  changedAt: Date;
+  changedBy: mongoose.Types.ObjectId;
+  reason?: string;
+}
+
 export interface IAdmin extends mongoose.Document {
   _id: mongoose.Types.ObjectId;
   userId: IUser |  mongoose.Types.ObjectId;
@@ -36,7 +44,30 @@ export interface IAdmin extends mongoose.Document {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  updatedBy?: mongoose.Types.ObjectId;
+  adminHistory: IAdminHistory[];
 }
+
+const adminHistorySchema = new mongoose.Schema({
+  role: {
+    type: String,
+    required: true,
+    enum: ['admin', 'creator', 'superAdmin']
+  },
+  changedAt: {
+    type: Date,
+    default: Date.now
+  },
+  changedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  reason: {
+    type: String,
+    default: ''
+  }
+});
 
 const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
   {
@@ -156,12 +187,21 @@ const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'Admin'
     },
+    // NEW FIELDS
+    updatedBy: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'User',
+      sparse: true
+    },
+    adminHistory: { 
+      type: [adminHistorySchema], 
+      default: [] 
+    },
   },
   { timestamps: true }
 );
 
-// FIXED: Only define indexes once - remove any that might be created automatically
-// Single field indexes
+// EXISTING INDEXES (keep all your current indexes)
 adminSchema.index({ role: 1 });
 adminSchema.index({ adminAccess: 1 });
 adminSchema.index({ isActivated: 1 });
@@ -189,7 +229,7 @@ adminSchema.index({ accessId: 1, accessIdExpires: 1 });
 adminSchema.index({ otp: 1, otpExpiresIn: 1 });
 adminSchema.index({ passwordAdded: 1, isActivated: 1 });
 
-// FIXED: TTL indexes - use a future date instead of Date.now()
+// TTL indexes
 adminSchema.index({ otpExpiresIn: 1 }, { 
   expireAfterSeconds: 0
 });
@@ -208,6 +248,11 @@ adminSchema.index({ suspendedBy: 1 }, { sparse: true });
 adminSchema.index({ deactivatedBy: 1 }, { sparse: true });
 adminSchema.index({ reactivatedBy: 1 }, { sparse: true });
 adminSchema.index({ createdBy: 1 }, { sparse: true });
+adminSchema.index({ updatedBy: 1 }, { sparse: true }); // NEW INDEX
+
+// NEW: Index for admin history queries
+adminSchema.index({ 'adminHistory.changedAt': -1 });
+adminSchema.index({ 'adminHistory.changedBy': 1 });
 
 adminSchema.pre<IAdmin>('save', async function (next) {
   // Only generate adminId if it doesn't exist
