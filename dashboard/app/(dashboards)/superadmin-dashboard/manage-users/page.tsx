@@ -1,5 +1,5 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import ActiveUsersClient from '@/components/dashboard-features/manage-app-users/active-user-client';
+import ActiveUsersClient from '@/components/dashboard-features/manage-app-users/active-users-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'

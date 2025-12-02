@@ -11,11 +11,12 @@ import EmptyState from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/formatDate'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Ban, Bell, Eye, MoreHorizontalIcon, RotateCcw, Trash2 } from 'lucide-react'
+import { Badge, Eye, MessageCircle, MoreHorizontalIcon, Pause, ShieldOff, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import TableLoading from '../table-loading'
 import Pagination from '@/components/ui/pagination'
-import { useDeleteUserModal, UserForRestriction } from '@/hooks/general-store'
+import { MessageRecipient, useDeleteUserModal, useMessageUserModal, useRevokeVerificationModal, UserForRestriction, UserForRoleAssignment, UserForVerificationRevocation, useRoleAssignmentModal, useSuspendUserModal } from '@/hooks/general-store'
+import { useRouter } from 'next/navigation'
 
 interface ApiResponse {
   users: ExtendedUserProps[];
@@ -28,11 +29,13 @@ type mobileItemProps = {
   toggleTable: () => void;
 };
 
-const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
+const ActiveUsersClient = ({user}:{user:AdminDetailsProps}) => {
   const { search, sortOrder } = useFilterStore();
 
   const [currentPage, setCurrentPage] = React.useState(1);
   const [currentIndex, setCurrentIndex] = React.useState(-1);
+  
+  const userRole = user.role;
   
   const queryData = React.useMemo(() => ({
     queryText: search,
@@ -42,7 +45,7 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
 
   const fetchData = async (): Promise<ApiResponse> => {
     try {
-      const response = await axios.post<ApiResponse>('/api/admin/users/deleted', queryData);
+      const response = await axios.post<ApiResponse>('/api/admin/users/active', queryData);
 
       if (response.status !== 200) {
         throw new Error(`API returned status: ${response.status}`);
@@ -56,7 +59,7 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
   };
 
   const { data, status } = useQuery<ApiResponse>({
-    queryKey: ['deleted-users', search, sortOrder, currentPage],
+    queryKey: ['active-users', search, sortOrder, currentPage],
     queryFn: fetchData,
     retry: 2,
   });
@@ -64,7 +67,7 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
   React.useEffect(() => {
     setCurrentPage(1);
   }, [search, sortOrder]);
-  
+
   const users = data?.users || [];
   const pagination = data?.pagination || null;
 
@@ -116,89 +119,154 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const Menu = ({ user }: { user: ExtendedUserProps }) => {
-    const [showMenu, setShowMenu] = React.useState(false);
+const Menu = ({ user }: { user: ExtendedUserProps }) => {
+  const [showMenu, setShowMenu] = React.useState(false);
 
-    const deleteUserModal = useDeleteUserModal();
+  const messageModal = useMessageUserModal();
+  const roleAssignmentModal = useRoleAssignmentModal();
+  const revokeVerificationModal = useRevokeVerificationModal();
+  const suspendUserModal = useSuspendUserModal();
+  const deleteUserModal = useDeleteUserModal();
 
-    const handleDeleteUser = (user: ExtendedUserProps) => {
-      const userForBlocking: UserForRestriction = {
-        id: user._id,
-        surName: user.surName,
-        lastName: user.lastName,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        userType: user.role,
-        isActive: user.userVerified,
-        isSuspended: !user.userVerified,
-      };
+  const router = useRouter();
 
-      deleteUserModal.onOpen(userForBlocking);
+  const handleSuspendUser = (user: ExtendedUserProps) => {
+    const userForSuspension: UserForRestriction = {
+      id: user._id,
+      surName: user.surName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      userType: user.role, // 'user', 'agent', or 'admin'
+      isActive: user.userVerified,
+      isSuspended: !user.userVerified
     };
-
-    const handleBlockUser = (user: ExtendedUserProps) => {
-      // Implement block user logic here
-      console.log('Block user:', user);
-      // You might want to open a modal or make an API call
-    };
-
-    const handleSendReminder = (user: ExtendedUserProps) => {
-      // Implement send reminder logic here
-      console.log('Send reminder to:', user);
-      // You might want to open a modal or make an API call
-    };
-
-    return (
-      <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
-        <DropdownMenuTrigger className='outline-none focus:outline-none'>
-          <MoreHorizontalIcon/>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
-          {/* Recovery & Information */}
-          <div className="p-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Actions</p>
-            <DropdownMenuItem 
-              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50 mb-1"
-              onClick={() => handleSendReminder(user)}
-            >
-              <Bell className="w-4 h-4" />
-              Send Reminder
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Restore User
-            </DropdownMenuItem>
-          </div>
-
-          {/* Restriction Actions */}
-          <div className="p-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Restrictions</p>
-            <DropdownMenuItem 
-              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-amber-600 focus:text-amber-600 focus:bg-amber-50 mb-1"
-              onClick={() => handleBlockUser(user)}
-            >
-              <Ban className="w-4 h-4" />
-              Block User
-            </DropdownMenuItem>
-          </div>
-
-          {/* Permanent Actions */}
-          <div className="p-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
-            <DropdownMenuItem 
-              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" 
-              onClick={() => handleDeleteUser(user)}
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete Permanently
-            </DropdownMenuItem>
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
+    
+    suspendUserModal.onOpen(userForSuspension);
   };
+
+  const handleDeleteUser = (user: ExtendedUserProps) => {
+    const userForBlocking: UserForRestriction = {
+      id: user._id,
+      surName: user.surName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      userType: user.role, 
+      isActive: user.userVerified,
+      isSuspended: !user.userVerified,
+    };
+    
+    deleteUserModal.onOpen(userForBlocking);
+  };
+
+  const handleRevokeVerification = (user: ExtendedUserProps) => {
+    const userForRevocation: UserForVerificationRevocation = {
+      id: user._id,
+      surName: user.surName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+      isVerified: user.userVerified,
+    };
+    
+    revokeVerificationModal.onOpen(userForRevocation);
+  };
+
+  const handleAssignRole = (user: ExtendedUserProps) => {
+    const userForRoleAssignment: UserForRoleAssignment = {
+      id: user._id,
+      surName: user.surName,
+      lastName: user.lastName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      currentRole: user.role || 'user',
+      isActive: false,
+    };
+    
+    roleAssignmentModal.onOpen(userForRoleAssignment);
+  };
+
+  const handleMessageUser = (user: ExtendedUserProps) => {
+    const recipient: MessageRecipient = {
+      id: user._id,
+      surName: user.surName, 
+      lastName: user.lastName,
+      email: user.email,
+      userType: user.role, 
+      phoneNumber: user.phoneNumber,
+    };
+    
+    messageModal.onOpen(recipient);
+  };
+
+  return (
+    <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
+      <DropdownMenuTrigger className='outline-none focus:outline-none'>
+        <MoreHorizontalIcon/>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
+        {/* Information & Communication */}
+        <div className="p-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Information & Communication</p>
+          <DropdownMenuItem 
+            className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-gray-700 focus:text-gray-700 focus:bg-gray-50 mb-1"
+            onClick={() => router.push(`/${userRole === 'superAdmin' ? 'superadmin' : userRole}-dashboard/manage-users/${user._id}`)}
+          >
+            <Eye className="w-4 h-4" />
+            View User Details
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50"
+            onClick={() => handleMessageUser(user)}
+          >
+            <MessageCircle className="w-4 h-4" />
+            Send Message
+          </DropdownMenuItem>
+        </div>
+
+        {/* Management Actions */}
+        <div className="p-2 border-t border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
+          <DropdownMenuItem 
+            className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1"
+            onClick={() => handleAssignRole(user)}
+          >
+            <Badge className="w-4 h-4" />
+            Assign Role
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50"
+            onClick={() => handleRevokeVerification(user)}
+          >
+            <ShieldOff className="w-4 h-4" />
+            Revoke Verification
+          </DropdownMenuItem>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="p-2 border-t border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
+          <DropdownMenuItem 
+            className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-amber-600 focus:text-amber-600 focus:bg-amber-50 mb-1"
+            onClick={() => handleSuspendUser(user)}
+          >
+            <Pause className="w-4 h-4" />
+            Suspend User
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10"
+            onClick={() => handleDeleteUser(user)}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete User
+          </DropdownMenuItem>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+};
 
   const MobileItem = ({open, toggleTable, user }:mobileItemProps) => {
     return (
@@ -245,7 +313,7 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
           }
           {status === 'success' && users.length === 0 &&
             <div className='w-full h-full items-center'>
-              <EmptyState message={ search !== '' ? 'No user found for the search query' : 'No deleted users at the moment.'}/>
+              <EmptyState message={ search !== '' ? 'No user found for the search query' : 'No active users at the moment.'}/>
             </div>
           }
           {status === 'success' && users && users.length > 0 &&
@@ -255,7 +323,7 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
                   <UserListHeader/>
                   <TableBody>
                     {users.map((user:ExtendedUserProps, index:number) => (
-                      <UserListItem user={user} index={index}/>
+                      <UserListItem user={user} index={index} key={index}/>
                     ))}
                   </TableBody>
                 </Table>
@@ -283,14 +351,14 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
   return (
     <UsersWrapper 
       user={user}
-      placeholder='search deleted users...'
+      placeholder='search active users...'
       searchDelay={400}
-      namespace='deleted_users'
+      namespace='active_users'
       maxWidth='max-w-4xl'
     >
       <TableList/>
     </UsersWrapper>
   )
-}
+};
 
-export default DeletedUsersClient
+export default ActiveUsersClient

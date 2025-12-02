@@ -1,22 +1,22 @@
 import { getCurrentUser } from '@/actions/auth-actions';
-import { getSingleActiveAgent } from '@/actions/resource-actions';
-import ActiveAgentClient from '@/components/dashboard-features/manage-app-users/active-agent-client';
+import { getSingleSuspendedUser } from '@/actions/resource-actions';
+import SuspendedUserClient from '@/components/dashboard-features/manage-app-users/suspended-user-client';
 import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import React from 'react'
 
 export const metadata: Metadata = {
-  title: 'Active User Details',
+  title: 'Suspended Agent Details',
   description: 'View and manage suspended user account details and appeals',
 };
 
 
-const ActiveAgent = async ({ params }: { params: { id: string } }) => {
+const SuspendedUser = async ({ params }: { params: { id: string } }) => {
   try {
     const user = await getCurrentUser();
 
     if (!user) {
-      redirect('/');
+      redirect('/login');
     }
 
     if (user.role !== 'superAdmin' && user.role !== 'admin') {
@@ -27,13 +27,13 @@ const ActiveAgent = async ({ params }: { params: { id: string } }) => {
       return notFound();
     }
 
-    const activeUserDetails = await getSingleActiveAgent(params.id);
+    const suspensionDetails = await getSingleSuspendedUser(params.id);
 
-    if (!activeUserDetails) {
+    if (!suspensionDetails) {
       return notFound();
     }
 
-    return <ActiveAgentClient userDetails={activeUserDetails} />
+    return <SuspendedUserClient suspensionDetails={suspensionDetails} currentUser={user} />
 
   } catch (error) {
     console.error('Error loading suspended user page:', error);
@@ -41,4 +41,4 @@ const ActiveAgent = async ({ params }: { params: { id: string } }) => {
   }
 }
 
-export default ActiveAgent
+export default SuspendedUser

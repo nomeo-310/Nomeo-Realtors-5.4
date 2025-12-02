@@ -49,7 +49,7 @@ const FeaturedProperties = () => {
   const {data, status } = useQuery({
     queryKey: ['featured-properties'],
     queryFn: () => apiRequestHandler(requestProperties),
-    staleTime: 1000 * 60 * 30,
+    staleTime: 1000 * 60 * 15,
     refetchOnWindowFocus: false
   });
 

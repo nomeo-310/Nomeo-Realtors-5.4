@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
 import React from "react";
 import { Cropper, ReactCropperElement } from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SparklesIcon, PlazaIcon, Coffee02Icon, ImageAdd02Icon, Location06Icon, MapsIcon, TelephoneIcon, User03Icon } from "@hugeicons/core-free-icons";
+import { SparklesIcon, PlazaIcon, Coffee02Icon, ImageAdd02Icon, Location06Icon, MapsIcon, TelephoneIcon, User03Icon, Alert01Icon, CheckmarkCircle01Icon } from "@hugeicons/core-free-icons";
 import InputWithIcon from "../ui/input-with-icon";
 import Image from "next/image";
 import { Input } from "../ui/input";
@@ -22,6 +22,7 @@ import { useAgentOnboardingModal } from "@/hooks/general-store";
 import { userDetails } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { createAgentProfile } from "@/actions/user-actions";
+import { useBioAnalyzer } from "@/hooks/use-bio-analyzer";
 
 const fieldNames = [
   {
@@ -55,7 +56,6 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
   const onboarding = useAgentOnboardingModal();
 
   const [currentStep, setCurrentStep] = React.useState(0);
-
   const [isLoading, setIsLoading] = React.useState(false);
   const [uploadingImage, setUploadingImage] = React.useState(false);
   const [imageCropped, setImageCropped] = React.useState<File | null>(null);
@@ -67,14 +67,19 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
   const [imageUploaded, setImageUploaded] = React.useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-
   const cropperRef = React.useRef<ReactCropperElement>(null);
+
+  // Bio analyzer for agents
+  const { analysis, updateAnalysis } = useBioAnalyzer({
+    type: 'agent',
+    minLength: 200,
+    targetLength: 1000
+  });
 
   const onImageSelection = (image: File | undefined) => {
     if (!image) {
       return;
     }
-
     setImageFile(image);
   };
 
@@ -165,6 +170,13 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
     },
   });
 
+  // Bio analysis handler
+  const handleBioChange = (value: string) => {
+    if (value.length > 10) { // Only analyze after some content
+      updateAnalysis(value);
+    }
+  };
+
   const previousStep = () => {
     setCurrentStep((current) => current - 1);
   };
@@ -216,7 +228,6 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
         }
       })
       .catch((error) => {
-
         toast.error("Something went wrong!!");
       });
   };
@@ -491,28 +502,111 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
           </div>
         )}
         {currentStep === 2 && (
-          <FormField
-            control={form.control}
-            name="agentBio"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <div className="w-full h-[250px] relative">
-                    <HugeiconsIcon
-                      icon={SparklesIcon}
-                      className="absolute top-3 left-3"
-                    />
-                    <Textarea
-                      className="border-0 h-full  resize-none shadow-none bg-gray-200 p-3 pl-10 placeholder:text-black text-base"
-                      placeholder="Give a description of yourself to your future clients"
-                      {...field}
-                    />
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="agentBio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <div className="w-full h-[250px] relative">
+                      <HugeiconsIcon
+                        icon={SparklesIcon}
+                        className="absolute top-3 left-3"
+                      />
+                      <Textarea
+                        className="border-0 h-full resize-none shadow-none bg-gray-200 p-3 pl-10 placeholder:text-black text-base"
+                        placeholder="Give a description of yourself to your future clients. Mention your experience, services, and expertise..."
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleBioChange(e.target.value);
+                        }}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Bio Analysis Panel */}
+            {analysis && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-blue-900 flex items-center gap-2">
+                    <HugeiconsIcon icon={SparklesIcon} className="w-4 h-4" />
+                    Bio Analysis
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-blue-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${analysis.score}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-blue-900">
+                      {analysis.score}/100
+                    </span>
                   </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+                </div>
+
+                {analysis.score >= 70 ? (
+                  <div className="flex items-center gap-2 text-green-600 mb-2">
+                    <HugeiconsIcon icon={CheckmarkCircle01Icon} className="w-4 h-4" />
+                    <span className="text-sm font-medium">Great bio! This looks professional.</span>
+                  </div>
+                ) : analysis.score >= 40 ? (
+                  <div className="flex items-center gap-2 text-yellow-600 mb-2">
+                    <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4" />
+                    <span className="text-sm font-medium">Good start! Consider these improvements:</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-red-600 mb-2">
+                    <HugeiconsIcon icon={Alert01Icon} className="w-4 h-4" />
+                    <span className="text-sm font-medium">Your bio needs more detail to attract clients:</span>
+                  </div>
+                )}
+
+                {analysis.strengths.length > 0 && (
+                  <div className="mb-2">
+                    <p className="text-xs font-medium text-green-700 mb-1">Strengths:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {analysis.strengths.map((strength, index) => (
+                        <span
+                          key={index}
+                          className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full"
+                        >
+                          {strength}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {analysis.suggestions.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-blue-700 mb-1">Suggestions:</p>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                      {analysis.suggestions.map((suggestion, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-blue-500 mt-0.5">•</span>
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {analysis.improvedBio && analysis.score < 70 && (
+                  <div className="mt-3 p-3 bg-white rounded border border-blue-100">
+                    <p className="text-xs font-medium text-blue-700 mb-1">Example improved bio:</p>
+                    <p className="text-xs text-gray-600 italic">{analysis.improvedBio}</p>
+                  </div>
+                )}
+              </div>
             )}
-          />
+          </div>
         )}
         <div className="mt-3 flex items-center justify-between">
           {currentStep > 0 && (

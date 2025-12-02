@@ -11,6 +11,7 @@ import RevokeVerificationModal from '@/components/modals/revoke-verification-mod
 import BlockUserModal from '@/components/modals/delete-user-modal'
 import SuspendUserModal from '@/components/modals/suspend-user-modal'
 import VerificationReminderModal from '@/components/modals/verification-reminder-modal'
+import DeletionReminderModal from '@/components/modals/deletion-reminder-modal'
 
 const ModalProvider = async () => {
 
@@ -28,6 +29,7 @@ const ModalProvider = async () => {
       <BlockUserModal/>
       <SuspendUserModal/>
       <VerificationReminderModal/>
+      <DeletionReminderModal/>
     </React.Fragment>
   )
 }

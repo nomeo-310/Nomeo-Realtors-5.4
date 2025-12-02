@@ -63,7 +63,7 @@ export const POST = async (request: Request) => {
     // Execute queries in parallel for better performance
     const [users, totalUsers] = await Promise.all([
       User.find(searchFilter)
-        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor phoneNumber createdAt role userAccountSuspended')
+        .select('lastName surName profilePicture phoneNumber address city state userVerified email username placeholderColor phoneNumber createdAt role userAccountSuspended suspendedBy')
         .populate({
           path: 'agentId',
           model: Agent,

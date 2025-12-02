@@ -141,6 +141,8 @@ const SuspendUserModal = () => {
             toast.success(`User suspended successfully! ${user.surName} has been suspended ${untilText}.`);
             queryClient.invalidateQueries({ queryKey: ['active-users'] });
             queryClient.invalidateQueries({ queryKey: ['suspended-users'] });
+            queryClient.invalidateQueries({ queryKey: ['active-agents'] });
+            queryClient.invalidateQueries({ queryKey: ['suspended-agents'] });
             onClose();
             resetForm();
           } else {

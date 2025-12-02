@@ -3,7 +3,7 @@ import Apartment from "@/models/apartment";
 
 let cachedFeatured: any[] = [];
 let lastFetchTime = 0;
-const CACHE_DURATION = 1000 * 60 * 30;
+const CACHE_DURATION = 1000 * 60 * 15;
 
 export const GET = async (req: Request) => {
   await connectToMongoDB();
@@ -13,7 +13,7 @@ export const GET = async (req: Request) => {
 
     if (!cachedFeatured.length || now - lastFetchTime > CACHE_DURATION) {
       cachedFeatured = await Apartment.aggregate([
-        { $match: { propertyApproval: "approved" } },
+        { $match: { propertyApproval: "approved", hideProperty: false } },
         { $sample: { size: 4 } },
         {
           $lookup: {

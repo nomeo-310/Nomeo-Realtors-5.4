@@ -211,7 +211,7 @@ const VerifyAccountForm = () => {
           />
           <div className='flex items-center justify-end'>
             {timeLeft !== null && timeLeft > 0 && (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm">
                 Resend available in {timeLeft}s
               </p>
             )}

@@ -1,10 +1,12 @@
-"use client";
+'use client';
 
 import React from "react";
 import Modal from "../ui/modal";
 import CustomSelect from "../ui/custom-select";
 import { useMessageUserModal } from "@/hooks/general-store";
 import { ADMIN_MESSAGE_TEMPLATES, AGENT_MESSAGE_TEMPLATES, USER_MESSAGE_TEMPLATES } from "@/assets/constants/admin-message-templates";
+import { toast } from "sonner";
+import { sendUserMessageEmail } from "@/actions/admin-actions";
 
 const MessageUserModal = () => {
   const { onClose, isOpen, recipient } = useMessageUserModal();
@@ -14,6 +16,7 @@ const MessageUserModal = () => {
   const [selectedTemplate, setSelectedTemplate] = React.useState("");
   const [isUrgent, setIsUrgent] = React.useState(false);
   const [showPreview, setShowPreview] = React.useState(false);
+  const [isSending, setIsSending] = React.useState(false);
 
   // Simple sender info - just "Admin"
   const senderName = "Admin";
@@ -67,25 +70,43 @@ const MessageUserModal = () => {
     }
   };
 
-  const getMailtoLink = () => {
-    const fullSubject = `${isUrgent ? '[URGENT] ' : ''}${subject}`;
-    const recipientEmail = recipient?.email;
-    
-    if (!recipientEmail) {
-      alert('No recipient email available');
-      return '#';
+  // Updated function to use your existing email sending pattern
+  const handleSendMessage = async () => {
+    if (!recipient?.email) {
+      toast.error('No recipient email available');
+      return;
     }
-    
-    return `mailto:${recipientEmail}?subject=${encodeURIComponent(fullSubject)}&body=${encodeURIComponent(message)}`;
-  };
 
-  const handleSendMessage = () => {
-    const mailtoLink = getMailtoLink();
-    if (mailtoLink !== '#') {
-      window.open(mailtoLink, "_blank");
+    setIsSending(true);
+
+    try {
+      const fullSubject = `${isUrgent ? '[URGENT] ' : ''}${subject}`;
+      const userName = `${recipient.surName || ''} ${recipient.lastName || ''}`.trim() || 'Valued User';
+
+      // Use the server action that follows your existing pattern
+      const result = await sendUserMessageEmail({
+        to: recipient.email,
+        subject: fullSubject,
+        message: message,
+        userName: userName,
+        userType: recipient.userType || 'user',
+        isUrgent: isUrgent,
+        senderName: senderName
+      });
+
+      if (result.success) {
+        toast.success('Message sent successfully!');
+        onClose();
+        resetForm();
+      } else {
+        toast.error(result.message || 'Failed to send message');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('An error occurred while sending the message');
+    } finally {
+      setIsSending(false);
     }
-    onClose();
-    resetForm();
   };
 
   const resetForm = () => {
@@ -94,6 +115,7 @@ const MessageUserModal = () => {
     setSelectedTemplate("");
     setIsUrgent(false);
     setShowPreview(false);
+    setIsSending(false);
   };
 
   const handleClose = () => {
@@ -154,9 +176,20 @@ const MessageUserModal = () => {
               </button>
               <button
                 onClick={handleSendMessage}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                disabled={isSending}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Open in Email Client
+                {isSending ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  'Send Message'
+                )}
               </button>
             </div>
           </div>
@@ -222,6 +255,25 @@ const MessageUserModal = () => {
               />
             </div>
 
+            {/* Urgent Toggle */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="urgent-message"
+                checked={isUrgent}
+                onChange={(e) => setIsUrgent(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="urgent-message" className="text-sm font-medium text-gray-900">
+                Mark as urgent
+              </label>
+              {isUrgent && (
+                <span className="inline-block px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded">
+                  URGENT
+                </span>
+              )}
+            </div>
+
             {/* Message Body */}
             <div>
               <div className="flex justify-between items-center mb-2">
@@ -260,10 +312,20 @@ const MessageUserModal = () => {
                 </button>
                 <button
                   onClick={handleSendMessage}
-                  disabled={!subject.trim() || !message.trim() || !recipient?.email}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!subject.trim() || !message.trim() || !recipient?.email || isSending}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Open in Email Client
+                  {isSending ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Message'
+                  )}
                 </button>
               </div>
             </div>

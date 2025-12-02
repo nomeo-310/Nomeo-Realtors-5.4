@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Mail, Phone, MapPin, Clock, AlertTriangle, CheckCircle, MessageSquare, Loader2, XCircle } from 'lucide-react';
+import { Calendar, Mail, Phone, MapPin, Clock, AlertTriangle, CheckCircle, MessageSquare, Loader2, XCircle, Building, Shield, Award, Wallet } from 'lucide-react';
 import { AdminDetailsProps, SuspensionData } from '@/lib/types';
 import { formatDateWithFullMonth } from '@/utils/formatDate';
 import { usePathname, useRouter } from 'next/navigation';
@@ -14,9 +14,28 @@ import { toast } from 'sonner';
 import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDetails: SuspensionData, currentUser: AdminDetailsProps }) => {
+// Type guard to check if agent is populated
+function isAgentPopulated(agentId: any): agentId is { 
+  _id: string;
+  agencyName: string;
+  officeAddress: string;
+  officeNumber: string;
+  licenseNumber?: string;
+  inspectionFeePerHour?: number;
+  agentVerified: boolean;
+  verificationStatus: 'pending' | 'verified' | 'rejected';
+} {
+  return (
+    typeof agentId === 'object' &&
+    agentId !== null &&
+    '_id' in agentId &&
+    'agencyName' in agentId &&
+    'officeAddress' in agentId &&
+    'officeNumber' in agentId
+  );
+}
 
-  console.log(suspensionDetails)
+const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDetails: SuspensionData, currentUser: AdminDetailsProps }) => {
 
   const { user, isActive, suspendedUntil, history } = suspensionDetails;
 
@@ -28,6 +47,11 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
 
   const isAppealPending = !!appealEntry;
   const isSuspended = isActive && new Date(suspendedUntil) > new Date();
+  const isAgent = user.role === 'agent';
+  const hasAgentDetails = isAgent && user.agentId && isAgentPopulated(user.agentId);
+  
+  // Get the agent details safely
+  const agentDetails = hasAgentDetails ? user.agentId : null;
 
   const path = usePathname();
   const router = useRouter();
@@ -50,7 +74,8 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
       '3_days': '3 Days',
       '7_days': '7 Days',
       '30_days': '30 Days',
-      'indefinite': 'Indefinite'
+      'indefinite': 'Indefinite',
+      'permanent': 'Permanent'
     };
     return durationMap[duration] || duration;
   };
@@ -95,8 +120,6 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
       adminNotes: adminNotes,
       path: path,
     };
-
-    console
 
     try {
       const result = await handleAppeal(appealData);
@@ -161,8 +184,8 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
       
       if (result.success) {
         toast.success(result.message);
-        queryClient.invalidateQueries({ queryKey: ['suspended-users'] });
-        router.push(`/${currentUser.role === 'superAdmin' ? 'superadmin' : currentUser.role}-dashboard/manage-users`);
+        queryClient.invalidateQueries({ queryKey: isAgent ? ['suspended-agents'] : ['suspended-users'] });
+        router.push(`/${currentUser.role === 'superAdmin' ? 'superadmin' : currentUser.role}-dashboard/${isAgent ? 'manage-agents' : 'manage-users'}`);
       } else {
         toast.error(result.message);
       }
@@ -214,22 +237,22 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
     ];
 
     // Pick random variation
-        const randomIndex = Math.floor(Math.random() * extensionReasons.length);
-        const extensionReason = extensionReasons[randomIndex];
-    
-        // Normalize duration value to match the server-side SuspensionDuration type
-        // (map any client-side 'permanent' value to the server's 'indefinite')
-        const originalDuration = suspensionDetails.history.find(h => h.action === 'suspension')?.duration || '30_days';
-        const durationForApi = originalDuration === 'permanent' ? 'indefinite' : originalDuration;
-    
-        const data = {
-          suspensionId: suspensionDetails._id,
-          userId: suspensionDetails.user._id,
-          duration: durationForApi as any,
-          extensionReason: extensionReason,
-          category: suspensionEntry?.data?.category || 'other',
-          path: path,
-        };
+    const randomIndex = Math.floor(Math.random() * extensionReasons.length);
+    const extensionReason = extensionReasons[randomIndex];
+
+    // Normalize duration value to match the server-side SuspensionDuration type
+    // (map any client-side 'permanent' value to the server's 'indefinite')
+    const originalDuration = suspensionDetails.history.find(h => h.action === 'suspension')?.duration || '30_days';
+    const durationForApi = originalDuration === 'permanent' ? 'indefinite' : originalDuration;
+
+    const data = {
+      suspensionId: suspensionDetails._id,
+      userId: suspensionDetails.user._id,
+      duration: durationForApi as any,
+      extensionReason: extensionReason,
+      category: suspensionEntry?.data?.category || 'other',
+      path: path,
+    };
 
     try {
       const result = await extendSuspension(data);
@@ -251,10 +274,20 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
     <div className='w-full h-full flex flex-col gap-6 md:gap-8 lg:gap-10 pb-6'>
       {/* Header - Maintaining your original structure */}
       <div className="items-center flex justify-between w-full">
-        <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>Suspended User Details</h2>
-        <Badge variant={getStatusVariant()} className="text-sm px-3 py-1">
-          {getStatusText()}
-        </Badge>
+        <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>
+          {isAgent ? 'Suspended Agent Details' : 'Suspended User Details'}
+        </h2>
+        <div className="flex items-center gap-3">
+          {isAgent && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Building className="w-3 h-3" />
+              Agent
+            </Badge>
+          )}
+          <Badge variant={getStatusVariant()} className="text-sm px-3 py-1">
+            {getStatusText()}
+          </Badge>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -268,8 +301,19 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
             </Avatar>
             <CardTitle className="text-xl font-quicksand">{userName}</CardTitle>
             <CardDescription className="font-quicksand capitalize">{user.role}</CardDescription>
+            
+            {/* Agent Verification Badge */}
+            {agentDetails && typeof agentDetails !== 'string' && agentDetails.agentVerified && (
+              <div className="flex justify-center mt-2">
+                <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  Verified Agent
+                </Badge>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Basic Contact Information */}
             <div className="flex items-center gap-3">
               <Mail className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-quicksand">{user.email}</span>
@@ -288,15 +332,90 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
               <MapPin className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm font-quicksand">{user.city}, {user.state}</span>
             </div>
+
+            {/* Agent Details Section */}
+            {agentDetails && (
+              <div className="pt-4 border-t border-gray-200 space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2 text-blue-600">
+                  <Building className="w-4 h-4" />
+                  Agency Information
+                </h4>
+                
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Agency Name</p>
+                    <p className="text-sm font-quicksand">{agentDetails && typeof agentDetails !== 'string' ? agentDetails.agencyName : ''}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Office Address</p>
+                    <p className="text-sm font-quicksand">{agentDetails && typeof agentDetails !== 'string' ? agentDetails.officeAddress : ''}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Office Number</p>
+                    <p className="text-sm font-quicksand">{agentDetails && typeof agentDetails !== 'string' ? agentDetails.officeNumber : ''}</p>
+                  </div>
+                  
+                  {agentDetails && typeof agentDetails !== 'string' && agentDetails.licenseNumber && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">License Number</p>
+                      <p className="text-sm font-mono">{agentDetails.licenseNumber}</p>
+                    </div>
+                  )}
+                  
+                  {agentDetails && typeof agentDetails !== 'string' && agentDetails.inspectionFeePerHour && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Inspection Fee</p>
+                      <p className="text-sm font-quicksand flex items-center gap-1">
+                        <Wallet className="w-3 h-3" />
+                        ₦{agentDetails.inspectionFeePerHour.toLocaleString()}/hour
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium text-muted-foreground">Verification Status</p>
+                    <Badge 
+                      variant={
+                        typeof agentDetails !== 'string' && agentDetails ?
+                          (agentDetails.verificationStatus === 'verified' ? 'default' :
+                            agentDetails.verificationStatus === 'pending' ? 'secondary' : 'destructive')
+                          : 'default'
+                      }
+                      className="text-xs capitalize"
+                    >
+                      {typeof agentDetails !== 'string' && agentDetails ? agentDetails.verificationStatus : ''}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Agent without populated details */}
+            {isAgent && !agentDetails && user.agentId && typeof user.agentId === 'string' && (
+              <div className="pt-4 border-t border-gray-200">
+                <h4 className="font-semibold text-sm flex items-center gap-2 text-amber-600">
+                  <Building className="w-4 h-4" />
+                  Agent Profile
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Agent details not loaded. Reference ID: {user.agentId}
+                </p>
+              </div>
+            )}
+
+            {/* Bio Section */}
             {user.bio && (
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground font-quicksand">{user.bio}</p>
+              <div className="pt-4 border-t border-gray-200">
+                <h4 className="font-semibold text-sm text-muted-foreground mb-2">About</h4>
+                <p className="text-sm text-muted-foreground font-quicksand leading-relaxed">{user.bio}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Main Content Area */}
+        {/* Main Content Area - Rest of your existing code remains the same */}
         <div className="lg:col-span-2 space-y-4 md:space-y-8">
           {/* Suspension Details Card */}
           <Card>

@@ -19,6 +19,9 @@ import { RoleAssignmentEmailTemplate } from "@/components/email-templates/role-a
 import bcrypt from "bcryptjs";
 import AdminSetupEmailTemplate from "@/components/email-templates/admin-setup-email-template";
 import { generatePlaceholderColor } from "@/utils/generatePlaceholderColor";
+import { UserMessageEmailTemplate } from "@/components/email-templates/user-message-email-template";
+import { VerificationReminderEmailTemplate } from "@/components/email-templates/verification-reminder-email-template";
+import { DeletionReminderEmailTemplate } from "@/components/email-templates/delete-reminder-email-template";
 
 interface agentDetails {
   agentId: string;
@@ -186,6 +189,115 @@ export const sendAdminSetupEmail = async (
     return false;
   }
 };
+
+export const sendUserMessageEmail = async (emailData: {
+  to: string;
+  subject: string;
+  message: string;
+  userName: string;
+  userType: string;
+  isUrgent: boolean;
+  senderName: string;
+}) => {
+  try {
+    const emailTemplate = await render(
+      UserMessageEmailTemplate({
+        userName: emailData.userName,
+        subject: emailData.subject,
+        message: emailData.message,
+        senderName: emailData.senderName,
+        isUrgent: emailData.isUrgent,
+        userType: emailData.userType
+      })
+    );
+
+    await sendEmail({ 
+      email: emailData.to, 
+      subject: emailData.subject, 
+      html: emailTemplate 
+    });
+    
+    return { success: true, message: 'Email sent successfully', status: 200 };
+  } catch (error) {
+    console.error('Error sending user message email:', error);
+    return { success: false, message: 'Failed to send email', status: 500 };
+  }
+};
+
+export const sendVerificationReminderEmail = async (emailData: {
+  to: string;
+  subject: string;
+  message: string;
+  userName: string;
+  userType: string;
+  reminderType: string;
+  includeVerificationLink: boolean;
+}) => {
+  try {
+    const emailTemplate = await render(
+      VerificationReminderEmailTemplate({
+        userName: emailData.userName,
+        userType: emailData.userType,
+        subject: emailData.subject,
+        message: emailData.message,
+        reminderType: emailData.reminderType,
+        includeVerificationLink: emailData.includeVerificationLink
+      })
+    );
+
+    await sendEmail({ 
+      email: emailData.to, 
+      subject: emailData.subject, 
+      html: emailTemplate 
+    });
+    
+    return { success: true, message: 'Verification reminder sent successfully' };
+  } catch (error) {
+    console.error('Error sending verification reminder email:', error);
+    return { success: false, message: 'Failed to send verification reminder' };
+  }
+};
+
+export const sendDeletionReminderEmail = async (emailData: {
+  to: string;
+  subject: string; // Still needed for sendEmail function
+  message: string;
+  userName: string;
+  userType: string;
+  includeRecoveryLink: boolean;
+  deletionDate: string;
+  daysRemaining: number;
+  isUrgent: boolean;
+  registrationDate?: string;
+}) => {
+  try {
+    const emailTemplate = await render(
+      DeletionReminderEmailTemplate({
+        userName: emailData.userName,
+        userType: emailData.userType,
+        message: emailData.message,
+        includeRecoveryLink: emailData.includeRecoveryLink,
+        deletionDate: emailData.deletionDate,
+        daysRemaining: emailData.daysRemaining,
+        isUrgent: emailData.isUrgent,
+        registrationDate: emailData.registrationDate
+      })
+    );
+
+    await sendEmail({ 
+      email: emailData.to, 
+      subject: emailData.subject,
+      html: emailTemplate 
+    });
+    
+    return { success: true, message: 'Deletion reminder sent successfully' };
+  } catch (error) {
+    console.error('Error sending deletion reminder email:', error);
+    return { success: false, message: 'Failed to send deletion reminder' };
+  }
+};
+
+
 
 const validateSuperAdminAccess = async (): Promise<{ success: boolean; user?: any; message?: string; status?: number }> => {
   const current_user = await getCurrentUser();
@@ -530,7 +642,7 @@ export const deleteUser = async (values: userDetails) => {
     const targetUserEmail = targetUser.email;
     const targetUserImage = targetUser.profileImage;
     const targetUserName = capitalizeName(targetUser.surName ?? '') + ' ' + capitalizeName(targetUser.lastName ?? '');
-    const userRole = targetUser.role; // 'user' or 'agent'
+    const userRole = targetUser.role;
 
     // Check if user has an associated admin record and delete it
     const userAdminRecord = await Admin.findOne({ userId: userId });
@@ -555,7 +667,7 @@ export const deleteUser = async (values: userDetails) => {
       'user', 
       reason || 'Account deleted by administrator',
       targetUserName || targetUserEmail.split('@')[0],
-      userRole // Pass the role for context in the email
+      userRole 
     );
 
     revalidatePath(path);
@@ -751,7 +863,7 @@ export const revokeValidation = async (values: userDetails) => {
     return { success: false, message: 'User cannot be found', status: 404 };
   }
 
-  if (!focusedUser.profileCreated && !focusedUser.userOnboarded) {
+  if (!focusedUser.profileCreated && !focusedUser.userOnboarded && !focusedUser.userVerified) {
     return { success: false, message: 'User verification has already been revoked', status: 400 };
   }
 
@@ -773,6 +885,7 @@ export const revokeValidation = async (values: userDetails) => {
       profilePicture: null,
       city: '',
       state: '',
+      userVerified: false
     })
 
     if (focusedUser.userIsAnAgent) {

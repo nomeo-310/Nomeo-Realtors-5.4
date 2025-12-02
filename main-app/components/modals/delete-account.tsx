@@ -20,8 +20,8 @@ const DeleteAccount = () => {
   const Initiate = () => {
     return (
       <div className="mt-5 w-full flex items-center justify-between">
-        <button type="button" className='py-2 px-4 rounded border-black/50 border dark:border-white/70 text-sm cursor-pointer' onClick={onClose}>Cancel</button>
-        <button type="button" className='py-2 px-4 rounded bg-black text-white text-sm border-black border cursor-pointer' onClick={() => setLevel('start')}>Proceed</button>
+        <button type="button" className='py-2 px-4 rounded-md border-black/50 border dark:border-white/70 text-sm cursor-pointer' onClick={onClose}>Cancel</button>
+        <button type="button" className='py-2 px-4 rounded-md bg-secondary-blue text-white text-sm border-secondary-blue border cursor-pointer' onClick={() => setLevel('start')}>Proceed</button>
       </div>
     )
   };
@@ -62,13 +62,13 @@ const DeleteAccount = () => {
           onChange={(e) => setAccountEmail(e.target.value)}
         />
         <div className="mt-5 w-full flex items-center justify-between">
-          <button type="button" className='py-2 px-4 rounded-full border-black/50 border dark:border-white/70 text-sm' onClick={() => { setLevel('initiate'); onClose(); }}>Cancel</button>
+          <button type="button" className='py-2 px-4 rounded-md border-black/50 border dark:border-white/70 text-sm' onClick={() => { setLevel('initiate'); onClose(); }}>Cancel</button>
           <LoadingButton
             label='Delete My Account'
             loadingLabel='Deleting Account...'
             onClick={() => deleteUserAccount()}
             isLoading={isLoading}
-            className='py-2 px-4 rounded-full bg-secondary-blue text-white text-sm border-black border'
+            className='py-2 px-4 bg-secondary-blue text-white text-sm border-secondary-blue border rounded-md'
             type='button'
           />
         </div>

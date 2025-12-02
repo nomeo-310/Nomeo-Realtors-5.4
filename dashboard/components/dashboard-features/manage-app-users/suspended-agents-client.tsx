@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { AdminDetailsProps, BasicAgentProps,  PaginationProps } from '@/lib/types'
+import { AdminDetailsProps, BasicAgentProps,  ExtendedUserProps,  PaginationProps } from '@/lib/types'
 import AgentsWrapper from './agents-wrapper'
 import { useFilterStore } from '@/hooks/usefilter-store';
 import axios from 'axios';
@@ -15,6 +15,8 @@ import { Eye, MessageCircle, MoreHorizontalIcon, PlayCircle, Trash2 } from 'luci
 import { cn } from '@/lib/utils';
 import TableLoading from '../table-loading';
 import Pagination from '@/components/ui/pagination';
+import { useDeleteUserModal, UserForRestriction } from '@/hooks/general-store';
+import { useRouter } from 'next/navigation';
 
 interface ApiResponse {
   users: BasicAgentProps[];
@@ -27,11 +29,16 @@ type mobileItemProps = {
   toggleTable: () => void;
 };
 
-const SuspendedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
+const SuspendedAgentsClient = ({user:current_user}:{user:AdminDetailsProps}) => {
   const { search, sortOrder } = useFilterStore();
 
   const [currentPage, setCurrentPage] = React.useState(1);
   const [currentIndex, setCurrentIndex] = React.useState(-1);
+
+  console.log(current_user)
+
+  const userRole = current_user.role;
+  const router = useRouter();
   
   const queryData = React.useMemo(() => ({
     queryText: search,
@@ -109,50 +116,106 @@ const SuspendedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{user.state}</TableCell>
         <TableCell className="text-xs md:text-sm text-center border-r border-b">{formatDate(user.createdAt)}</TableCell>
         <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
-          <Menu/>
+          <Menu user={user}/>
         </TableCell>
       </TableRow>
     )
   };
 
-  const Menu = () => {
-    const [showMenu, setShowMenu] = React.useState(false);
+    const Menu = ({ user }: { user: ExtendedUserProps }) => {
+      const [showMenu, setShowMenu] = React.useState(false);
 
-    return (
-      <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
-        <DropdownMenuTrigger className='outline-none focus:outline-none'>
-          <MoreHorizontalIcon/>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
-          {/* User Management */}
-          <div className="p-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1">
-              <PlayCircle className="w-4 h-4" />
-              Revoke Suspension
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
-              <MessageCircle className="w-4 h-4" />
-              Send Message
-            </DropdownMenuItem>
-          </div>
+      console.log(user.suspendedBy)
+  
+      const deleteUserModal = useDeleteUserModal();
+  
+      const handleDeleteUser = (user: ExtendedUserProps) => {
+        const userForBlocking: UserForRestriction = {
+          id: user._id,
+          surName: user.surName,
+          lastName: user.lastName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          userType: user.role,
+          isActive: user.userVerified,
+          isSuspended: !user.userVerified,
+        };
+  
+        deleteUserModal.onOpen(userForBlocking);
+      };
+  
+      return (
+        <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
+          <DropdownMenuTrigger className='outline-none focus:outline-none'>
+            <MoreHorizontalIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
+            {/* User Management */}
+            {current_user.userId._id === user.suspendedBy && (
+              <div className="p-2">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
+                <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1" onClick={() => router.push(`/${userRole === 'superAdmin' ? 'superadmin' : userRole}-dashboard/manage-agents/suspended/${user._id}`)}>
+                  <PlayCircle className="w-4 h-4" />
+                  Lift Suspension
+                </DropdownMenuItem>
+              </div>
+            )}
+  
+            {/* Information & Danger */}
+            <div className="p-2 border-t border-gray-100">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Actions</p>
+              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1" onClick={() => router.push(`/${userRole === 'superAdmin' ? 'superadmin' : userRole}-dashboard/manage-agents/suspended/${user._id}`)}>
+                <Eye className="w-4 h-4" />
+                View Suspension Details
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteUser(user)}>
+                <Trash2 className="w-4 h-4" />
+                Delete Agent
+              </DropdownMenuItem>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    };
 
-          {/* Information & Danger */}
-          <div className="p-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Actions</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1">
-              <Eye className="w-4 h-4" />
-              View Suspension Details
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
-              <Trash2 className="w-4 h-4" />
-              Delete Agent
-            </DropdownMenuItem>
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
-  };
+  // const Menu = () => {
+  //   const [showMenu, setShowMenu] = React.useState(false);
+
+  //   return (
+  //     <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
+  //       <DropdownMenuTrigger className='outline-none focus:outline-none'>
+  //         <MoreHorizontalIcon/>
+  //       </DropdownMenuTrigger>
+  //       <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
+  //         {/* User Management */}
+  //         <div className="p-2">
+  //           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
+  //           <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50 mb-1">
+  //             <PlayCircle className="w-4 h-4" />
+  //             Revoke Suspension
+  //           </DropdownMenuItem>
+  //           <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+  //             <MessageCircle className="w-4 h-4" />
+  //             Send Message
+  //           </DropdownMenuItem>
+  //         </div>
+
+  //         {/* Information & Danger */}
+  //         <div className="p-2 border-t border-gray-100">
+  //           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Actions</p>
+  //           <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1">
+  //             <Eye className="w-4 h-4" />
+  //             View Suspension Details
+  //           </DropdownMenuItem>
+  //           <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
+  //             <Trash2 className="w-4 h-4" />
+  //             Delete Agent
+  //           </DropdownMenuItem>
+  //         </div>
+  //       </DropdownMenuContent>
+  //     </DropdownMenu>
+  //   )
+  // };
 
   const MobileItem = ({open, toggleTable, user }:mobileItemProps) => {
     return (
@@ -237,7 +300,7 @@ const SuspendedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
 
   return (
     <AgentsWrapper 
-      user={user}
+      user={current_user}
       placeholder='search suspended agents...'
       searchDelay={400}
       namespace='suspended_agents'

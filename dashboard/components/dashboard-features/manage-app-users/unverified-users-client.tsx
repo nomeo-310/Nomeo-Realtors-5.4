@@ -168,10 +168,6 @@ const UnverifiedUsersClient = ({ user }: { user: AdminDetailsProps }) => {
               <Bell className="w-4 h-4" />
               Send Verification Reminder
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50">
-              <Eye className="w-4 h-4" />
-              View Verification Details
-            </DropdownMenuItem>
           </div>
 
           {/* Danger Zone */}

@@ -18,6 +18,8 @@ export interface ExtendedUserProps extends BasicUserProps {
   phoneNumber: string;
   userAccountSuspended: boolean;
   suspendedBy: string;
+  deletedAt: string;
+  deletedBy: string;
 }
 
 export interface BasicAgentProps extends ExtendedUserProps {
@@ -307,9 +309,9 @@ export interface PropertyProps {
   bookmarks: string[];
 };
 
-interface SuspensionHistoryEntry {
+interface SuspensionHistory {
   _id: string;
-  action: 'suspension' | 'lift' | 'extension' | 'appeal' | 'appeal_approved' | 'appeal_rejected' | 'auto_lift',
+  action: 'suspension' | 'lift' | 'extension' | 'appeal' | 'appeal_approved' | 'appeal_rejected' | 'auto_lift';
   description: string;
   performedBy: string;
   performedAt: string;
@@ -323,7 +325,7 @@ interface SuspensionHistoryEntry {
   duration?: '3_days' | '7_days' | '30_days' | 'permanent';
 }
 
-interface SuspendedUser {
+interface UserDetails {
   _id: string;
   email: string;
   role: string;
@@ -335,12 +337,26 @@ interface SuspendedUser {
   profilePicture: string;
   state: string;
   surName: string;
+  agentId?: string | AgentId | null;
+}
+
+interface AgentId {
+  _id: string;
+  agencyName: string;
+  officeAddress: string;
+  officeNumber: string;
+  licenseNumber?: string;
+  inspectionFeePerHour?: number;
+  agentVerified: boolean;
+  verificationStatus: 'pending' | 'verified' | 'rejected';
 }
 
 export interface SuspensionData {
   _id: string;
-  user: SuspendedUser;
+  user: UserDetails;
   isActive: boolean;
   suspendedUntil: string;
-  history: SuspensionHistoryEntry[];
+  history: SuspensionHistory[];
+  createdAt?: string;
+  updatedAt?: string;
 }

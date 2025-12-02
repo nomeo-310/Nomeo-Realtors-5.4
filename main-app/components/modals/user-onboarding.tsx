@@ -14,6 +14,8 @@ const UserOnBoarding = ({user}:{user:userDetails}) => {
       isOpen={onboardingControl.isOpen}
       onClose={onboardingControl.onClose}
       useCloseButton={false}
+      closeOnEsc={false}
+      closeOnOverlayClick={false}
       title='Create User Profile'
       useSeparator
       width='xl:w-[600px] lg:w-[550px] md:w-[550px]'

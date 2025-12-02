@@ -93,8 +93,8 @@ export function RoleAssignmentEmailTemplate(props: RoleAssignmentEmailTemplatePr
               </Text>
               <Text style={textStyle}>
                 <strong>Setup Link:</strong>{' '}
-                <Link href={`${process.env.APP_URL}/admin/set-up`} style={linkStyle}>
-                  {process.env.APP_URL}/admin/setup
+                <Link href={`${process.env.NEXT_PUBLIC_APP_URL}/admin/set-up`} style={linkStyle}>
+                  {process.env.NEXT_PUBLIC_APP_URL}/admin/set-up
                 </Link>
               </Text>
             </Section>

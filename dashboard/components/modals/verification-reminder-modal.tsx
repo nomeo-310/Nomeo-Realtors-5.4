@@ -1,5 +1,4 @@
-// components/admin/verification-reminder-modal.tsx
-"use client";
+'use client';
 
 import React from "react";
 import Modal from "../ui/modal";
@@ -8,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useVerificationReminderModal } from "@/hooks/general-store";
 import { formatDate } from "@/utils/formatDate";
+import { toast } from "sonner";
+import { sendVerificationReminderEmail } from "@/actions/admin-actions";
 
 const VerificationReminderModal = () => {
   const { onClose, isOpen, user } = useVerificationReminderModal();
@@ -18,7 +19,7 @@ const VerificationReminderModal = () => {
   const [reminderType, setReminderType] = React.useState("friendly");
   const [includeVerificationLink, setIncludeVerificationLink] = React.useState(true);
   const [showPreview, setShowPreview] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSending, setIsSending] = React.useState(false);
 
   // Reminder templates
   const reminderTemplates = [
@@ -30,7 +31,7 @@ const VerificationReminderModal = () => {
 
 We noticed you haven't completed your account verification yet. Verifying your account helps us ensure the security of our platform and unlocks all features available to you.
 
-To complete your verification, please visit your account settings or use the verification link below.
+To complete your verification, please visit your account settings.
 
 If you need any assistance with the verification process, please don't hesitate to contact our support team.
 
@@ -167,40 +168,51 @@ The Platform Team`
     }
   };
 
-  const handleIncludeLinkChange = (checked: boolean) => {
-    setIncludeVerificationLink(checked);
-    // Re-process current message with updated link
-    if (selectedTemplate) {
-      const template = reminderTemplates.find(t => t.id === selectedTemplate);
-      if (template) {
-        const processed = processTemplate(template);
-        setCustomMessage(processed.message);
-      }
+  // Updated function to use Nodemailer via server action
+  const handleSendReminder = async () => {
+    if (!user?.email) {
+      toast.error('No user email available');
+      return;
     }
-  };
 
-  const getMailtoLink = () => {
-    const finalMessage = includeVerificationLink
-      ? `${customMessage}\n\nVerification Link: https://yourapp.com/verify-account`
-      : customMessage;
+    setIsSending(true);
 
-    return `mailto:${user?.email}?subject=${encodeURIComponent(customSubject)}&body=${encodeURIComponent(finalMessage)}`;
-  };
+    try {
+      const userName = `${user.surName || ''} ${user.lastName || ''}`.trim() || 'Valued User';
 
-  const handleSendReminder = () => {
-    const mailtoLink = getMailtoLink();
-    window.open(mailtoLink, "_blank");
+      // Use the server action that uses Nodemailer
+      const result = await sendVerificationReminderEmail({
+        to: user.email,
+        subject: customSubject,
+        message: customMessage,
+        userName: userName,
+        userType: user.userType || 'user',
+        reminderType: reminderType,
+        includeVerificationLink: includeVerificationLink
+      });
 
-    // Optional: Log the reminder in your system
-    console.log('Reminder sent:', {
-      userId: user?.id,
-      template: selectedTemplate,
-      type: reminderType,
-      includeLink: includeVerificationLink
-    });
+      if (result.success) {
+        toast.success('Verification reminder sent successfully!');
+        
+        // Optional: Log the reminder in your database
+        console.log('Reminder sent via Nodemailer:', {
+          userId: user?.id,
+          template: selectedTemplate,
+          type: reminderType,
+          includeLink: includeVerificationLink
+        });
 
-    onClose();
-    resetForm();
+        onClose();
+        resetForm();
+      } else {
+        toast.error(result.message || 'Failed to send reminder');
+      }
+    } catch (error) {
+      console.error('Error sending reminder:', error);
+      toast.error('An error occurred while sending the reminder');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const resetForm = () => {
@@ -210,7 +222,7 @@ The Platform Team`
     setReminderType("friendly");
     setIncludeVerificationLink(true);
     setShowPreview(false);
-    setIsSubmitting(false);
+    setIsSending(false);
   };
 
   const handleClose = () => {
@@ -245,6 +257,11 @@ The Platform Team`
               <div className="space-y-2 text-sm">
                 <p><span className="font-medium">To:</span> {displayName} &lt;{user.email}&gt;</p>
                 <p><span className="font-medium">Subject:</span> {currentSubject}</p>
+                {includeVerificationLink && (
+                  <span className="inline-block px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
+                    Includes Verification Link
+                  </span>
+                )}
               </div>
             </div>
 
@@ -253,6 +270,13 @@ The Platform Team`
               <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">
                 {currentMessage}
               </pre>
+              {includeVerificationLink && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                  <p className="text-sm text-green-800 font-medium">
+                    ✅ Verification link will be included in the email
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 justify-end pt-4">
@@ -264,12 +288,20 @@ The Platform Team`
               </button>
               <button
                 onClick={handleSendReminder}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
+                disabled={isSending}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Open in Email Client
+                {isSending ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reminder'
+                )}
               </button>
             </div>
           </div>
@@ -297,6 +329,7 @@ The Platform Team`
                 </div>
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               {/* Reminder Type */}
               <div className="space-y-3">
@@ -334,6 +367,20 @@ The Platform Team`
                   itemText="lg:text-sm text-sm"
                 />
               </div>
+            </div>
+
+            {/* Include Verification Link Toggle */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="include-verification-link"
+                checked={includeVerificationLink}
+                onChange={(e) => setIncludeVerificationLink(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="include-verification-link" className="text-sm font-medium text-gray-900">
+                Include verification link in email
+              </label>
             </div>
 
             {/* Custom Subject */}
@@ -389,13 +436,20 @@ The Platform Team`
                 </button>
                 <button
                   onClick={handleSendReminder}
-                  disabled={!customSubject.trim() || !customMessage.trim()}
+                  disabled={!customSubject.trim() || !customMessage.trim() || isSending}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Send Reminder
+                  {isSending ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Reminder'
+                  )}
                 </button>
               </div>
             </div>

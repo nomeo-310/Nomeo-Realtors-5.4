@@ -1,340 +1,449 @@
 'use client'
 
 import React from 'react'
-import UsersWrapper from './users-wrapper'
-import { AdminDetailsProps, ExtendedUserProps, PaginationProps } from '@/lib/types'
-import { useFilterStore } from '@/hooks/usefilter-store'
-import axios from 'axios'
-import { useQuery } from '@tanstack/react-query'
-import ErrorState from '@/components/ui/error-state'
-import EmptyState from '@/components/ui/empty-state'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatDate } from '@/utils/formatDate'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Badge, MessageCircle, MoreHorizontalIcon, Pause, ShieldOff, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import TableLoading from '../table-loading'
-import Pagination from '@/components/ui/pagination'
-import { MessageRecipient, useDeleteUserModal, useMessageUserModal, useRevokeVerificationModal, UserForRestriction, UserForRoleAssignment, UserForVerificationRevocation, useRoleAssignmentModal, useSuspendUserModal } from '@/hooks/general-store'
+import { Mail, Phone, MapPin, User, Bookmark, Heart, Stethoscope, FileText, Users, ThumbsUp, Clock, Building } from 'lucide-react'
 
-interface ApiResponse {
-  users: ExtendedUserProps[];
-  pagination: PaginationProps
+// TypeScript Interface
+interface ExtendedUserProps {
+  _id: string
+  username: string
+  email: string
+  role: string
+  userOnboarded: boolean
+  profileCreated: boolean
+  userVerified: boolean
+  blogCollaborator: boolean
+  collaborations: any[]
+  createdBlogs: any[]
+  likedApartments: string[]
+  bookmarkedApartments: string[]
+  likedBlogs: any[]
+  bookmarkedABlogs: any[]
+  propertiesRented: any[]
+  additionalPhoneNumber: string
+  bio: string
+  city: string
+  lastName: string
+  phoneNumber: string
+  profilePicture: string
+  state: string
+  surName: string
 }
 
-type mobileItemProps = {
-  open: boolean;
-  user: ExtendedUserProps;
-  toggleTable: () => void;
-};
+interface ActiveUserClientProps {
+  userDetails: ExtendedUserProps
+}
 
-const ActiveUsersClient = ({user}:{user:AdminDetailsProps}) => {
-  const { search, sortOrder } = useFilterStore();
+const ActiveUserClient: React.FC<ActiveUserClientProps> = ({ userDetails }) => {
 
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [currentIndex, setCurrentIndex] = React.useState(-1);
-  
-  const queryData = React.useMemo(() => ({
-    queryText: search,
-    sortOrder: sortOrder,
-    page: currentPage
-  }), [search, sortOrder, currentPage]);
-
-  const fetchData = async (): Promise<ApiResponse> => {
-    try {
-      const response = await axios.post<ApiResponse>('/api/admin/users/active', queryData);
-
-      if (response.status !== 200) {
-        throw new Error(`API returned status: ${response.status}`);
+  // Enhanced bio parsing with fallbacks
+  const parseBio = (bio: string) => {
+    if (!bio || bio.trim() === '') {
+      return {
+        mainBio: 'No bio provided by the user.',
+        likes: [],
+        dislikes: [],
+        lifeMotto: '',
+        hasBio: false
       }
-
-    return response.data;
-    } catch (error:any) {
-      const errorMessage = error.response?.data?.error || error.message || 'Something went wrong';
-      throw new Error(errorMessage);
     }
-  };
 
-  const { data, status } = useQuery<ApiResponse>({
-    queryKey: ['active-users', search, sortOrder, currentPage],
-    queryFn: fetchData,
-    retry: 2,
-  });
+    let mainBio = bio
+    let likes: string[] = []
+    let dislikes: string[] = []
+    let lifeMotto = ''
 
-  React.useEffect(() => {
-    setCurrentPage(1);
-  }, [search, sortOrder]);
+    // Try to extract structured data using multiple patterns (without 's' flag)
+    const likesPatterns = [
+      /Likes:\s*(.+?)(?=Dislikes:|Life Motto:|$)/i,
+      /Interests:\s*(.+?)(?=Dislikes:|$)/i,
+      /Hobbies:\s*(.+?)(?=Dislikes:|$)/i
+    ]
 
-  const users = data?.users || [];
-  const pagination = data?.pagination || null;
+    const dislikesPatterns = [
+      /Dislikes:\s*(.+?)(?=Likes:|Life Motto:|$)/i,
+      /Don't Like:\s*(.+?)(?=Likes:|$)/i
+    ]
 
-  const getStartingSerialNumber = () => {
-    const perPage = pagination?.perPage ?? 0;
-    return (currentPage - 1) * perPage + 1;
-  };
+    const mottoPatterns = [
+      /Life Motto:\s*"(.+?)"/i,
+      /Motto:\s*"(.+?)"/i,
+      /Quote:\s*"(.+?)"/i,
+      /Philosophy:\s*(.+?)(?=Likes:|Dislikes:|$)/i
+    ]
 
-  const startingSerial = getStartingSerialNumber();
+    // Extract likes
+    for (const pattern of likesPatterns) {
+      const match = bio.match(pattern)
+      if (match) {
+        likes = match[1].split(',').map(item => item.trim()).filter(item => item)
+        mainBio = mainBio.replace(match[0], '').trim()
+        break
+      }
+    }
 
-  const toggleItem = React.useCallback((index: number) => {
-    setCurrentIndex((currentValue) => (currentValue !== index ? index : -1));
-  },[]);
+    // Extract dislikes
+    for (const pattern of dislikesPatterns) {
+      const match = bio.match(pattern)
+      if (match) {
+        dislikes = match[1].split(',').map(item => item.trim()).filter(item => item)
+        mainBio = mainBio.replace(match[0], '').trim()
+        break
+      }
+    }
 
-  const handlePageChange = (page:number) => {
-    setCurrentPage(page)
-  };
+    // Extract life motto
+    for (const pattern of mottoPatterns) {
+      const match = bio.match(pattern)
+      if (match) {
+        lifeMotto = match[1].trim()
+        mainBio = mainBio.replace(match[0], '').trim()
+        break
+      }
+    }
 
-  const header = ['s/n', 'username', 'surname', 'lastname', 'email',  'verification', 'city', 'state', 'date joined', 'action'];
+    // Clean up main bio - remove empty lines and excessive whitespace
+    mainBio = mainBio.replace(/\n\s*\n/g, '\n').trim()
 
-  const UserListHeader = () => {
-    return (
-      <TableHeader className="rounded-lg h-11 [&_tr]:border-b">
-        <TableRow className="bg-white hover:bg-white border-b-0 dark:bg-[#424242]">
-          {header.map((item:string) => (
-            <TableHead className="text-center font-semibold uppercase border-r text-xs last:border-r-0">{item}</TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-    )
-  };
+    // If main bio is empty after extraction, use a fallback
+    if (!mainBio && (likes.length > 0 || dislikes.length > 0 || lifeMotto)) {
+      mainBio = 'User prefers to express themselves through their interests and preferences.'
+    }
 
-  const UserListItem = ({user, index}:{user:ExtendedUserProps, index:number}) => {
-    return (
-      <TableRow className='border'>
-        <TableCell className="text-xs md:text-sm text-center border-r">{startingSerial + index}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center border-r">{user.username}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center border-r">{user.surName}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center capitalize border-r">{user.lastName}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center border-r">{user.email}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center capitalize border-r text-green-600 font-semibold">{user.userVerified ? 'verified' : 'unverified'}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center border-r border-b">{user.city}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center border-r border-b">{user.state}</TableCell>
-        <TableCell className="text-xs md:text-sm text-center border-r border-b">{formatDate(user.createdAt)}</TableCell>
-        <TableCell className='text-xs md:text-sm text-center flex items-center justify-center cursor-pointer'>
-          <Menu user={user}/>
-        </TableCell>
-      </TableRow>
-    )
-  };
+    return {
+      mainBio: mainBio || 'User has provided some preferences but no main bio.',
+      likes,
+      dislikes,
+      lifeMotto,
+      hasBio: true
+    }
+  }
 
-  const Menu = ({user}: {user: ExtendedUserProps}) => {
-    const [showMenu, setShowMenu] = React.useState(false);
+  const { mainBio, likes, dislikes, lifeMotto, hasBio } = parseBio(userDetails.bio)
 
-    console.log(user.role)
-
-      const messageModal = useMessageUserModal();
-      const roleAssignmentModal = useRoleAssignmentModal();
-      const revokeVerificationModal = useRevokeVerificationModal();
-      const suspendUserModal = useSuspendUserModal();
-      const deleteUserModal = useDeleteUserModal();
-
-  const handleSuspendUser = (user: ExtendedUserProps) => {
-    const userForSuspension: UserForRestriction = {
-      id: user._id,
-      surName: user.surName,
-      lastName: user.lastName,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      userType: user.role, // 'user', 'agent', or 'admin'
-      isActive: user.userVerified,
-      isSuspended: !user.userVerified
-    };
-    
-    suspendUserModal.onOpen(userForSuspension);
-  };
-
-  const handleDeleteUser = (user: ExtendedUserProps) => {
-    const userForBlocking: UserForRestriction = {
-      id: user._id,
-      surName: user.surName,
-      lastName: user.lastName,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      userType: user.role, 
-      isActive: user.userVerified,
-      isSuspended: !user.userVerified,
-    };
-    
-    deleteUserModal.onOpen(userForBlocking);
-  };
-
-      const handleRevokeVerification = (user: ExtendedUserProps) => {
-        const userForRevocation: UserForVerificationRevocation = {
-          id: user._id,
-          surName: user.surName,
-          lastName: user.lastName,
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          role: user.role,
-          isVerified: user.userVerified,
-        };
-        
-        revokeVerificationModal.onOpen(userForRevocation);
-      };
-
-      const handleAssignRole = (user: ExtendedUserProps) => {
-        const userForRoleAssignment: UserForRoleAssignment = {
-          id: user._id,
-          surName: user.surName,
-          lastName: user.lastName,
-          email: user.email,
-          phoneNumber: user.phoneNumber,
-          currentRole: user.role || 'user',
-          isActive: false,
-        };
-        
-        roleAssignmentModal.onOpen(userForRoleAssignment);
-      };
-
-      const handleMessageUser = (user:ExtendedUserProps) => {
-        
-        const recipient: MessageRecipient = {
-          id: user._id,
-          surName: user.surName, 
-          lastName: user.lastName,
-          email: user.email,
-          userType: user.role, 
-          phoneNumber: user.phoneNumber,
-        };
-        
-        messageModal.onOpen(recipient);
-      };
-
-    return (
-      <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
-        <DropdownMenuTrigger className='outline-none focus:outline-none'>
-          <MoreHorizontalIcon/>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64 min-w-[200px]" align="end">
-          {/* Communication */}
-          <div className="p-2">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Communication</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-green-600 focus:text-green-600 focus:bg-green-50" onClick={() => handleMessageUser(user)}>
-              <MessageCircle className="w-4 h-4" />
-              Send User a Message
-            </DropdownMenuItem>
-          </div>
-
-          {/* Management Actions */}
-          <div className="p-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Management</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-purple-600 focus:text-purple-600 focus:bg-purple-50 mb-1"  onClick={() => handleAssignRole(user)}>
-              <Badge className="w-4 h-4" />
-              Assign Role
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50" onClick={() => handleRevokeVerification(user)}>
-              <ShieldOff className="w-4 h-4" />
-              Revoke Verification
-            </DropdownMenuItem>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="p-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-amber-600 focus:text-amber-600 focus:bg-amber-50 mb-1" onClick={() => handleSuspendUser(user)}>
-              <Pause className="w-4 h-4" />
-              Suspend User
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteUser(user)}>
-              <Trash2 className="w-4 h-4" />
-              Delete User
-            </DropdownMenuItem>
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
-  };
-
-  const MobileItem = ({open, toggleTable, user }:mobileItemProps) => {
-    return (
-      <div className={cn("shadow-sm border-b last:border-b-0 w-full h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
-        <div className="flex items-center justify-between">
-          <p className="text-sm capitalize font-semibold">{user.surName}</p>
-          <p className="text-sm capitalize font-semibold">{user.lastName}</p>
-        </div>
-        <div className="flex items-center justify-between mt-1">
-          <p className={cn("text-center text-sm")}>{user.email}</p>
-          <p className="text-sm">{user.city}, {user.state}</p>
-        </div>
-        <div className="border-b border-black my-3"/>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Verification Status</p>
-          <p className="text-sm capitalize text-green-600 font-semibold">{user.userVerified ? 'verified' : 'unverified'}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Location</p>
-          <p className="text-sm capitalize">{user.city}, {user.state}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Date Joined</p>
-          <p className="text-sm capitalize">{formatDate(user.createdAt)}</p>
-        </div>
-      </div>
-    )
-  };
-
-  const TableList = () => {
-
-    return (
-      <div className='w-full flex flex-col gap-6 md:gap-8 lg:gap-10 bg-inherit overflow-hidden'>
-        <div className='min-h-[300px] max-h-[490px] h-[560px]'>
-          {status === 'pending' &&
-            <div className='w-full'>
-              <TableLoading tableHeader={header}/>
-            </div>
-          }
-          {status === 'error' &&
-            <div className='w-full h-full items-center '>
-              <ErrorState message='An error occurred while fetching users. Try again later.'/>
-            </div>
-          }
-          {status === 'success' && users.length === 0 &&
-            <div className='w-full h-full items-center'>
-              <EmptyState message={ search !== '' ? 'No user found for the search query' : 'No active users at the moment.'}/>
-            </div>
-          }
-          {status === 'success' && users && users.length > 0 &&
-            <React.Fragment>
-              <div className="hidden md:block">
-                <Table className='w-full border'>
-                  <UserListHeader/>
-                  <TableBody>
-                    {users.map((user:ExtendedUserProps, index:number) => (
-                      <UserListItem user={user} index={index} key={index}/>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Pagination currentPage={currentPage} totalPages={pagination?.totalPages ?? 1} onPageChange={handlePageChange} />
-              </div>
-              <div className="flex flex-col md:hidden">
-                {users.map((user:ExtendedUserProps, index:number) => (
-                  <React.Fragment key={index}>
-                    <MobileItem
-                      open={currentIndex === index}
-                      toggleTable={() => toggleItem(index)}
-                      user={user}
-                    />
-                  </React.Fragment>
-                ))}
-                <Pagination currentPage={currentPage} totalPages={pagination?.totalPages ?? 1} onPageChange={handlePageChange} />
-              </div>
-            </React.Fragment>
-          }
-        </div>
-      </div>
-    )
-  };
+  // Calculate total engagement - conditionally include blog engagement
+  const totalEngagement = 
+    userDetails.likedApartments.length + 
+    userDetails.bookmarkedApartments.length + 
+    (userDetails.blogCollaborator ? userDetails.likedBlogs.length : 0) + 
+    (userDetails.blogCollaborator ? userDetails.bookmarkedABlogs.length : 0) +
+    userDetails.propertiesRented.length
 
   return (
-    <UsersWrapper 
-      user={user}
-      placeholder='search active users...'
-      searchDelay={400}
-      namespace='active_users'
-      maxWidth='max-w-4xl'
-    >
-      <TableList/>
-    </UsersWrapper>
-  )
-};
+    <div className='w-full h-full flex flex-col gap-6 md:gap-8 lg:gap-10 pb-6'>
+      <div className="items-center flex justify-between w-full">
+        <h2 className='text-xl font-semibold font-quicksand md:text-2xl lg:text-3xl'>Active User Details</h2>
+        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-white/80">
+          <Clock className="w-4 h-4" />
+          <span>User ID: {userDetails._id}</span>
+        </div>
+      </div>
 
-export default ActiveUsersClient
+      {/* User Profile Card */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Profile Info */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Profile Card */}
+          <div className="bg-white dark:bg-[#424242] dark:border-[#424242]/40 rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={userDetails.profilePicture}
+                alt={`${userDetails.surName} ${userDetails.lastName}`}
+                className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 mb-4"
+              />
+              <h3 className="text-lg font-semibold font-quicksand">
+                {userDetails.surName} {userDetails.lastName}
+              </h3>
+              <p className="text-gray-600 text-sm mb-2 dark:text-white">@{userDetails.username}</p>
+              
+              {/* Role Badge */}
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mb-4">
+                <User className="w-3 h-3 mr-1" />
+                {userDetails.role.charAt(0).toUpperCase() + userDetails.role.slice(1)}
+              </div>
+
+              {/* Contact Information */}
+              <div className="space-y-3 w-full">
+                <div className="flex items-center justify-center text-sm text-gray-600 dark:text-white">
+                  <Mail className="w-4 h-4 mr-2" />
+                  <span className="truncate">{userDetails.email}</span>
+                </div>
+                <div className="flex items-center justify-center text-sm text-gray-600 dark:text-white">
+                  <Phone className="w-4 h-4 mr-2" />
+                  {userDetails.phoneNumber}
+                </div>
+                {userDetails.additionalPhoneNumber && (
+                  <div className="flex items-center justify-center text-sm text-gray-600 dark:text-white">
+                    <Phone className="w-4 h-4 mr-2" />
+                    {userDetails.additionalPhoneNumber}
+                  </div>
+                )}
+                <div className="flex items-center justify-center text-sm text-gray-600 dark:text-white">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  {userDetails.city}, {userDetails.state}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Stats Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-[#424242] dark:border-[#424242]/40 p-6">
+            <h4 className="font-semibold font-quicksand mb-4">User Statistics</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-1">
+                  <Heart className="w-4 h-4 text-red-500 mr-1" />
+                  <span className="text-lg font-semibold">{userDetails.likedApartments.length}</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-white">Liked Properties</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-1">
+                  <Bookmark className="w-4 h-4 text-blue-500 mr-1" />
+                  <span className="text-lg font-semibold">{userDetails.bookmarkedApartments.length}</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-white">Saved Properties</p>
+              </div>
+              <div className="text-center">
+                <div className="flex items-center justify-center mb-1">
+                  <Building className="w-4 h-4 text-purple-500 mr-1" />
+                  <span className="text-lg font-semibold">{userDetails.propertiesRented.length}</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-white">Properties Rented</p>
+              </div>
+              
+              {/* Blog-related stats - conditionally shown */}
+              {userDetails.blogCollaborator && (
+                <>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <FileText className="w-4 h-4 text-orange-500 mr-1" />
+                      <span className="text-lg font-semibold">{userDetails.createdBlogs.length}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-white">Blogs Created</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <ThumbsUp className="w-4 h-4 text-green-500 mr-1" />
+                      <span className="text-lg font-semibold">{userDetails.likedBlogs.length}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-white">Liked Blogs</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <Bookmark className="w-4 h-4 text-indigo-500 mr-1" />
+                      <span className="text-lg font-semibold">{userDetails.bookmarkedABlogs.length}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-white">Saved Blogs</p>
+                  </div>
+                  <div className="text-center col-span-2">
+                    <div className="flex items-center justify-center mb-1">
+                      <Users className="w-4 h-4 text-cyan-500 mr-1" />
+                      <span className="text-lg font-semibold">{userDetails.collaborations.length}</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-white">Blog Collaborations</p>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            {/* Total Engagement */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-700">Total Engagement</p>
+                <p className="text-2xl font-bold text-blue-600">{totalEngagement}</p>
+                <p className="text-xs text-gray-500 dark:text-white/80">All interactions combined</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Bio and Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Bio Card */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-[#424242] dark:border-[#424242]/40">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-semibold font-quicksand">About</h4>
+              <div className="flex items-center gap-2">
+                {!hasBio && (
+                  <span className="text-xs bg-gray-100 text-gray-600 dark:text-white px-2 py-1 rounded-full">
+                    No Bio Provided
+                  </span>
+                )}
+                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                  {userDetails.bio.length} characters
+                </span>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 dark:text-white leading-relaxed mb-4 whitespace-pre-line text-sm lg:text-base">{mainBio}</p>
+            
+            {lifeMotto && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                <p className="text-sm italic text-yellow-800">"{lifeMotto}"</p>
+              </div>
+            )}
+
+            {(likes.length > 0 || dislikes.length > 0) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Likes */}
+                {likes.length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-green-700 mb-2 flex items-center">
+                      <Heart className="w-4 h-4 mr-1" />
+                      Likes & Interests
+                    </h5>
+                    <div className="flex flex-wrap gap-1">
+                      {likes.map((like, index) => (
+                        <span
+                          key={index}
+                          className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full"
+                        >
+                          {like}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dislikes */}
+                {dislikes.length > 0 && (
+                  <div>
+                    <h5 className="font-medium text-red-700 mb-2 flex items-center">
+                      <Stethoscope className="w-4 h-4 mr-1" />
+                      Dislikes
+                    </h5>
+                    <div className="flex flex-wrap gap-1">
+                      {dislikes.map((dislike, index) => (
+                        <span
+                          key={index}
+                          className="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full"
+                        >
+                          {dislike}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!hasBio && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                This user hasn't added a bio yet.
+              </div>
+            )}
+          </div>
+
+          {/* Enhanced Account Status */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-[#424242] dark:border-[#424242]/40">
+            <h4 className="font-semibold font-quicksand mb-4">Account Status & Features</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className={`p-3 rounded-lg text-center ${userDetails.userVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <p className="text-sm font-medium">Verified</p>
+                <p className="text-xs">{userDetails.userVerified ? 'Yes' : 'No'}</p>
+              </div>
+              <div className={`p-3 rounded-lg text-center ${userDetails.userOnboarded ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <p className="text-sm font-medium">Onboarded</p>
+                <p className="text-xs">{userDetails.userOnboarded ? 'Yes' : 'No'}</p>
+              </div>
+              <div className={`p-3 rounded-lg text-center ${userDetails.profileCreated ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <p className="text-sm font-medium">Profile Created</p>
+                <p className="text-xs">{userDetails.profileCreated ? 'Yes' : 'No'}</p>
+              </div>
+              <div className={`p-3 rounded-lg text-center ${userDetails.blogCollaborator ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <p className="text-sm font-medium">Blog Collaborator</p>
+                <p className="text-xs">{userDetails.blogCollaborator ? 'Yes' : 'No'}</p>
+              </div>
+            </div>
+            
+            {/* Additional Status Info */}
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-700">User Role</p>
+                <p className="text-sm text-gray-600 capitalize">{userDetails.role}</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm font-medium text-gray-700">Username</p>
+                <p className="text-sm text-gray-600">@{userDetails.username}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Recent Activity */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-[#424242] dark:border-[#424242]/40">
+            <h4 className="font-semibold font-quicksand mb-4">Platform Activity</h4>
+            <div className="space-y-3">
+              {/* Blog-related activities - conditionally shown */}
+              {userDetails.blogCollaborator && (
+                <>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600 dark:text-white flex items-center">
+                      <FileText className="w-4 h-4 mr-2 text-orange-500" />
+                      Blogs Created
+                    </span>
+                    <span className="text-sm font-medium">{userDetails.createdBlogs.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600 dark:text-white flex items-center">
+                      <Users className="w-4 h-4 mr-2 text-green-500" />
+                      Blog Collaborations
+                    </span>
+                    <span className="text-sm font-medium">{userDetails.collaborations.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600 dark:text-white flex items-center">
+                      <ThumbsUp className="w-4 h-4 mr-2 text-green-500" />
+                      Liked Blogs
+                    </span>
+                    <span className="text-sm font-medium">{userDetails.likedBlogs.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600 dark:text-white flex items-center">
+                      <Bookmark className="w-4 h-4 mr-2 text-indigo-500" />
+                      Saved Blogs
+                    </span>
+                    <span className="text-sm font-medium">{userDetails.bookmarkedABlogs.length}</span>
+                  </div>
+                </>
+              )}
+              
+              {/* Property-related activities - always shown */}
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 dark:text-white flex items-center">
+                  <ThumbsUp className="w-4 h-4 mr-2 text-red-500" />
+                  Liked Properties
+                </span>
+                <span className="text-sm font-medium">{userDetails.likedApartments.length}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-600 dark:text-white flex items-center">
+                  <Bookmark className="w-4 h-4 mr-2 text-blue-500" />
+                  Bookmarked Properties
+                </span>
+                <span className="text-sm font-medium">{userDetails.bookmarkedApartments.length}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm text-gray-600 dark:text-white flex items-center">
+                  <Building className="w-4 h-4 mr-2 text-purple-500" />
+                  Properties Rented
+                </span>
+                <span className="text-sm font-medium">{userDetails.propertiesRented.length}</span>
+              </div>
+            </div>
+            
+            {/* Engagement Summary */}
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700 dark:text-white">Total Platform Engagement</span>
+                <span className="text-lg font-bold text-blue-600">{totalEngagement}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default ActiveUserClient

@@ -26,7 +26,7 @@ const SpecialInput = ({icon:Icon, value, setValue, onClick, placeholder, label, 
         <div className='flex gap-1.5'>
           <InputWithIcon
             icon={Icon}
-            className='bg-[#d4d4d4] rounded-lg dark:bg-[#424242]'
+            className='bg-[#d4d4d4] rounded-lg dark:bg-neutral-600'
             inputClassName={cn('rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 rounded-r-none')}
             placeholder={placeholder}
             value={value}
@@ -51,7 +51,7 @@ const SpecialInput = ({icon:Icon, value, setValue, onClick, placeholder, label, 
             }
           }
           />
-          <button type="button" className='lg:h-12 h-11 aspect-square rounded-lg flex items-center justify-center bg-black rounded-l-none text-white' onClick={onClick}>
+          <button type="button" className='lg:h-12 h-11 aspect-square rounded-lg flex items-center justify-center bg-secondary-blue rounded-l-none text-white' onClick={onClick}>
             <HugeiconsIcon icon={ArrowUpRight03Icon} className='rotate-45'/>
           </button>
         </div>

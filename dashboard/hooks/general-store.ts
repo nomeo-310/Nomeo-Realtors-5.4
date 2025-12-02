@@ -104,6 +104,28 @@ export interface BlockUserModalStore {
   user: UserForRestriction | null;
 }
 
+export interface UserForDeletionReminder {
+  id: string;
+  email: string;
+  surName?: string;
+  lastName?: string;
+  userType: 'user' | 'agent';
+  registrationDate?: string;
+  initiationDate?: string;
+  phoneNumber?: string;
+  accountStatus?: string;
+}
+
+interface DeletionReminderModalStore {
+  isOpen: boolean;
+  onOpen: (user: UserForDeletionReminder, deletionDate?: string, gracePeriodDays?: number) => void;
+  onClose: () => void;
+  user: UserForDeletionReminder | null;
+  deletionDate: string | null;
+  gracePeriodDays: number | null;
+  reset: () => void;
+}
+
 export const useCookiesModal = create<ModalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
@@ -180,4 +202,34 @@ export const useVerificationReminderModal = create<VerificationReminderModalStor
   user: null,
   onOpen: (user: UnverifiedUser) => set({ isOpen: true, user }),
   onClose: () => set({ isOpen: false, user: null }),
+}));
+
+export const useDeletionReminderModal = create<DeletionReminderModalStore>((set) => ({
+  isOpen: false,
+  user: null,
+  deletionDate: null,
+  gracePeriodDays: null,
+  
+  onOpen: (user, deletionDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), gracePeriodDays = 30) => {
+    set({ 
+      isOpen: true, 
+      user,
+      deletionDate,
+      gracePeriodDays
+    });
+  },
+  
+  onClose: () => {
+    set({ isOpen: false });
+    setTimeout(() => {
+      set({ user: null, deletionDate: null, gracePeriodDays: null });
+    }, 300);
+  },
+  
+  reset: () => set({ 
+    isOpen: false, 
+    user: null, 
+    deletionDate: null,
+    gracePeriodDays: null 
+  })
 }));

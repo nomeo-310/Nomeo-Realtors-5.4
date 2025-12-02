@@ -187,10 +187,9 @@ export const getCurrentUser = async (): Promise<userProps | null> => {
   }
 
   try {
-    const user = await User.findOne({
-      email: currentUserSession.user.email,
-      userAccountDeleted: false,
-    }).lean().exec();
+    const user = await User.findOne({email: currentUserSession.user.email, userAccountDeleted: false })
+    .select('-password -otp -otpWxpiredIn -resetPasswordOtp ')
+    .lean().exec();
 
     if (!user) return null;
 
@@ -1161,6 +1160,26 @@ export const changePhoneNumber = async (values: {
   }
 };
 
+export const changeBio = async (values: {
+  userId: string;
+  newBio: string;
+  path: string;
+}): Promise<ApiResponse> => {
+  const { userId, newBio, path } = values;
+  await connectToMongoDB();
+  const currentUser = await getCurrentUser();
+
+  const accessError = validateUserAccess(currentUser, userId);
+  if (accessError) return accessError;
+  try {
+    await User.findByIdAndUpdate(userId, { bio: newBio });
+    revalidatePath(path);
+    return { success: true, message: "Profile bio updated", status: 200 };
+  } catch (error) {
+    return handleServerError(error);
+  }
+}
+
 const toggleUserPreference = async (
   values: { userId: string; path: string },
   preferenceField: string,
@@ -1258,7 +1277,7 @@ export const deleteAccount = async (values: { email: string; path: string }): Pr
   try {
     // If user is an agent, hide all their apartments
     if (currentUser.role === 'agent') {
-      await hideAgentApartments(currentUser._id);
+      await hideAgentApartments(currentUser.agentId || '');
     }
 
     const emailTemplate = await render(TemporaryDeleteEmailTemplate({ name }));

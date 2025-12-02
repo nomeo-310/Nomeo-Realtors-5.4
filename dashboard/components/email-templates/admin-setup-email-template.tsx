@@ -29,7 +29,7 @@ export function AdminSetupEmailTemplate(props: AdminSetupEmailTemplateProps) {
     return roleMap[role] || role;
   };
 
-  const setupLink = `${process.env.APP_URL || 'https://yourdomain.com'}/admin/setup`;
+  const setupLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://yourdomain.com'}/admin/setup`;
   const expiryDate = new Date(expiresAt);
   const formattedExpiry = expiryDate.toLocaleString();
 
