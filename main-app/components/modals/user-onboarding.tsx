@@ -5,9 +5,16 @@ import React from 'react'
 import Modal from '../ui/modal';
 import UserMultiStepForm from '../on-boarding/user-multistep-form';
 import { userDetails } from '@/lib/types';
+import ScrollableWrapper from '../ui/scrollable-wrapper';
 
 const UserOnBoarding = ({user}:{user:userDetails}) => {
   const onboardingControl = useUserOnboardingModal();
+
+  React.useEffect(() => {
+    if (user && !user.userOnboarded) {
+      onboardingControl.onOpen();
+    }
+  }, [user]);
 
   return (
     <Modal
@@ -16,11 +23,12 @@ const UserOnBoarding = ({user}:{user:userDetails}) => {
       useCloseButton={false}
       closeOnEsc={false}
       closeOnOverlayClick={false}
-      title='Create User Profile'
-      useSeparator
-      width='xl:w-[600px] lg:w-[550px] md:w-[550px]'
+      title=''
+      width="lg:w-[650px] xl:w-[700px] md:w-[550px]"
     >
-     <UserMultiStepForm user={user}/>
+      <ScrollableWrapper>
+        <UserMultiStepForm user={user}/>
+      </ScrollableWrapper>
     </Modal>
   )
 }

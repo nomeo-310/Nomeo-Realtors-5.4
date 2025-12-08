@@ -2,310 +2,215 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { ROLE_PERMISSIONS } from '@/lib/permissions';
 import generateAdminId from '@/utils/generateAdminId';
-import { IUser } from './user';
 
-// Admin History Interface
+const ADMIN_ROLES = ['admin', 'creator', 'superAdmin'] as const;
+const ADMIN_ACCESS_LEVELS = ['full_access', 'limited_access', 'no_access'] as const;
+
+export type AdminRole = typeof ADMIN_ROLES[number];
+export type AdminAccess = typeof ADMIN_ACCESS_LEVELS[number];
+
 export interface IAdminHistory {
-  role: string;
+  role: AdminRole;
   changedAt: Date;
   changedBy: mongoose.Types.ObjectId;
   reason?: string;
 }
 
 export interface IAdmin extends mongoose.Document {
-  _id: mongoose.Types.ObjectId;
-  userId: IUser |  mongoose.Types.ObjectId;
-  role: string;
-  adminAccess: 'full_access' | 'limited_access' | 'no_access';
+  userId: mongoose.Types.ObjectId;
+  role: AdminRole;
+  adminAccess: AdminAccess;
   adminPermissions: string[];
   adminId: string;
+
+  // Status flags
+  isActive: boolean;
   isActivated: boolean;
-  activatedAt: Date;
-  activatedBy: mongoose.Types.ObjectId;
+  activatedAt?: Date;
+  activatedBy?: mongoose.Types.ObjectId;
+
   isSuspended: boolean;
-  suspendedAt: Date;
-  suspendedBy: mongoose.Types.ObjectId;
-  suspensionReason: string;
+  suspendedAt?: Date;
+  suspendedBy?: mongoose.Types.ObjectId;
+  suspensionReason?: string;
+
+  deactivated: boolean;
+  deactivatedAt?: Date;
+  deactivatedBy?: mongoose.Types.ObjectId;
+  deactivationReason?: string;
+  reactivatedAt?: Date;
+  reactivatedBy?: mongoose.Types.ObjectId;
+
+  // Auth & Security
   password?: string;
   passwordAdded: boolean;
-  accessId: string;
+  accessId?: string;
   accessIdExpires?: number;
   otp?: string;
   otpExpiresIn?: number;
   resetAccessIdOtp?: string;
   resetAccessIdOtpExpiresIn?: number;
   lockUntil?: Date;
-  deactivatedAt: Date;
-  deactivatedBy: mongoose.Types.ObjectId;
-  deactivationReason: string;
-  reactivatedAt: Date;
-  reactivatedBy: mongoose.Types.ObjectId;
+
+  // Onboarding & Metadata
   adminOnboarded: boolean;
-  createdBy: mongoose.Types.ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
+  createdBy?: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
   adminHistory: IAdminHistory[];
+
+  // Methods
+  comparePassword(candidate: string): Promise<boolean>;
 }
 
-const adminHistorySchema = new mongoose.Schema({
-  role: {
-    type: String,
-    required: true,
-    enum: ['admin', 'creator', 'superAdmin']
-  },
-  changedAt: {
-    type: Date,
-    default: Date.now
-  },
-  changedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  reason: {
-    type: String,
-    default: ''
-  }
-});
-
-const adminSchema: mongoose.Schema<IAdmin> = new mongoose.Schema(
+const AdminHistorySchema = new mongoose.Schema<IAdminHistory>(
   {
-    userId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User', 
+    role: { type: String, enum: ADMIN_ROLES, required: true },
+    changedAt: { type: Date, default: Date.now },
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    reason: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
+const adminSchema = new mongoose.Schema<IAdmin>(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
-      unique: true
+      unique: true,
+      index: true, // ✅ Added inline index (removes need for separate userId index)
     },
-    role: { 
-      type: String, 
-      enum: ['admin', 'creator', 'superAdmin'], 
-      default: 'admin'
+    role: {
+      type: String,
+      enum: ADMIN_ROLES,
+      default: 'admin',
+      index: true, // ✅ Added inline index
     },
-    adminAccess: { 
-      type: String, 
-      enum: ['full_access', 'limited_access', 'no_access'], 
-      default: 'no_access'
+    adminAccess: {
+      type: String,
+      enum: ADMIN_ACCESS_LEVELS,
+      default: 'no_access',
+      index: true, // ✅ Added inline index
     },
-    adminPermissions: { 
-      type: [String], 
-      default: [] 
+    adminPermissions: {
+      type: [String],
+      default: [],
     },
-    adminId: { 
-      type: String, 
-      unique: true, 
-      default: undefined
+    adminId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true, // ✅ Added inline index
     },
-    isActivated: { 
-      type: Boolean, 
-      default: false
-    },
-    activatedAt: { 
-      type: Date, 
-      default: Date.now
-    },
-    activatedBy: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User'
-    },
-    password: { 
-      type: String, 
-      default: undefined 
-    },
-    passwordAdded: { 
-      type: Boolean, 
-      default: false
-    },
-    accessId: { 
-      type: String, 
-      unique: true
-    },
-    accessIdExpires: { 
-      type: Number, 
-      default: undefined
-    },
-    otp: { 
-      type: String
-    },
-    otpExpiresIn: { 
-      type: Number, 
-      default: undefined
-    },
-    resetAccessIdOtp: { 
-      type: String, 
-      default: undefined
-    },
-    resetAccessIdOtpExpiresIn: { 
-      type: Number, 
-      default: undefined
-    },
-    isSuspended: { 
-      type: Boolean, 
-      default: false
-    },
-    suspendedAt: { 
-      type: Date, 
-      default: undefined
-    },
-    suspendedBy: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Admin'
-    },
-    suspensionReason: { 
-      type: String, 
-      default: undefined 
-    },
-    lockUntil: { 
-      type: Date, 
-      default: undefined
-    },
-    deactivatedAt: { 
-      type: Date, 
-      default: undefined
-    },
-    deactivatedBy: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Admin'
-    },
-    deactivationReason: {
-      type: String, 
-      default: undefined 
-    },
-    reactivatedAt: { 
-      type: Date, 
-      default: undefined
-    },
-    reactivatedBy: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Admin'
-    },
-    adminOnboarded: { 
-      type: Boolean, 
-      default: false
-    },
+
+    // Status
+    isActive: { type: Boolean, default: false },
+    isActivated: { type: Boolean, default: false, index: true }, // ✅ Added inline index
+    activatedAt: { type: Date, index: true }, // ✅ Added inline index
+
+    isSuspended: { type: Boolean, default: false, index: true }, // ✅ Added inline index
+    suspendedAt: { type: Date },
+    suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    suspensionReason: String,
+
+    deactivated: { type: Boolean, default: false, index: true }, // ✅ Added inline index
+    deactivatedAt: { type: Date },
+    deactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    deactivationReason: String,
+    reactivatedAt: { type: Date },
+    reactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+
+    // Auth
+    password: String,
+    passwordAdded: { type: Boolean, default: false },
+    accessId: String,
+    accessIdExpires: Number,
+    otp: String,
+    otpExpiresIn: Number,
+    resetAccessIdOtp: String,
+    resetAccessIdOtpExpiresIn: Number,
+    lockUntil: Date,
+
+    // Metadata
+    adminOnboarded: { type: Boolean, default: false, index: true }, 
     createdBy: { 
       type: mongoose.Schema.Types.ObjectId, 
-      ref: 'Admin'
+      ref: 'Admin',
+      index: true,
+      sparse: true 
     },
-    // NEW FIELDS
     updatedBy: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'User',
-      sparse: true
+      sparse: true,
     },
-    adminHistory: { 
-      type: [adminHistorySchema], 
-      default: [] 
-    },
+    adminHistory: { type: [AdminHistorySchema], default: [] },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-// EXISTING INDEXES (keep all your current indexes)
-adminSchema.index({ role: 1 });
-adminSchema.index({ adminAccess: 1 });
-adminSchema.index({ isActivated: 1 });
-adminSchema.index({ activatedAt: 1 });
-adminSchema.index({ passwordAdded: 1 });
-adminSchema.index({ otp: 1 });
-adminSchema.index({ isSuspended: 1 });
-adminSchema.index({ suspendedAt: 1 });
-adminSchema.index({ lockUntil: 1 });
-adminSchema.index({ deactivatedAt: 1 });
-adminSchema.index({ reactivatedAt: 1 })
-adminSchema.index({ adminOnboarded: 1 });
-
-// Compound indexes
-adminSchema.index({ role: 1, adminAccess: 1 });
+// KEEP THESE COMPOUND INDEXES (not covered by inline indexes):
+adminSchema.index({ isActivated: 1, isSuspended: 1, deactivated: 1 });
 adminSchema.index({ role: 1, isActivated: 1 });
-adminSchema.index({ isActivated: 1, adminOnboarded: 1 });
-adminSchema.index({ isSuspended: 1, isActivated: 1 });
 adminSchema.index({ adminAccess: 1, isActivated: 1 });
-adminSchema.index({ createdAt: -1, role: 1 });
-adminSchema.index({ activatedAt: -1, isActivated: 1 });
-adminSchema.index({ suspendedAt: -1, isSuspended: 1 });
-adminSchema.index({ userId: 1, isActivated: 1 });
-adminSchema.index({ accessId: 1, accessIdExpires: 1 });
-adminSchema.index({ otp: 1, otpExpiresIn: 1 });
-adminSchema.index({ passwordAdded: 1, isActivated: 1 });
 
-// TTL indexes
-adminSchema.index({ otpExpiresIn: 1 }, { 
-  expireAfterSeconds: 0
-});
+// KEEP THESE TTL INDEXES:
+adminSchema.index({ otpExpiresIn: 1 }, { expireAfterSeconds: 0 });
+adminSchema.index({ accessIdExpires: 1 }, { expireAfterSeconds: 0 });
+adminSchema.index({ resetAccessIdOtpExpiresIn: 1 }, { expireAfterSeconds: 0 });
 
-adminSchema.index({ accessIdExpires: 1 }, { 
-  expireAfterSeconds: 0
-});
-
-adminSchema.index({ resetAccessIdOtpExpiresIn: 1 }, { 
-  expireAfterSeconds: 0
-});
-
-// Sparse indexes
+// KEEP THESE SPARSE INDEXES (but remove duplicates):
 adminSchema.index({ activatedBy: 1 }, { sparse: true });
 adminSchema.index({ suspendedBy: 1 }, { sparse: true });
 adminSchema.index({ deactivatedBy: 1 }, { sparse: true });
 adminSchema.index({ reactivatedBy: 1 }, { sparse: true });
-adminSchema.index({ createdBy: 1 }, { sparse: true });
-adminSchema.index({ updatedBy: 1 }, { sparse: true }); // NEW INDEX
 
-// NEW: Index for admin history queries
-adminSchema.index({ 'adminHistory.changedAt': -1 });
-adminSchema.index({ 'adminHistory.changedBy': 1 });
+// KEEP THESE HISTORY INDEXES:
+adminSchema.index({ "adminHistory.changedAt": -1 });
+adminSchema.index({ "adminHistory.changedBy": 1 });
 
-adminSchema.pre<IAdmin>('save', async function (next) {
-  // Only generate adminId if it doesn't exist
+// ADD THESE NEW INDEXES FOR BETTER QUERY PERFORMANCE:
+adminSchema.index({ activatedAt: -1, isActivated: 1 }); // For sorting active admins
+adminSchema.index({ suspendedAt: -1, isSuspended: 1 }); // For suspension reports
+adminSchema.index({ deactivatedAt: -1, deactivated: 1 }); // For deactivation reports
+adminSchema.index({ passwordAdded: 1, isActivated: 1 }); // For onboarding flows
+
+adminSchema.pre('save', async function (next) {
+  // Generate adminId only once
   if (!this.adminId) {
-    const adminIdTag = generateAdminId();
-    this.adminId = adminIdTag;
+    this.adminId = generateAdminId();
   }
 
-  // Update permissions and access based on role changes
+  // Sync permissions & access level on role change
   if (this.isModified('role') || this.adminPermissions.length === 0) {
-    const roleKey = this.role.toUpperCase() as keyof typeof ROLE_PERMISSIONS;
-    this.adminPermissions = ROLE_PERMISSIONS[roleKey] || [];
+    const key = this.role.toUpperCase() as keyof typeof ROLE_PERMISSIONS;
+    this.adminPermissions = ROLE_PERMISSIONS[key] || [];
+
+    // Auto-set access level
+    this.adminAccess = this.role === 'superAdmin' ? 'full_access' : 'limited_access';
   }
 
-  // Update admin access based on role
-  if (this.isModified('role')) {
-    if (this.role === 'superAdmin') {
-      this.adminAccess = 'full_access';
-    } else {
-      this.adminAccess = 'limited_access';
-    }
-  }
-
-  // Hash password if modified
+  // Hash password if modified and present
   if (this.isModified('password') && this.password) {
     try {
-      const hashedPassword = await bcrypt.hash(this.password, 12);
-      this.password = hashedPassword;
-      
-      if (!this.passwordAdded) {
-        this.passwordAdded = true;
-      }
-    } catch (error) {
-      return next(error as Error);
+      this.password = await bcrypt.hash(this.password, 12);
+      this.passwordAdded = true;
+    } catch (err) {
+      return next(err as Error);
     }
   }
 
   next();
 });
 
-// Add method to compare access ID/password
-adminSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
-  return this.password ? bcrypt.compare(password, this.password) : false;
+adminSchema.methods.comparePassword = async function (candidate: string): Promise<boolean> {
+  if (!this.password) return false;
+  return bcrypt.compare(candidate, this.password);
 };
 
-// FIXED: Better model creation with connection check
-let Admin: mongoose.Model<IAdmin>;
+const AdminModel = mongoose.models.Admin || mongoose.model<IAdmin>('Admin', adminSchema);
 
-// Check if model already exists to prevent recompilation
-if (mongoose.models.Admin) {
-  Admin = mongoose.models.Admin;
-} else {
-  Admin = mongoose.model<IAdmin>('Admin', adminSchema);
-}
-
-export default Admin;
+export default AdminModel;

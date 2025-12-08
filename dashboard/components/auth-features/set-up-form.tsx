@@ -10,10 +10,14 @@ import { setUpSchema, SetUpValues } from '@/utils/form-validations';
 import { zodResolver } from "@hookform/resolvers/zod"
 import CustomInput from '../ui/custom-input';
 import { LoadingButton } from '../ui/loading-button';
+import { activateAdmin, requestNewAccessId } from '@/actions/admin-actions';
+import { toast } from 'sonner';
 
 const SetUpForm = () => {
   
   const [isLoading, setIsLoading] = React.useState(false);
+  const [showRequestButton, setShowRequestButton] = React.useState(false);
+  const [requesting, setRequesting] = React.useState(false);
 
   const { onOpen } = useTermsAndConditionModal();
 
@@ -27,10 +31,107 @@ const SetUpForm = () => {
     }
   })
 
-  const submitForm = async (value:SetUpValues) => {
+  const submitForm = async (value: SetUpValues) => {
     setIsLoading(true);
-    console.log(value);
-    setIsLoading(false);
+    
+    try {
+      if (!value.email?.trim()) {
+        toast.error('Email is required');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!value.accessId?.trim()) {
+        toast.error('Access ID is required');
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await activateAdmin(value);
+
+      if (response.success) {
+        toast.success(response.message);
+        router.push(`/set-password?email=${value.email}`)
+      } else {
+        // Handle different error statuses with appropriate messages
+        switch (response.status) {
+          case 400:
+            toast.error(response.message || 'Invalid input. Please check your details.');
+            break;
+          case 403:
+            toast.error(response.message || 'Access denied. Invalid access ID.');
+            break;
+          case 404:
+            toast.error(response.message || 'Account not found.');
+            break;
+          case 409:
+            toast.error(response.message || 'Account is already activated.');
+            break;
+          case 410:
+            toast.error(response.message || 'Access ID has expired. Please request a new one.');
+            setShowRequestButton(true);
+            break;
+          case 429:
+            toast.error(response.message || 'Too many attempts. Please try again later.');
+            break;
+          case 500:
+            toast.error('Server error. Please try again later.');
+            break;
+          default:
+            toast.error(response.message || 'An error occurred. Please try again.');
+        }
+        
+        console.error('Activation error:', response);
+      }
+      
+    } catch (error) {
+      // Handle network errors, timeouts, etc.
+      console.error('Network error during activation:', error);
+      
+      // Determine error type
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        toast.error('Network error. Please check your internet connection.');
+      } else if (error instanceof Error && error.name === 'AbortError') {
+        toast.error('Request timeout. Please try again.');
+      } else {
+        toast.error('An unexpected error occurred. Please try again.');
+      }    
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const requestNewId = async () => {
+
+    const value = {
+      email: form.watch('email'),
+      accessId: form.watch('accessId')
+    }
+
+    setRequesting(true);
+    try {
+      await toast.promise(requestNewAccessId(value), {
+        loading: 'Sending new acess id...',
+        success: (response) => {
+          if (response.success) {
+            return response.message;
+          } else {
+            throw new Error(response.message);
+          }
+        },
+        error: (error) => {
+          if (error instanceof Error) {
+            return error.message;
+          }
+          return 'Something went wrong. Try again later';
+        }
+      });
+    } catch (error) {
+      toast.error('Something went wrong. Try again later')
+      console.error('Error approving apartment:', error);
+    } finally {
+      setRequesting(false)
+    }
   };
 
   return (
@@ -101,6 +202,11 @@ const SetUpForm = () => {
               </FormItem>
             )}
           />
+          { showRequestButton && (
+            <div className='flex items-center justify-end -mt-2'>
+              <button type="button" className='text-sm cursor-pointer' onClick={() => requestNewId()}>Request New AcessId</button>
+            </div>
+          )}
           <LoadingButton
             className='bg-secondary-blue text-white h-[50px] rounded-lg mt-6 disabled:bg-secondary-blue/50'
             label='Setup Account'

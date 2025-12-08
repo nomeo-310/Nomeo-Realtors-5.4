@@ -11,12 +11,12 @@ import EmptyState from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/formatDate'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Eye, MessageCircle, MoreHorizontalIcon, PlayCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { Bell, Eye, MessageCircle, MoreHorizontalIcon, PlayCircle, RotateCcw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import TableLoading from '../table-loading';
 import Pagination from '@/components/ui/pagination';
 import { calculateDeletionStatus } from '@/utils/account-deletion-utils';
-import { useDeletionReminderModal } from '@/hooks/general-store';
+import { useDeleteUserModal, useDeletionReminderModal, UserForRestriction } from '@/hooks/general-store';
 
 interface ApiResponse {
   users: BasicAgentProps[];
@@ -124,7 +124,39 @@ const DeletedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
   const Menu = ({user}:{user:ExtendedUserProps}) => {
     const [showMenu, setShowMenu] = React.useState(false);
 
-    const { onOpen } = useDeletionReminderModal();
+    const deleteUserModal = useDeleteUserModal();
+    const deleteReminderModal = useDeletionReminderModal();
+
+    
+    const handleDeleteUser = () => {
+      const userForBlocking: UserForRestriction = {
+        id: user._id,
+        surName: user.surName,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        userType: user.role,
+        isActive: user.userVerified,
+        isSuspended: !user.userVerified,
+      };
+
+      deleteUserModal.onOpen(userForBlocking);
+    };
+
+    const handleSendReminder = () => {
+      deleteReminderModal.onOpen(
+        {
+          id: user._id,
+          email: user.email,
+          surName: user.surName,
+          lastName: user.lastName,
+          userType: (user.role === 'agent' || user.role === 'user') ? user.role : 'user',
+          registrationDate: user.createdAt
+        },
+        user.deletedAt,
+        30
+      )
+    }
 
     return (
       <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
@@ -139,31 +171,16 @@ const DeletedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
               <RotateCcw className="w-4 h-4" />
               Restore Agent
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50 mb-1">
-              <Eye className="w-4 h-4" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-cyan-600 focus:text-cyan-600 focus:bg-cyan-50" onClick={() => onOpen(
-              {
-                id: user._id,
-                email: user.email,
-                surName: user.surName,
-                lastName: user.lastName,
-                userType: (user.role === 'agent' || user.role === 'user') ? user.role : 'user',
-                registrationDate: user.createdAt
-              },
-              user.deletedAt,
-              30
-            )}>
-              <MessageCircle className="w-4 h-4" />
-              Contact Agent
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-cyan-600 focus:text-cyan-600 focus:bg-cyan-50" onClick={() =>handleSendReminder()}>
+              <Bell className="w-4 h-4" />
+              Send Reminder
             </DropdownMenuItem>
           </div>
 
           {/* Permanent Actions */}
           <div className="p-2 border-t border-gray-100">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10">
+            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => handleDeleteUser()}>
               <Trash2 className="w-4 h-4" />
               Delete Permanently
             </DropdownMenuItem>

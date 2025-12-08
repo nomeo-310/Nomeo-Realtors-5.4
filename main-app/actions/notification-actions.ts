@@ -55,34 +55,19 @@ export const getSingleNotification = async (id: string) => {
   if (!authResult.success) return authResult;
 
   try {
-    const single_notification = await Notification.findOne({ _id: id });
-    
-    if (!single_notification) {
-      return { 
-        success: false, 
-        message: 'Notification not found', 
-        status: 404 
-      };
+    const notification = await Notification.findOne({
+      _id: id,
+      recipient: authResult.currentUser!._id
+    }).lean({ virtuals: true });
+
+    if (!notification) {
+      return { success: false, message: 'Not found', status: 404 };
     }
 
-    // Verify the notification belongs to the current user
-    if (!compareIds(single_notification.recipient, authResult.currentUser!._id)) {
-      return { 
-        success: false, 
-        message: 'You are not authorized to access this notification', 
-        status: 403 
-      };
-    }
-
-    const notification = JSON.parse(JSON.stringify(single_notification));
-    return notification;
+    return { success: true, data: notification, status: 200 };
   } catch (error) {
-    console.error('Get single notification error:', error);
-    return { 
-      success: false, 
-      message: 'Internal server error', 
-      status: 500 
-    };
+    console.error(error);
+    return { success: false, message: 'Server error', status: 500 };
   }
 };
 

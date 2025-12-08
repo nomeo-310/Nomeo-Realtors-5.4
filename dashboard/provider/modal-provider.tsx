@@ -12,8 +12,13 @@ import BlockUserModal from '@/components/modals/delete-user-modal'
 import SuspendUserModal from '@/components/modals/suspend-user-modal'
 import VerificationReminderModal from '@/components/modals/verification-reminder-modal'
 import DeletionReminderModal from '@/components/modals/deletion-reminder-modal'
+import CreateAdminModal from '@/components/modals/create-admin-modal'
+import OnboardingModal from '@/components/modals/onboarding-modal'
+import { getCurrentUser } from '@/actions/auth-actions'
+import DeactivateUserModal from '@/components/modals/deactivate-user-modal'
 
 const ModalProvider = async () => {
+  const currentUser = await getCurrentUser();
 
   return (
     <React.Fragment>
@@ -30,6 +35,9 @@ const ModalProvider = async () => {
       <SuspendUserModal/>
       <VerificationReminderModal/>
       <DeletionReminderModal/>
+      <CreateAdminModal/>
+      { currentUser && <OnboardingModal user={currentUser}/> }
+      <DeactivateUserModal/>
     </React.Fragment>
   )
 }

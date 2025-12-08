@@ -49,6 +49,14 @@ interface HandleAppealProps {
   path?: string;
 }
 
+interface SuspendAdminProps {
+  adminId: string;
+  reason: string;
+  category: string;
+  duration: SuspensionDuration;
+  path?: string;
+}
+
 // Utility functions
 const calculateSuspendedUntil = (duration: SuspensionDuration): Date | undefined => {
   const now = new Date();
@@ -109,6 +117,84 @@ const getSuspensionCount = async (userId: string): Promise<number> => {
 const canModifySuspension = (suspension: any, currentUser: any): boolean => {
   const suspensionEntry = suspension.history.find((h: any) => h.action === 'suspension');
   return suspensionEntry?.performedBy?.toString() === currentUser.userId._id.toString();
+};
+
+export const canSuspendAdmin = async (adminId: string) => {
+  try {
+    await connectToMongoDB();
+
+    const current_user = await getCurrentUser();
+
+    if (!current_user) {
+      return { 
+        success: false, 
+        canSuspend: false, 
+        message: 'Not authenticated' 
+      };
+    }
+
+    const permissions = createServerPermissionService(current_user.role);
+    
+    if (!permissions.isSuperAdmin) {
+      return { 
+        success: true, 
+        canSuspend: false, 
+        message: 'Only Super Admins can suspend other admins' 
+      };
+    }
+
+    const adminToCheck = await User.findById(adminId);
+    
+    if (!adminToCheck) {
+      return { 
+        success: true, 
+        canSuspend: false, 
+        message: 'Admin not found' 
+      };
+    }
+
+    // Cannot suspend yourself
+    if (current_user.userId._id.toString() === adminId) {
+      return { 
+        success: true, 
+        canSuspend: false, 
+        message: 'Cannot suspend your own account' 
+      };
+    }
+
+    // Check if already suspended
+    const activeSuspension = await Suspension.findOne({ 
+      user: adminId, 
+      isActive: true 
+    });
+
+    if (activeSuspension) {
+      return { 
+        success: true, 
+        canSuspend: false, 
+        message: 'Admin is already suspended' 
+      };
+    }
+
+    return { 
+      success: true, 
+      canSuspend: true, 
+      message: 'Admin can be suspended',
+      adminDetails: {
+        role: adminToCheck.role,
+        name: `${adminToCheck.surName} ${adminToCheck.lastName}`,
+        email: adminToCheck.email
+      }
+    };
+
+  } catch (error) {
+    console.error('Error checking admin suspension eligibility:', error);
+    return { 
+      success: false, 
+      canSuspend: false, 
+      message: 'Error checking suspension eligibility' 
+    };
+  }
 };
 
 // Suspend user
@@ -785,5 +871,177 @@ export const autoLiftExpiredSuspensions = async () => {
   } catch (error) {
     console.error('Error in auto-lift process:', error);
     return { success: false, message: 'Failed to process expired suspensions', status: 500 };
+  }
+};
+
+// Add this function near your other suspension functions
+export const suspendAdmin = async (values: SuspendAdminProps) => {
+  const { adminId, category, reason, duration, path } = values;
+
+  try {
+    await connectToMongoDB();
+
+    const current_user = await getCurrentUser();
+
+    if (!current_user) {
+      return { success: false, message: 'You are not logged in', status: 403 };
+    }
+
+    const permissions = createServerPermissionService(current_user.role);
+
+    // Only superAdmins can suspend other admins
+    if (!permissions.isSuperAdmin) {
+      return { 
+        success: false, 
+        message: 'Only Super Admins can suspend other admin accounts', 
+        status: 403 
+      };
+    }
+
+    // Cannot suspend yourself
+    if (current_user.userId._id.toString() === adminId) {
+      return { 
+        success: false, 
+        message: 'You cannot suspend your own account', 
+        status: 400 
+      };
+    }
+
+    const adminToSuspend = await User.findById(adminId);
+
+    if (!adminToSuspend) {
+      return { 
+        success: false, 
+        message: 'Admin user not found', 
+        status: 404 
+      };
+    }
+
+    // Verify this is actually an admin user
+    if (!['admin', 'superAdmin', 'creator'].includes(adminToSuspend.role)) {
+      return { 
+        success: false, 
+        message: 'This user is not an admin. Use regular suspension instead.', 
+        status: 400 
+      };
+    }
+
+    // Cannot suspend superAdmins unless you're also a superAdmin
+    // (already checked above, but extra safeguard)
+    if (adminToSuspend.role === 'superAdmin' && current_user.role !== 'superAdmin') {
+      return { 
+        success: false, 
+        message: 'Only Super Admins can suspend other Super Admins', 
+        status: 403 
+      };
+    }
+
+    // Enhanced check: Verify no active suspension exists
+    const activeSuspension = await Suspension.findOne({ 
+      user: adminId, 
+      isActive: true 
+    });
+
+    if (activeSuspension) {
+      return {
+        success: false,
+        message: 'Admin account is already suspended by another admin',
+        status: 400
+      };
+    }
+
+    if (adminToSuspend.userAccountSuspended) {
+      return { 
+        success: false, 
+        message: 'Admin account is already suspended', 
+        status: 400 
+      };
+    }
+
+    // Start transaction for atomic operations
+    const session = await mongoose.startSession();
+
+    try {
+      await session.withTransaction(async () => {
+        const suspensionCount = await getSuspensionCount(adminId) + 1;
+        const suspendedUntil = calculateSuspendedUntil(duration);
+        const suspendedAt = new Date();
+
+        const newSuspensionData = {
+          user: adminToSuspend._id,
+          isActive: true,
+          suspendedUntil,
+          history: [{
+            action: 'suspension',
+            description: `ADMIN SUSPENSION #${suspensionCount}: ${reason}`,
+            performedBy: new Types.ObjectId(current_user.userId._id),
+            performedAt: suspendedAt,
+            reason,
+            duration,
+            data: { 
+              category, 
+              suspensionCount,
+              adminType: adminToSuspend.role // Store the admin type
+            }
+          }]
+        };
+
+        const suspension = new Suspension(newSuspensionData);
+        await suspension.save({ session });
+
+        const adminSuspensionUpdate = {
+          userAccountSuspended: true,
+          suspensionReason: reason,
+          suspendedAt,
+          suspendedBy: new Types.ObjectId(current_user.userId._id),
+          // Additional admin-specific fields
+          adminSuspended: true,
+          adminSuspensionCategory: category
+        };
+
+        await User.findByIdAndUpdate(adminId, adminSuspensionUpdate, { session });
+
+        // For admin accounts, we might want to log this in an admin audit log
+        // You can add additional logging here if needed
+
+        const formattedDate = formatDateWithFullMonth(suspendedAt);
+        const name = `${capitalizeName(adminToSuspend.surName ?? '')} ${capitalizeName(adminToSuspend.lastName ?? '')}`;
+
+        // Send admin-specific suspension email
+        await sendSuspensionEmail(
+          'suspension',
+          name,
+          reason,
+          `Admin Suspension: ${category}`,
+          formattedDate || " ",
+          adminToSuspend.email,
+          'ADMIN ACCOUNT SUSPENDED',
+          false,
+          'admin-support@yourdomain.com' // Special admin support email
+        );
+      });
+
+      path && revalidatePath(path);
+      return { 
+        success: true, 
+        message: 'Admin account successfully suspended', 
+        status: 200,
+        data: {
+          adminRole: adminToSuspend.role,
+          suspendedBy: current_user.userId._id
+        }
+      };
+
+    } finally {
+      await session.endSession();
+    }
+
+  } catch (error) {
+    console.error('Error suspending admin:', error);
+    return { 
+      success: false, 
+      message: 'Internal server error while suspending admin', 
+      status: 500 
+    };
   }
 };

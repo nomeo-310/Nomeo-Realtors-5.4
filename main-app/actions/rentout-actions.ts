@@ -12,7 +12,7 @@ import Apartment from "@/models/apartment";
 import { revalidatePath } from "next/cache";
 import Inspection from "@/models/inspection";
 import mongoose from "mongoose";
-import Rentout from "@/models/rentout";
+import Rentout, { RentoutStatus } from "@/models/rentout";
 
 type initialProps = {
   userId: string;
@@ -142,34 +142,47 @@ export const initiateRentOut = async (data: initialProps) => {
     if (!agentAccessResult.success) return agentAccessResult;
 
     // Parallelize all database queries for maximum performance
-    const [potentialClient, agentUserDetails, apartmentDetails, completedInspection, rentOutExists] = await Promise.all([
+    const [potentialClient, agentUserDetails, apartmentDetails] = await Promise.all([
       User.findById(userId),
       User.findById(agentUserId),
-      Apartment.findOne({ propertyIdTag }),
+      Apartment.findOne({ propertyIdTag })
+    ]);
+
+    if (!potentialClient || !agentUserDetails || !apartmentDetails) {
+      return { success: false, message: 'Client, agent, or property not found', status: 404 };
+    }
+
+    // NOW run the real checks
+    const [inspection, existingRentOut] = await Promise.all([
       Inspection.findOne({
-        apartment: { $exists: true }, // Will be populated below
+        apartment: apartmentDetails._id,
         agent: agentId,
         status: 'completed',
         user: userId,
         verdict: 'accepted'
       }),
       Rentout.findOne({
-        apartment: { $exists: true }, // Will be populated below
+        apartment: apartmentDetails._id,
         agent: agentId
       })
     ]);
 
+    if (!inspection) {
+      return { success: false, message: 'No accepted inspection found', status: 403 };
+    }
+    if (existingRentOut) {
+      return { success: false, message: 'Rent-out already initiated', status: 409 };
+    }
+
     // Validate all required data exists
     if (!potentialClient) {
-      return { success: false, message: 'Client seeking this property does not exist', status: 404 };
+      return { success: false, message: 'Client not found', status: 404 };
     }
-
     if (!agentUserDetails) {
-      return { success: false, message: 'Agent attached to this property does not exist', status: 404 };
+      return { success: false, message: 'Agent not found', status: 404 };
     }
-
     if (!apartmentDetails) {
-      return { success: false, message: 'Property does not exist', status: 404 };
+      return { success: false, message: 'Property not found', status: 404 };
     }
 
     // Update inspection and rentout queries with actual apartment ID
@@ -195,15 +208,14 @@ export const initiateRentOut = async (data: initialProps) => {
     if (!finalCompletedInspection) {
       return { 
         success: false, 
-        message: 'This property cannot be rented out to this client without a completed and accepted inspection.', 
+        message: 'No completed and accepted inspection found', 
         status: 403 
       };
     }
-
     if (finalRentOutExists) {
       return { 
         success: false, 
-        message: 'A rental process has already been initiated for this property. To proceed, please cancel the initial one.', 
+        message: 'Rental process already initiated', 
         status: 409 
       };
     }
@@ -211,22 +223,22 @@ export const initiateRentOut = async (data: initialProps) => {
     const userFullName = getFullName(potentialClient);
     const agentFullName = getFullName(authResult.currentUser!);
     
-    const messageContent = `Your contact agent: ${agentFullName} has successfully initiated the rent-out process for the property with ID: ${propertyIdTag}. Check your account to continue with process of payment.\n\nThank you for using our service!`;
+    const messageContent = `Your contact agent ${agentFullName} has initiated the rent-out process for property ID: ${propertyIdTag}. Check your account to proceed with payment.`;
 
     const initialRentOutData = {
       user: userId,
       agent: agentId,
       apartment: apartmentDetails._id,
-      rented: false,
+      status: 'pending' as RentoutStatus,
     };
 
     const notificationData = {
       title: 'Apartment Rent-Out',
-      content: `The rent-out process has been successfully initiated for the property with the ID: ${propertyIdTag}. You can go ahead and make payment.`,
+      content: `Rent-out process initiated for property ID: ${propertyIdTag}. Proceed to payment.`,
       recipient: userId,
       issuer: agentUserDetails._id,
       type: 'payment',
-      propertyId: propertyIdTag
+      propertyId: apartmentDetails._id
     };
 
     // Create rentout and notification within transaction
@@ -249,33 +261,21 @@ export const initiateRentOut = async (data: initialProps) => {
       )
     ]);
 
-    // Commit transaction first
+    // Commit transaction
     await session.commitTransaction();
 
-    // Send email asynchronously after transaction commit
-    sendRentOutEmail(
-      userFullName,
-      email,
-      'Apartment Rent-Out Initialization',
-      messageContent
-    );
+    // Send email asynchronously
+    sendRentOutEmail(userFullName, email, 'Apartment Rent-Out Initiated', messageContent);
 
     return { 
       success: true, 
-      message: 'Rent out successfully initiated. Contact client', 
+      message: 'Rent-out initiated successfully', 
       status: 200 
     };
-
   } catch (error) {
-    // Rollback transaction on error
     await session.abortTransaction();
     console.error('Rent-out initiation error:', error);
-
-    return { 
-      success: false, 
-      message: 'Error occurred while initiating rent-out. Please try again later.', 
-      status: 500 
-    };
+    return { success: false, message: 'Failed to initiate rent-out', status: 500 };
   } finally {
     session.endSession();
   }
@@ -309,40 +309,31 @@ export const cancelRentOut = async (data: cancelProps) => {
     ]);
 
     if (!apartmentDetails) {
-      return { success: false, message: 'Property does not exist', status: 404 };
+      return { success: false, message: 'Property not found', status: 404 };
     }
-
     if (!rentOut) {
-      return { success: false, message: 'Rent out process does not exist', status: 404 };
+      return { success: false, message: 'Rent-out process not found', status: 404 };
     }
 
     // Use populated user data
     const potentialClient = rentOut.user as any;
     if (!potentialClient) {
-      return { success: false, message: 'Client seeking this property does not exist', status: 404 };
+      return { success: false, message: 'Client not found', status: 404 };
     }
 
     const clientFullName = getFullName(potentialClient);
     const agentFullName = getFullName(authResult.currentUser!);
     
-    const messageContent = `Your contact agent: ${agentFullName} has cancelled the rent-out process for the property with ID: ${propertyIdTag}. You can reach out to the agent to find out the reason for this change.\n\nThank you for using our service!`;
+    const messageContent = `Your contact agent ${agentFullName} has cancelled the rent-out process for property ID: ${propertyIdTag}. Contact the agent for details.`;
 
     const notificationData = {
-      title: 'Rent-Out Cancellation',
-      content: `The rent-out process initiated for the property with the ID: ${propertyIdTag} has been cancelled. For further details reach out to the contact agent.`,
+      title: 'Rent-Out Cancelled',
+      content: `Rent-out process for property ID: ${propertyIdTag} has been cancelled.`,
       recipient: rentOut.user,
       issuer: authResult.currentUser!._id,
       type: 'payment',
-      propertyId: propertyIdTag
+      propertyId: apartmentDetails._id 
     };
-
-    // Prepare email template asynchronously while doing other work
-    const emailPromise = sendRentOutEmail(
-      clientFullName,
-      potentialClient.email,
-      'Apartment Rent-Out Cancellation',
-      messageContent
-    );
 
     // Execute all database operations within transaction
     const [newNotification] = await Promise.all([
@@ -366,33 +357,29 @@ export const cancelRentOut = async (data: cancelProps) => {
       )
     ]);
 
-    // Commit transaction first
+    // Commit transaction
     await session.commitTransaction();
 
-    // Wait for email to complete (but don't fail operation if it fails)
-    await emailPromise.catch(error => 
-      console.error('Failed to send rent-out cancellation email:', error)
-    );
+    // Send email asynchronously
+    await sendRentOutEmail(
+      clientFullName,
+      potentialClient.email,
+      'Apartment Rent-Out Cancelled',
+      messageContent
+    ).catch(error => console.error('Email error:', error));
 
-    // Revalidate path after successful operation
+    // Revalidate path
     revalidatePath(path);
 
     return { 
       success: true, 
-      message: 'Rent out successfully cancelled.', 
+      message: 'Rent-out cancelled successfully', 
       status: 200 
     };
-
   } catch (error) {
-    // Rollback transaction on error
     await session.abortTransaction();
     console.error('Cancel rent-out error:', error);
-
-    return { 
-      success: false, 
-      message: 'Error occurred while cancelling rent out.', 
-      status: 500 
-    };
+    return { success: false, message: 'Failed to cancel rent-out', status: 500 };
   } finally {
     session.endSession();
   }

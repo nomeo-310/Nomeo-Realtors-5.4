@@ -1,79 +1,81 @@
-import mongoose, { Schema, Document, Model, Types } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-interface ISellout extends Document {
-  user: Types.ObjectId;
-  apartment: string;
-  agent: Types.ObjectId;
-  sold: boolean;
-  status: string;
+const SELLOUT_STATUS = ['pending', 'active', 'completed', 'cancelled', 'expired'] as const;
+export type SelloutStatus = typeof SELLOUT_STATUS[number];
+
+export interface ISellout extends Document {
+  user: mongoose.Types.ObjectId;
+  apartment: mongoose.Types.ObjectId; 
+  agent: mongoose.Types.ObjectId;
   totalAmount?: number;
+  status: SelloutStatus;
+  isActive: boolean;
+  isCompleted: boolean;
+  isCancelled: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
-const selloutSchema: Schema<ISellout> = new Schema(
+const selloutSchema = new Schema<ISellout>(
   {
-    user: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'User'
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
-    apartment: { 
-      type: String, 
-      required: true
+    apartment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Apartment',
+      required: true,
+      index: true,
     },
-    agent: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Agent'
+    agent: {
+      type: Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: true,
+      index: true,
     },
-    sold: { 
-      type: Boolean, 
-      default: false
+
+    totalAmount: { type: Number, min: 0 },
+
+    status: {
+      type: String,
+      enum: SELLOUT_STATUS,
+      default: 'pending',
+      index: true,
     },
-    status: { 
-      type: String, 
-      enum: ['initiated', 'completed', 'cancelled', 'pending'], 
-      default: 'initiated'
-    },
-    totalAmount: { 
-      type: Number, 
-      default: undefined
-    }
   },
-  { 
+  {
     timestamps: true,
-    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// FIXED: Keep only essential single field indexes
-selloutSchema.index({ user: 1 });
-selloutSchema.index({ apartment: 1 });
-selloutSchema.index({ agent: 1 });
-selloutSchema.index({ sold: 1 });
-selloutSchema.index({ status: 1 });
-selloutSchema.index({ createdAt: -1 });
+selloutSchema.virtual('isActive').get(function () {
+  return this.status === 'active';
+});
+selloutSchema.virtual('isCompleted').get(function () {
+  return this.status === 'completed';
+});
+selloutSchema.virtual('isCancelled').get(function () {
+  return ['cancelled', 'expired'].includes(this.status);
+});
 
-// Compound indexes for common query patterns
-selloutSchema.index({ user: 1, sold: 1 });
-selloutSchema.index({ user: 1, status: 1 });
-selloutSchema.index({ agent: 1, sold: 1 });
-selloutSchema.index({ agent: 1, status: 1 });
-selloutSchema.index({ sold: 1, status: 1 });
-selloutSchema.index({ status: 1, createdAt: -1 });
+selloutSchema.index({ user: 1, createdAt: -1 });        
+selloutSchema.index({ agent: 1, createdAt: -1 });      
+selloutSchema.index({ apartment: 1 });                  
+selloutSchema.index({ status: 1 });                     
+selloutSchema.index({ status: 1, createdAt: -1 });     
+selloutSchema.index({ createdAt: 1 }, {          
+  expireAfterSeconds: 365 * 24 * 60 * 60, 
+  partialFilterExpression: { status: { $in: ['completed', 'cancelled', 'expired'] } }
+});
 
-// FIXED: Improved model creation with better caching
-let Sellout: Model<ISellout>;
+const SelloutModel =
+  (mongoose.models.Sellout as mongoose.Model<ISellout> | undefined) ??
+  mongoose.model<ISellout>('Sellout', selloutSchema);
 
-if (mongoose.models.Sellout) {
-  Sellout = mongoose.models.Sellout;
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 Using cached Sellout model');
-  }
-} else {
-  Sellout = mongoose.model<ISellout>('Sellout', selloutSchema);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Created new Sellout model');
-  }
-}
-
-export default Sellout;
+export default SelloutModel;

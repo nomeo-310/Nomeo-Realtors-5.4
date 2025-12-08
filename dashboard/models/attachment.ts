@@ -66,14 +66,8 @@ let Attachment: Model<IAttachment>;
 
 if (mongoose.models.Attachment) {
   Attachment = mongoose.models.Attachment;
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 Using cached Attachment model');
-  }
 } else {
   Attachment = mongoose.model<IAttachment>('Attachment', attachmentSchema);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Created new Attachment model');
-  }
 }
 
 export default Attachment;

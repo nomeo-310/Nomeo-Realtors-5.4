@@ -2,6 +2,13 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { parseISO, format } from 'date-fns';
 
+interface ActionResponse {
+  success: boolean;
+  message: string;
+  status?: number;
+  data?: any
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -140,4 +147,12 @@ export const generateUID = () => {
     baseString.substring(16, 20),
     baseString.substring(20, 32)
   ].join('-');
-}
+};
+
+export const createSuccessResponse = ( message: string, status = 200, data?: any): ActionResponse => ({
+  success: true, message, status, data
+});
+
+export const createErrorResponse = ( message: string, status = 500, data?: any): ActionResponse => ({
+  success: false, message, status, data
+});

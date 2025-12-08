@@ -63,7 +63,7 @@ export const authOptions: AuthOptions = {
           }
 
           // 4. Check if admin is activated
-          if (!admin.isActivated) {
+          if (!admin.isActive) {
             throw new Error('Admin account is deactivated');
           }
 

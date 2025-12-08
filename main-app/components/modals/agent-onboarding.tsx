@@ -5,9 +5,16 @@ import React from 'react'
 import Modal from '../ui/modal';
 import AgentMultiStepForm from '../on-boarding/agent-multistep-form';
 import { userDetails } from '@/lib/types';
+import ScrollableWrapper from '../ui/scrollable-wrapper';
 
 const AgentOnBoarding = ({user}:{user:userDetails}) => {
   const onboardingControl = useAgentOnboardingModal();
+
+  React.useEffect(() => {
+    if (user && !user.userOnboarded) {
+      onboardingControl.onOpen();
+    }
+  }, [user]);
 
   return (
     <Modal
@@ -16,11 +23,12 @@ const AgentOnBoarding = ({user}:{user:userDetails}) => {
       useCloseButton={false}
       closeOnEsc={false}
       closeOnOverlayClick={false}
-      title= 'Create Agent Profile'
-      useSeparator
-      width='xl:w-[600px] lg:w-[550px] md:w-[550px]'
+      title= ''
+      width="lg:w-[650px] xl:w-[700px] md:w-[550px]"
     >
-      <AgentMultiStepForm user={user}/>
+      <ScrollableWrapper>
+        <AgentMultiStepForm user={user}/>
+      </ScrollableWrapper>
     </Modal>
   )
 }

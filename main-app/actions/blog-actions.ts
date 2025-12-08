@@ -2,7 +2,6 @@
 
 import { connectToMongoDB } from "@/lib/connectToMongoDB";
 import Blog from "@/models/blog";
-import { getCurrentUser } from "./user-actions";
 import { revalidatePath } from "next/cache";
 import { render } from "@react-email/render";
 import { PostedCollaborationEmailTemplate } from "@/components/email-templates/posted-collaboration-email-template";
@@ -14,6 +13,7 @@ import Notification from "@/models/notification";
 import { deleteCloudinaryImages } from "./delete-cloudinary-image";
 import mongoose from 'mongoose'
 import { ObjectId } from "mongodb";
+import { getCurrentUser } from "./user-actions";
 
 interface blogData {
   read_time: number;
@@ -162,7 +162,7 @@ export const createNewBlog = async (blogData: blogData) => {
     description,
     content,
     bannerImagePublicId,
-    collaborators,
+    collaborators = [], // ← default empty array
   } = blogData;
 
   const banner = {
@@ -170,27 +170,29 @@ export const createNewBlog = async (blogData: blogData) => {
     public_id: bannerImagePublicId,
   };
 
-  const collaboratorPresent = collaborators.length > 0;
+  const hasCollaborators = collaborators.length > 0;
 
-  const newBlogData = {
-    read_time,
-    path,
-    title,
-    description,
-    content,
-    banner,
-    author: authResult.current_user!._id,
-    collaborators,
-    collaboration: collaboratorPresent,
-    is_published: true,
-    is_draft: false,
-    blog_approval: authResult.current_user!.role === 'superAdmin' ? 'approved' : 'pending',
-  };
+  // Define who can auto-approve
+  const canAutoApprove = ['superAdmin', 'admin', 'creator'].includes(
+    authResult.current_user!.role
+  );
 
   try {
-    const newBlog = await Blog.create(newBlogData);
+    const newBlog = await Blog.create({
+      read_time,
+      title,
+      description,
+      content: content || '',
+      banner,
+      author: authResult.current_user!._id,
+      collaborators,
+      collaboration: hasCollaborators,
+      is_published: true,
+      is_draft: false,
+      blog_approval: canAutoApprove ? 'approved' : 'pending',
+    });
 
-    if (collaboratorPresent) {
+    if (hasCollaborators) {
       const collaboratorUsers = await User.find({
         _id: { $in: collaborators },
         blogCollaborator: true,
@@ -245,7 +247,7 @@ export const createNewDraft = async (blogData: draftBlogData) => {
     description,
     content,
     bannerImagePublicId,
-    collaborators,
+    collaborators = [],
   } = blogData;
 
   const banner = {
@@ -253,25 +255,24 @@ export const createNewDraft = async (blogData: draftBlogData) => {
     public_id: bannerImagePublicId,
   };
 
-  const collaboratorPresent = collaborators && collaborators.length > 0;
-
-  const newBlogData = {
-    read_time,
-    path,
-    title,
-    description,
-    content,
-    banner: banner,
-    author: authResult.current_user!._id,
-    collaborators: collaborators || [],
-    collaboration: collaboratorPresent ? true : false,
-    is_draft: true,
-  };
+  const hasCollaborators = collaborators.length > 0;
 
   try {
-    const newBlog = await Blog.create(newBlogData);
+    const newBlog = await Blog.create({
+      read_time,
+      title,
+      description,
+      content: content || '',
+      banner,
+      author: authResult.current_user!._id,
+      collaborators,
+      collaboration: hasCollaborators,
+      is_draft: true,
+      is_published: false,
+      blog_approval: 'pending',
+    });
 
-    if (collaboratorPresent && collaborators) {
+    if (hasCollaborators) {
       const blogCollaborators = await User.find({
         _id: { $in: collaborators },
         blogCollaborator: true,
@@ -294,7 +295,7 @@ export const createNewDraft = async (blogData: draftBlogData) => {
           blogId: newBlog._id,
           title: "New Collaboration Invitation",
           type: "blog-invitation",
-          content: `You've been invited by ${getAuthorName(authResult.current_user!)} to collaborate on the blog post: "${title}".`,
+          content: `You've been invited by ${getAuthorName(authResult.current_user!)} to collaborate on "${title}".`,
         }
       );
 
@@ -305,11 +306,7 @@ export const createNewDraft = async (blogData: draftBlogData) => {
     }
 
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Blog draft created successfully",
-      status: 200,
-    };
+    return { success: true, message: "Blog draft created successfully", status: 200 };
   } catch (error) {
     console.error('Create draft error:', error);
     return { success: false, message: "Internal server error", status: 500 };
@@ -332,44 +329,28 @@ export const acceptCollaboration = async (acceptData: acceptDataProps) => {
   if (!permissionResult.success) return permissionResult;
 
   if (["user", "agent"].includes(authResult.current_user!.role) && !authResult.current_user!.blogCollaborator) {
-    return {
-      success: false,
-      message: "You can only accept a collaboration if you are a collaborator",
-      status: 403,
-    };
+    return { success: false, message: "You can only accept a collaboration if you are a collaborator", status: 403 };
   }
 
   try {
     const blog = await Blog.findById(blogId);
-    if (!blog) {
-      return { success: false, message: "Blog not found", status: 404 };
-    }
+    if (!blog) return { success: false, message: "Blog not found", status: 404 };
+    if (blog.author.toString() !== authorId) return { success: false, message: "Invalid author", status: 403 };
 
-    if (blog.collaborators?.some((id) => id.toString() === collaboratorId)) {
-      return {
-        success: false,
-        message: "You have already accepted this collaboration",
-        status: 400,
-      };
-    }
+    const result = await Blog.updateOne(
+      { _id: blogId },
+      {
+        $addToSet: { collaborators: collaboratorId },
+        $set: { collaboration: true }
+      }
+    );
 
-    if (blog.author.toString() !== authorId) {
-      return {
-        success: false,
-        message: "The author of this blog didn't send you an invite",
-        status: 403,
-      };
+    if (result.modifiedCount === 0) {
+      return { success: false, message: "Already a collaborator", status: 400 };
     }
-
-    if (!blog.collaborators) blog.collaborators = [];
-    blog.collaborators.push(collaboratorId as any);
-    blog.collaboration = true;
-    await blog.save();
 
     const collaborator = await User.findById(collaboratorId);
     if (collaborator) {
-      const fullName = getAuthorName(collaborator);
-
       await createNotifications(
         [blog.author.toString()],
         {
@@ -377,23 +358,17 @@ export const acceptCollaboration = async (acceptData: acceptDataProps) => {
           blogId: blog._id,
           title: "Collaboration Accepted",
           type: "notification",
-          content: `${fullName} has accepted your invitation to collaborate on the blog post: "${blog.title}".`,
+          content: `${getAuthorName(collaborator)} has accepted your collaboration invite for "${blog.title}".`,
         }
       );
 
-      await User.findByIdAndUpdate(
-        collaboratorId,
-        { $push: { collaborations: blog._id } },
-        { new: true }
-      );
+      await User.findByIdAndUpdate(collaboratorId, {
+        $addToSet: { collaborations: blog._id }
+      });
     }
 
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Collaboration accepted successfully",
-      status: 200,
-    };
+    return { success: true, message: "Collaboration accepted successfully", status: 200 };
   } catch (error) {
     console.error('Accept collaboration error:', error);
     return { success: false, message: "Internal server error", status: 500 };
@@ -416,69 +391,50 @@ export const rejectCollaboration = async (acceptData: acceptDataProps) => {
   if (!permissionResult.success) return permissionResult;
 
   if (["user", "agent"].includes(authResult.current_user!.role) && !authResult.current_user!.blogCollaborator) {
-    return {
-      success: false,
-      message: "You can only reject a collaboration if you are a collaborator",
-      status: 403,
-    };
+    return { success: false, message: "You can only reject a collaboration if you are a collaborator", status: 403 };
   }
 
   try {
     const blog = await Blog.findById(blogId);
-    if (!blog) {
-      return { success: false, message: "Blog not found", status: 404 };
-    }
+    if (!blog) return { success: false, message: "Blog not found", status: 404 };
+    if (blog.author.toString() !== authorId) return { success: false, message: "Invalid author", status: 403 };
 
-    if (blog.author.toString() !== authorId) {
-      return {
-        success: false,
-        message: "The author of this blog didn't send you an invite",
-        status: 403,
-      };
+    const wasCollaborator = blog.collaborators?.some(id => id.toString() === collaboratorId);
+
+    if (wasCollaborator) {
+      await Promise.all([
+        Blog.updateOne(
+          { _id: blogId },
+          { $pull: { collaborators: collaboratorId } }
+        ),
+        User.updateOne(
+          { _id: collaboratorId },
+          { $pull: { collaborations: blogId } }
+        )
+      ]);
     }
 
     const collaborator = await User.findById(collaboratorId);
-    const alreadyCollaborated = blog.collaborators?.some((id) => id.toString() === collaboratorId);
-
-    if (alreadyCollaborated && collaborator) {
+    if (collaborator) {
       const fullName = getAuthorName(collaborator);
+      const message = wasCollaborator
+        ? `${fullName} has left the collaboration on "${blog.title}".`
+        : `${fullName} has rejected your collaboration invite for "${blog.title}".`;
 
       await createNotifications(
         [blog.author.toString()],
         {
-          issuer: authResult.current_user!._id,
+          issuer: collaboratorId,
           blogId: blog._id,
-          title: "Collaboration Rejected",
+          title: "Collaboration Update",
           type: "notification",
-          content: `${fullName} will no longer be collaborating with you on the blog post: "${blog.title}".`,
-        }
-      );
-
-      await Promise.all([
-        Blog.findByIdAndUpdate(blogId, { $pull: { collaborators: collaborator._id } }),
-        User.findByIdAndUpdate(collaboratorId, { $pull: { collaborations: blog._id } })
-      ]);
-    } else if (collaborator) {
-      const fullName = getAuthorName(collaborator);
-
-      await createNotifications(
-        [blog.author.toString()],
-        {
-          issuer: authResult.current_user!._id,
-          blogId: blog._id,
-          title: "Collaboration Rejected",
-          type: "notification",
-          content: `${fullName} has rejected your invitation to collaborate on the blog post: "${blog.title}".`,
+          content: message,
         }
       );
     }
 
     revalidatePath(path);
-    return {
-      success: true,
-      message: "Collaboration rejected successfully",
-      status: 200,
-    };
+    return { success: true, message: "Collaboration rejected successfully", status: 200 };
   } catch (error) {
     console.error('Reject collaboration error:', error);
     return { success: false, message: "Internal server error", status: 500 };
@@ -645,83 +601,36 @@ export const publishDraft = async (blogData: updateBlogData) => {
     description,
     content,
     bannerImagePublicId,
-    collaborators,
+    collaborators = [], // ← default
     blogId,
   } = blogData;
 
   const currentBlog = await Blog.findOne({ _id: blogId, is_draft: true });
-  if (!currentBlog) {
-    return {
-      success: false,
-      message: "The blog you intend to edit does not exist!",
-      status: 404,
-    };
-  }
+  if (!currentBlog) return { success: false, message: "Draft not found", status: 404 };
 
   const isAuthor = currentBlog.author.toString() === authResult.current_user!._id.toString();
-  const isACollaborator = currentBlog.collaborators?.some((collabId) =>
-    collabId.toString() === authResult.current_user!._id.toString()
-  );
+  if (!isAuthor) return { success: false, message: "Only author can publish", status: 403 };
 
-  if (!isAuthor || isACollaborator) {
-    return {
-      success: false,
-      message: "You do not have the required permission to publish this draft",
-      status: 403,
-    };
-  }
+  const canAutoApprove = ['superAdmin', 'admin', 'creator'].includes(authResult.current_user!.role);
 
-  const newCollaboratorAdded = (blogData.collaborators?.length || 0) > (currentBlog.collaborators?.length || 0);
-  let newCollaborators: string[] = [];
-
-  if (newCollaboratorAdded && collaborators) {
-    newCollaborators = collaborators.filter((id) =>
-      !(currentBlog.collaborators || []).some((existingId) => existingId.toString() === id.toString())
-    );
-
-    if (newCollaborators.length > 0) {
-      const collaboratorUsers = await User.find({
-        _id: { $in: newCollaborators },
-        blogCollaborator: true,
-      });
-
-      await sendCollaborationEmails(
-        collaboratorUsers,
-        {
-          recipient: "Collaborator",
-          author: getAuthorName(authResult.current_user!),
-        },
-        "Your Collaboration has been published!",
-        'published'
-      );
-
-      await User.updateMany(
-        { _id: { $in: newCollaborators } },
-        { $push: { collaborations: currentBlog._id } }
-      );
-    }
-  }
-
-  const banner = {
-    secure_url: bannerImageUrl,
-    public_id: bannerImagePublicId,
-  };
+  const banner = { secure_url: bannerImageUrl, public_id: bannerImagePublicId };
 
   try {
     await Blog.findByIdAndUpdate(blogId, {
       title,
       description,
-      content,
+      content: content || '',
       read_time,
       banner,
-      collaborators: collaborators ?? currentBlog.collaborators,
+      collaborators,
+      collaboration: collaborators.length > 0,
       is_draft: false,
       is_published: true,
-      blog_approval: authResult.current_user!.role === 'superAdmin' ? 'approved' : 'pending',
+      blog_approval: canAutoApprove ? 'approved' : 'pending',
     });
 
     revalidatePath(path);
-    return { success: true, message: "Blog successfully published", status: 200 };
+    return { success: true, message: "Blog published successfully", status: 200 };
   } catch (error) {
     console.error('Publish draft error:', error);
     return { success: false, message: "Internal server error", status: 500 };
@@ -830,39 +739,54 @@ export const likeBlog = async ({ blogId, path }: { blogId: string; path: string 
   const authResult = await validateUserAuth();
   if (!authResult.success) return authResult;
 
+  const userId = authResult.current_user!._id;
+  const blogObjectId = new mongoose.Types.ObjectId(blogId);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
   try {
-    const current_blog = await Blog.findById(blogId);
-    if (!current_blog) {
+    const blog = await Blog.findById(blogObjectId);
+    if (!blog) {
       return { success: false, message: "Blog does not exist", status: 404 };
     }
 
-    const userId = new mongoose.Types.ObjectId(authResult.current_user!._id);
-    const hasLiked = current_blog.likes.some(
-      (id: mongoose.Types.ObjectId) => id.toString() === userId.toString()
-    );
+    const hasLiked = blog.likes.some(id => id.toString() === userObjectId.toString());
 
-    const operation = hasLiked ?
-      { $pull: { likes: userId }, $inc: { total_likes: -1 } } :
-      { $push: { likes: userId }, $inc: { total_likes: 1 } };
-
-    const userOperation = hasLiked ?
-      { $pull: { likedBlogs: current_blog._id } } :
-      { $push: { likedBlogs: current_blog._id } };
-
-    await Promise.all([
-      Blog.findByIdAndUpdate(blogId, operation),
-      User.findByIdAndUpdate(authResult.current_user!._id, userOperation)
-    ]);
+    if (hasLiked) {
+      // Unlike
+      await Promise.all([
+        Blog.updateOne(
+          { _id: blogObjectId },
+          { $pull: { likes: userObjectId } }
+        ),
+        User.updateOne(
+          { _id: userObjectId },
+          { $pull: { likedBlogs: blogObjectId } }
+        )
+      ]);
+    } else {
+      // Like
+      await Promise.all([
+        Blog.updateOne(
+          { _id: blogObjectId },
+          { $addToSet: { likes: userObjectId } }
+        ),
+        User.updateOne(
+          { _id: userObjectId },
+          { $addToSet: { likedBlogs: blogObjectId } }
+        )
+      ]);
+    }
 
     revalidatePath(path);
     return {
       success: true,
-      message: hasLiked ? "Blog unliked successfully" : "Blog liked successfully",
+      message: hasLiked ? "Blog unliked" : "Blog liked",
+      data: { hasLiked: !hasLiked },
       status: 200
     };
   } catch (error) {
     console.error('Like blog error:', error);
-    return { success: false, message: "Internal server error", status: 500 };
+    return { success: false, message: "Server error", status: 500 };
   }
 };
 
@@ -872,39 +796,40 @@ export const saveBlog = async ({ blogId, path }: { blogId: string; path: string 
   const authResult = await validateUserAuth();
   if (!authResult.success) return authResult;
 
+  const userId = authResult.current_user!._id;
+  const blogObjectId = new mongoose.Types.ObjectId(blogId);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
   try {
-    const current_blog = await Blog.findById(blogId);
-    if (!current_blog) {
+    const blog = await Blog.findById(blogObjectId);
+    if (!blog) {
       return { success: false, message: "Blog does not exist", status: 404 };
     }
 
-    const userId = new mongoose.Types.ObjectId(authResult.current_user!._id);
-    const hasSaved = current_blog.saves.some(
-      (id: mongoose.Types.ObjectId) => id.toString() === userId.toString()
-    );
+    const hasSaved = blog.saves.some(id => id.toString() === userId);
 
-    const operation = hasSaved ?
-      { $pull: { saves: userId }, $inc: { total_saves: -1 } } :
-      { $push: { saves: userId }, $inc: { total_saves: 1 } };
-
-    const userOperation = hasSaved ?
-      { $pull: { bookmarkedABlogs: current_blog._id } } :
-      { $push: { bookmarkedABlogs: current_blog._id } };
-
-    await Promise.all([
-      Blog.findByIdAndUpdate(blogId, operation),
-      User.findByIdAndUpdate(authResult.current_user!._id, userOperation)
-    ]);
+    if (hasSaved) {
+      await Promise.all([
+        Blog.updateOne({ _id: blogObjectId }, { $pull: { saves: userObjectId } }),
+        User.updateOne({ _id: userObjectId }, { $pull: { bookmarkedABlogs: blogObjectId } })
+      ]);
+    } else {
+      await Promise.all([
+        Blog.updateOne({ _id: blogObjectId }, { $addToSet: { saves: userObjectId } }),
+        User.updateOne({ _id: userObjectId }, { $addToSet: { bookmarkedABlogs: blogObjectId } })
+      ]);
+    }
 
     revalidatePath(path);
     return {
       success: true,
-      message: hasSaved ? "Blog unsaved successfully" : "Blog saved successfully",
+      message: hasSaved ? "Blog removed from saves" : "Blog saved",
+      data: { hasSaved: !hasSaved },
       status: 200
     };
   } catch (error) {
     console.error('Save blog error:', error);
-    return { success: false, message: "Internal server error", status: 500 };
+    return { success: false, message: "Server error", status: 500 };
   }
 };
 
@@ -912,21 +837,27 @@ export const getSingleBlog = async (blogId: string) => {
   await ensureConnection();
 
   try {
-    const current_blog = await Blog.findById(blogId)
+    const blog = await Blog.findById(blogId)
       .populate({
         path: 'author',
-        model: User,
-        select: '_id surName lastName profilePicture username role placeholderColor email'
+        select: '_id surName lastName profilePicture username role placeholderColor email',
       })
       .populate({
         path: 'collaborators',
-        model: User,
-        select: '_id surName lastName profilePicture username role placeholderColor email'
+        select: '_id surName lastName profilePicture username role placeholderColor email',
       })
+      .lean({ virtuals: true })
       .exec();
 
-    const blogData = JSON.parse(JSON.stringify(current_blog));
-    return blogData;
+    if (!blog) {
+      return { success: false, message: 'Blog not found', status: 404 };
+    }
+
+    return {
+      success: true,
+      data: blog,
+      status: 200,
+    };
   } catch (error) {
     console.error('Get single blog error:', error);
     return { success: false, message: 'Internal server error', status: 500 };
@@ -936,55 +867,60 @@ export const getSingleBlog = async (blogId: string) => {
 export const readBlog = async ({ blogId, path, sessionKey }: { blogId: string; path: string; sessionKey: string }) => {
   await ensureConnection();
 
+  if (!sessionKey) {
+    return { success: false, message: "Session key required", status: 400 };
+  }
+
+  const blogObjectId = new mongoose.Types.ObjectId(blogId);
+
   try {
-    if (!sessionKey) {
-      return { success: false, message: "Missing session identifier", status: 400 };
-    }
-
-    const blog = await Blog.findOne({ _id: new ObjectId(blogId) }).lean();
-    if (!blog) {
-      return { success: false, message: "Blog not found", status: 404 };
-    }
-
     const current_user = await getCurrentUser();
-    let shouldIncrementReads = false;
 
     if (!current_user) {
-      // Guest user
-      if (!blog.guest_readers?.includes(sessionKey)) {
-        shouldIncrementReads = true;
-        await Blog.updateOne(
-          { _id: new ObjectId(blogId) },
-          { $inc: { total_reads: 1 }, $addToSet: { guest_readers: sessionKey } }
-        );
-      }
-    } else {
-      // Logged-in user
-      const userId = current_user._id.toString();
-      const alreadyRead = blog.reads?.some((id: any) => id.toString() === userId);
+      // Guest reader
+      const result = await Blog.updateOne(
+        { 
+          _id: blogObjectId,
+          guest_readers: { $ne: sessionKey }  // Only count once
+        },
+        { 
+          $addToSet: { guest_readers: sessionKey }
+        }
+      );
 
-      if (!alreadyRead) {
-        shouldIncrementReads = true;
-        await Promise.all([
-          Blog.updateOne(
-            { _id: new ObjectId(blogId) },
-            { $inc: { total_reads: 1 }, $addToSet: { reads: new ObjectId(userId) } }
-          ),
-          User.updateOne(
-            { _id: new ObjectId(userId) },
-            { $addToSet: { reads: new ObjectId(blogId) } }
-          )
-        ]);
+      if (result.modifiedCount > 0) {
+        revalidatePath(path);
       }
+
+      return { success: true, message: "Read tracked (guest)" };
     }
 
-    if (shouldIncrementReads) {
+    // Logged-in user
+    const userObjectId = new mongoose.Types.ObjectId(current_user._id);
+
+    const result = await Blog.updateOne(
+      {
+        _id: blogObjectId,
+        reads: { $ne: userObjectId }
+      },
+      {
+        $addToSet: { 
+          reads: userObjectId,
+        }
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      await User.updateOne(
+        { _id: userObjectId },
+        { $addToSet: { readBlogs: blogObjectId } }
+      );
       revalidatePath(path);
     }
 
-    return { success: true, message: "Read registered", status: 200 };
+    return { success: true, message: "Read tracked" };
   } catch (error) {
     console.error('Read blog error:', error);
-    return { success: false, message: "Internal server error", status: 500 };
+    return { success: false, message: "Server error", status: 500 };
   }
 };

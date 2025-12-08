@@ -119,3 +119,13 @@ export const getSingleActiveAgent = async (id: string) => {
     throw new Error('Failed to fetch active user details');
   }
 };
+
+export const getSingleActiveAdmin = async (id:string) => {
+  await connectToMongoDB();
+
+  try {
+    
+  } catch (error) {
+    
+  }
+}

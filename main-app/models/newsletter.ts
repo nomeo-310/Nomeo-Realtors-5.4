@@ -1,55 +1,60 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
-interface INewsletter extends mongoose.Document {
-  userId?: mongoose.Types.ObjectId;
-  email: string;
+export interface INewsletter extends Document {
+  userId?: mongoose.Types.ObjectId;  
+  email: string;                     
   createdAt: Date;
   updatedAt: Date;
 }
 
-const newsletterSchema: mongoose.Schema<INewsletter> = new mongoose.Schema(
+const newsletterSchema = new Schema<INewsletter>(
   {
-    userId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'User'
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      sparse: true, 
+      index: true,
     },
-    email: { 
-      type: String, 
-      required: true, 
-      unique: true, 
-      lowercase: true
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      validate: {
+        validator: (v: string) => /^\S+@\S+\.\S+$/.test(v),
+        message: 'Please enter a valid email address',
+      },
     },
-  }, 
-  { 
+  },
+  {
     timestamps: true,
-    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Unique partial index to ensure one subscription per user (if userId exists)
-// This is the ONLY index needed for userId
-newsletterSchema.index(
-  { userId: 1 }, 
-  { 
-    unique: true, 
-    sparse: true,
-    partialFilterExpression: { userId: { $type: 'objectId' } }
-  }
-);
+newsletterSchema.virtual('isGuest').get(function () {
+  return !this.userId;
+});
 
-// FIXED: Improved model creation with better caching
-let Newsletter: mongoose.Model<INewsletter>;
-
-if (mongoose.models.Newsletter) {
-  Newsletter = mongoose.models.Newsletter;
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 Using cached Newsletter model');
+newsletterSchema.pre('save', async function (next) {
+  if (this.isModified('email')) {
+    const existing = await mongoose.models.Newsletter.findOne({
+      email: this.email,
+      _id: { $ne: this._id },
+    });
+    if (existing) {
+      const err = new Error('This email is already subscribed');
+      (err as any).code = 11000; 
+      return next(err);
+    }
   }
-} else {
-  Newsletter = mongoose.model<INewsletter>('Newsletter', newsletterSchema);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Created new Newsletter model');
-  }
-}
+  next();
+});
 
-export default Newsletter;
+const NewsletterModel =
+  (mongoose.models.Newsletter as mongoose.Model<INewsletter> | undefined) ??
+  mongoose.model<INewsletter>('Newsletter', newsletterSchema);
+
+export default NewsletterModel;

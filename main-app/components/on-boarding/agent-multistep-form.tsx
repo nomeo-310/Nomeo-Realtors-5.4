@@ -26,7 +26,7 @@ import { useBioAnalyzer } from "@/hooks/use-bio-analyzer";
 
 const fieldNames = [
   {
-    name: "Step 1",
+    name: "Personal Info",
     fields: [
       "surName",
       "lastName",
@@ -34,9 +34,10 @@ const fieldNames = [
       "additionalPhoneNumber",
       "officeNumber",
     ],
+    icon: User03Icon
   },
   {
-    name: "Step 2",
+    name: "Agency Details",
     fields: [
       "city",
       "state",
@@ -44,14 +45,17 @@ const fieldNames = [
       "agencyAddress",
       "inspectionFeePerHour",
     ],
+    icon: PlazaIcon
   },
   {
-    name: "Step 3",
+    name: "Professional Bio",
     fields: ["agentBio"],
+    icon: SparklesIcon
   },
 ];
 
 const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
+
   type FieldName = keyof agentProfileValues;
   const onboarding = useAgentOnboardingModal();
 
@@ -61,10 +65,15 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
   const [imageCropped, setImageCropped] = React.useState<File | null>(null);
   const [imageFile, setImageFile] = React.useState<File>();
   const [imageUrls, setImageUrls] = React.useState({
-    public_id: "",
-    secure_url: "",
+    public_id: user.profileImage?.public_id || "",
+    secure_url: user.profileImage?.secure_url || "",
   });
-  const [imageUploaded, setImageUploaded] = React.useState(false);
+  const [hasExistingImage, setHasExistingImage] = React.useState(
+    !!user.profileImage?.secure_url
+  );
+  const [imageUploaded, setImageUploaded] = React.useState(
+    !!user.profileImage?.secure_url
+  );
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const cropperRef = React.useRef<ReactCropperElement>(null);
@@ -75,6 +84,8 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
     minLength: 200,
     targetLength: 1000
   });
+
+  const totalSteps = fieldNames.length;
 
   const onImageSelection = (image: File | undefined) => {
     if (!image) {
@@ -132,15 +143,25 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
         secure_url: imageData?.secure_url,
       };
       setImageUrls(imageUrls);
-      toast.success("Profile image succesfully uploaded!");
+      toast.success("Profile image successfully uploaded!");
       setUploadingImage(false);
       setImageUploaded(true);
+      setHasExistingImage(true);
     } catch (error) {
       setUploadingImage(false);
       setImageCropped(null);
       setImageFile(undefined);
       toast.error("Error while uploading profile image, try again later.");
     }
+  };
+
+  const removeImage = () => {
+    setImageUrls({ public_id: "", secure_url: "" });
+    setImageUploaded(false);
+    setHasExistingImage(false);
+    setImageCropped(null);
+    setImageFile(undefined);
+    toast.info("Profile image removed. Please upload a new one.");
   };
 
   const resetField = () => {
@@ -150,29 +171,30 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
     setImageFile(undefined);
     setImageUrls({ public_id: "", secure_url: "" });
     setImageUploaded(false);
+    setHasExistingImage(false);
     form.reset();
   };
 
   const form = useForm({
     resolver: zodResolver(agentProfileSchema),
     defaultValues: {
-      surName: "",
-      lastName: "",
-      city: "",
-      state: "",
-      phoneNumber: "",
-      additionalPhoneNumber: "",
-      agencyAddress: "",
-      agencyName: "",
-      officeNumber: "",
-      inspectionFeePerHour: undefined,
-      agentBio: "",
+      surName: user.surName,
+      lastName: user.lastName,
+      city: user.city,
+      state: user.state,
+      phoneNumber: user.phoneNumber,
+      additionalPhoneNumber: user.additionalPhoneNumber,
+      agencyAddress: user?.agentId?.officeAddress,
+      agencyName: user?.agentId?.agencyName,
+      officeNumber: user?.agentId?.officeNumber,
+      inspectionFeePerHour: user?.agentId?.inspectionFeePerHour,
+      agentBio: user?.bio,
     },
   });
 
   // Bio analysis handler
   const handleBioChange = (value: string) => {
-    if (value.length > 10) { // Only analyze after some content
+    if (value.length > 10) {
       updateAnalysis(value);
     }
   };
@@ -191,16 +213,16 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
       return;
     }
 
-    if (output && !imageFile && !imageCropped) {
-      toast.error("Profile image is required!!");
+    // Allow users to proceed if they have an existing image OR have uploaded a new one
+    if (!imageUploaded && !imageCropped && !hasExistingImage) {
+      toast.error("Profile image is required!");
       return;
     }
 
-    if (currentStep < fieldNames.length - 1) {
-      if (currentStep === 0 && imageCropped && !imageUploaded) {
-        toast.error("Upload your profile image");
-        return;
-      }
+    // If user uploaded a new image but hasn't completed upload
+    if (currentStep === 0 && imageCropped && !imageUploaded && !hasExistingImage) {
+      toast.error("Upload your profile image");
+      return;
     }
 
     setCurrentStep((current) => current + 1);
@@ -210,9 +232,16 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
     values
   ) => {
     setIsLoading(true);
+    
+    // Prepare image data - ensure it's not undefined
+    const profileImageData = (imageUploaded || hasExistingImage) ? imageUrls : {
+      public_id: user.profileImage?.public_id || "",
+      secure_url: user.profileImage?.secure_url || "/images/default_user.png"
+    };
+    
     await createAgentProfile({
       ...values,
-      profileImage: imageUrls,
+      profileImage: profileImageData,
       userId: user._id,
     })
       .then((response) => {
@@ -232,12 +261,89 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
       });
   };
 
+  // Progress Indicator
+  const renderProgressIndicator = () => {
+    return (
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          {fieldNames.map((step, index) => (
+            <React.Fragment key={index}>
+              <div className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0 ${
+                  index === currentStep
+                    ? 'bg-blue-600 text-white'
+                    : index < currentStep
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {index < currentStep ? '✓' : index + 1}
+                </div>
+                <span className={`ml-2 text-sm font-medium ${
+                  index === currentStep ? 'text-blue-600' :
+                    index < currentStep ? 'text-green-600' :
+                      'text-gray-500'
+                }`}>
+                  {step.name}
+                </span>
+              </div>
+
+              {index < totalSteps - 1 && (
+                <div className={`flex-1 h-0.5 mx-4 ${
+                  index < currentStep ? 'bg-green-600' : 'bg-gray-200'
+                }`} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Step Header
+  const renderStepHeader = () => {
+    const currentStepInfo = fieldNames[currentStep];
+    const stepTitles = [
+      "Personal Information & Profile",
+      "Agency Details",
+      "Professional Bio"
+    ];
+    const stepDescriptions = [
+      "Start by adding your personal details and profile picture",
+      "Tell us about your agency and services",
+      "Create a compelling bio to attract clients"
+    ];
+
+    return (
+      <div className="space-y-2 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <HugeiconsIcon icon={currentStepInfo.icon} className="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {stepTitles[currentStep]}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {stepDescriptions[currentStep]}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Form {...form}>
       <form
         className="flex flex-col gap-3 lg:gap-4 w-full"
         onSubmit={form.handleSubmit(onSubmit)}
       >
+        {/* Step Header */}
+        {renderStepHeader()}
+
+        {/* Progress Indicator */}
+        {renderProgressIndicator()}
+
         {currentStep === 0 && (
           <React.Fragment>
             {imageFile ? (
@@ -252,56 +358,93 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
                 />
                 <div className="flex items-center justify-end gap-3 mt-4">
                   <Button
-                    variant={"secondary"}
+                    variant={"outline"}
                     onClick={onClose}
-                    className="rounded"
+                    className="rounded border-gray-300 hover:bg-gray-50"
                     type="button"
                   >
                     Cancel
                   </Button>
-                  <Button onClick={crop} className="rounded" type="button">
-                    Crop
+                  <Button 
+                    onClick={crop} 
+                    className="rounded bg-blue-600 hover:bg-blue-700" 
+                    type="button"
+                  >
+                    Crop Image
                   </Button>
                 </div>
               </div>
             ) : (
               <React.Fragment>
                 <div className="xl:h-[165px] lg:[150px] md:h-[160px] h-auto sm:flex-row flex-col flex xl:gap-4 gap-3 w-full sm:items-center group">
-                  <div
-                    className="cursor-pointer xl:w-[165px] lg:[150px] md:w-[160px] w-[130px] aspect-square bg-gray-200 flex items-center justify-center rounded-lg mx-auto sm:mx-0 relative"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden sr-only"
-                      onChange={(e) => onImageSelection(e.target.files?.[0])}
-                    />
-                    <Image
-                      src={
-                        imageCropped
-                          ? URL.createObjectURL(imageCropped)
-                          : "/images/default_user.png"
-                      }
-                      alt="avatar"
-                      fill
-                      priority
-                      className="rounded-lg object-cover object-center"
-                    />
+                  <div className="relative group">
                     <div
-                      className={cn(
-                        "p-3 text-center text-white text-sm absolute top-0 right-0 w-full h-full bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 flex justify-center items-center",
-                        uploadingImage && "opacity-100"
-                      )}
+                      className="cursor-pointer xl:w-[165px] lg:[150px] md:w-[160px] w-[130px] aspect-square bg-gray-200 flex items-center justify-center rounded-lg mx-auto sm:mx-0 relative"
+                      onClick={() => fileInputRef.current?.click()}
                     >
-                      {imageCropped && uploadingImage ? (
-                        <Loader2 className="animate-spin size-[50px] xl:size-[60px]" />
-                      ) : (
-                        <HugeiconsIcon
-                          icon={ImageAdd02Icon}
-                          className="size-[50px] xl:size-[60px]"
-                        />
-                      )}
+                      <Input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden sr-only"
+                        onChange={(e) => onImageSelection(e.target.files?.[0])}
+                        accept="image/*"
+                      />
+                      <Image
+                        src={
+                          imageCropped
+                            ? URL.createObjectURL(imageCropped)
+                            : imageUrls.secure_url || "/images/default_user.png"
+                        }
+                        alt="avatar"
+                        fill
+                        priority
+                        className="rounded-lg object-cover object-center"
+                      />
+                      <div
+                        className={cn(
+                          "p-3 text-center text-white text-sm absolute top-0 right-0 w-full h-full bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 flex justify-center items-center",
+                          uploadingImage && "opacity-100",
+                          hasExistingImage && "opacity-100 bg-black/20"
+                        )}
+                      >
+                        {uploadingImage ? (
+                          <Loader2 className="animate-spin size-[50px] xl:size-[60px]" />
+                        ) : hasExistingImage ? (
+                          <div className="text-center">
+                            <HugeiconsIcon
+                              icon={ImageAdd02Icon}
+                              className="size-[50px] xl:size-[60px] mb-2 mx-auto"
+                            />
+                            <p className="text-xs">Click to change image</p>
+                          </div>
+                        ) : (
+                          <HugeiconsIcon
+                            icon={ImageAdd02Icon}
+                            className="size-[50px] xl:size-[60px]"
+                          />
+                        )}
+                      </div>
+                      {/* Indicators container - positioned at top-right corner */}
+                      <div className="absolute -top-2 -right-2 flex flex-col items-end gap-1">
+                        {/* Current tag */}
+                        {hasExistingImage && (
+                          <div className="bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap shadow-sm">
+                            Current
+                          </div>
+                        )}
+                        
+                        {/* Remove button */}
+                        {(hasExistingImage || imageUploaded) && (
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors text-sm font-bold shadow-sm"
+                            aria-label="Remove profile image"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex-1 flex flex-col xl:gap-4 gap-3">
@@ -315,7 +458,7 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
                               className="bg-gray-200 rounded-lg"
                               inputClassName="rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 "
                               icon={User03Icon}
-                              placeholder="Enter your  surname"
+                              placeholder="Enter your surname"
                               {...field}
                             />
                           </FormControl>
@@ -608,33 +751,101 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
             )}
           </div>
         )}
+
+        {/* Profile Summary (for review) */}
+        {currentStep === totalSteps - 1 && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+            <h4 className="text-sm font-semibold text-gray-900 mb-2">Agent Profile Summary</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Agent Name:</span>
+                <span className="font-medium">
+                  {form.watch('surName')} {form.watch('lastName')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Agency:</span>
+                <span className="font-medium">{form.watch('agencyName')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Location:</span>
+                <span className="font-medium">
+                  {form.watch('city')}, {form.watch('state')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Contact:</span>
+                <span className="font-medium">{form.watch('phoneNumber')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Inspection Fee:</span>
+                <span className="font-medium">
+                  ₦{String(form.watch('inspectionFeePerHour') || '0')}/hour
+                </span>
+              </div>
+              {form.watch('agentBio') && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Bio Length:</span>
+                  <span className="font-medium">{form.watch('agentBio')?.length || 0} characters</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Profile Picture:</span>
+                <span className={`font-medium ${imageUploaded || hasExistingImage ? 'text-green-600' : 'text-amber-600'}`}>
+                  {(imageUploaded || hasExistingImage) ? 'Uploaded ✓' : 'Required'}
+                </span>
+              </div>
+              {/* Show preview of profile image */}
+              {(imageUploaded || hasExistingImage) && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-gray-600">Preview:</span>
+                  <div className="w-12 h-12 relative rounded-full overflow-hidden border-2 border-green-500">
+                    <Image
+                      src={imageUrls.secure_url || user.profileImage?.secure_url || ""}
+                      alt="Profile preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step Navigation */}
         <div className="mt-3 flex items-center justify-between">
           {currentStep > 0 && (
-            <button
-              className="rounded-lg py-3 px-5 bg-black text-white text-sm lg:text-sm"
+            <Button
               type="button"
+              variant="outline"
               onClick={previousStep}
+              disabled={isLoading}
+              className="rounded-lg py-3 px-5 border-gray-300 hover:bg-gray-50"
             >
               Previous
-            </button>
+            </Button>
           )}
-          {currentStep === 2 ? (
+          {currentStep === totalSteps - 1 ? (
             <LoadingButton
               isLoading={isLoading}
-              disabled={isLoading}
-              className="rounded-lg py-3 px-5 bg-green-600 text-white text-sm lg:text-sm"
+              disabled={isLoading || (!imageUploaded && !hasExistingImage)}
+              className="rounded-lg py-3 px-5 bg-green-600 hover:bg-green-700 text-white text-sm lg:text-sm"
               type="submit"
-              label="Create Profile"
+              label="Complete Agent Profile"
               loadingLabel="Creating Profile..."
             />
           ) : (
-            <button
-              className="rounded-lg py-3 px-5 bg-black text-white text-sm lg:text-sm"
+            <Button
               type="button"
               onClick={nextStep}
+              className="rounded-lg py-3 px-5 bg-blue-600 hover:bg-blue-700 text-white text-sm lg:text-sm"
             >
-              Next
-            </button>
+              Next Step
+              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Button>
           )}
         </div>
       </form>

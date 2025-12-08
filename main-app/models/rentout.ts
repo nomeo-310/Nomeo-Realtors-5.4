@@ -1,90 +1,94 @@
-import mongoose, { Schema, Document, Model, Types } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-interface IRentout extends Document {
-  user: Types.ObjectId;
-  apartment: Types.ObjectId;
-  agent: Types.ObjectId;
-  rented: boolean;
-  status: string;
-  startDate?: string;
-  endDate?: string;
+const RENTOUT_STATUS = ['pending', 'active', 'completed', 'cancelled', 'expired'] as const;
+export type RentoutStatus = typeof RENTOUT_STATUS[number];
+
+export interface IRentout extends Document {
+  user: mongoose.Types.ObjectId;  
+  apartment: mongoose.Types.ObjectId;
+  agent: mongoose.Types.ObjectId;
+  startDate?: Date;
+  endDate?: Date;
   totalAmount?: number;
+  status: RentoutStatus;
+  isActive: boolean;
+  isCompleted: boolean;
+  isCancelled: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
-const rentoutSchema: Schema<IRentout> = new Schema(
+const rentoutSchema = new Schema<IRentout>(
   {
-    user: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'User'
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
-    apartment: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Apartment'
+    apartment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Apartment',
+      required: true,
+      index: true,
     },
-    agent: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Agent'
+    agent: {
+      type: Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: true,
+      index: true,
     },
-    startDate: { 
-      type: String, 
-      default: undefined
+
+    startDate: { type: Date },
+    endDate: { type: Date },
+    totalAmount: { type: Number, min: 0 },
+
+    status: {
+      type: String,
+      enum: RENTOUT_STATUS,
+      default: 'pending',
+      index: true,
     },
-    endDate: { 
-      type: String, 
-      default: undefined
-    },
-    rented: { 
-      type: Boolean, 
-      default: false
-    },
-    status: { 
-      type: String, 
-      enum: ['initiated', 'completed', 'cancelled', 'pending'], 
-      default: 'initiated'
-    },
-    totalAmount: { 
-      type: Number, 
-      default: undefined
-    }
   },
-  { 
+  {
     timestamps: true,
-    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// FIXED: Keep only essential single field indexes
-rentoutSchema.index({ user: 1 });
-rentoutSchema.index({ apartment: 1 });
-rentoutSchema.index({ agent: 1 });
-rentoutSchema.index({ status: 1 });
-rentoutSchema.index({ rented: 1 });
-rentoutSchema.index({ createdAt: -1 });
+rentoutSchema.virtual('isActive').get(function () {
+  return this.status === 'active';
+});
+rentoutSchema.virtual('isCompleted').get(function () {
+  return this.status === 'completed';
+});
+rentoutSchema.virtual('isCancelled').get(function () {
+  return this.status === 'cancelled' || this.status === 'expired';
+});
 
-// Compound indexes for common query patterns
-rentoutSchema.index({ user: 1, rented: 1 });
-rentoutSchema.index({ user: 1, status: 1 });
-rentoutSchema.index({ agent: 1, rented: 1 });
-rentoutSchema.index({ agent: 1, status: 1 });
-rentoutSchema.index({ apartment: 1, rented: 1 });
-rentoutSchema.index({ rented: 1, status: 1 });
-rentoutSchema.index({ status: 1, createdAt: -1 });
+rentoutSchema.index({ user: 1, createdAt: -1 });    
+rentoutSchema.index({ agent: 1, createdAt: -1 });       
+rentoutSchema.index({ apartment: 1 });                  
+rentoutSchema.index({ status: 1 });                     
+rentoutSchema.index({ status: 1, createdAt: -1 });      
+rentoutSchema.index({ endDate: 1 }, {                  
+  expireAfterSeconds: 0,
+  partialFilterExpression: { status: 'active' }
+});
 
-// FIXED: Improved model creation with better caching
-let Rentout: Model<IRentout>;
 
-if (mongoose.models.Rentout) {
-  Rentout = mongoose.models.Rentout;
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 Using cached Rentout model');
+rentoutSchema.pre('save', function (next) {
+  const now = new Date();
+  if (this.endDate && this.endDate < now && this.status === 'active') {
+    this.status = 'expired';
   }
-} else {
-  Rentout = mongoose.model<IRentout>('Rentout', rentoutSchema);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Created new Rentout model');
-  }
-}
+  next();
+});
 
-export default Rentout;
+const RentoutModel =
+  (mongoose.models.Rentout as mongoose.Model<IRentout> | undefined) ??
+  mongoose.model<IRentout>('Rentout', rentoutSchema);
+
+export default RentoutModel;

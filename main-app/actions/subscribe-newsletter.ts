@@ -3,38 +3,33 @@ import { getUserByEmail } from "./user-actions";
 import Newsletter from "@/models/newsletter";
 import { revalidatePath } from "next/cache";
 
-type newsletter = {
+type NewsletterInput = {
   email: string;
   path: string;
-}
+};
 
-export const subscribeNewsletter = async ({email, path}:newsletter) => {
+export const subscribeNewsletter = async ({ email, path }: NewsletterInput) => {
   await connectToMongoDB();
 
-  if (!email) {
-    return { success: false, message: 'Email is required!!', status: 400 }
-  };
+  const normalizedEmail = email.trim().toLowerCase();
 
-  const alreadySubscribed = await Newsletter.find({email:email});
+  try {
+    const user = await getUserByEmail(normalizedEmail);
 
-  if (alreadySubscribed) {
-    return { success: false, message: 'You have already subscribed to our newsletter!!', status: 400 }
-  }
-
-  const user = await getUserByEmail(email);
-
-  if (user) {
-    const newSubscriber = await Newsletter.create({email: email, userId: user._id});
-    newSubscriber.save();
+    await Newsletter.findOneAndUpdate(
+      { email: normalizedEmail },
+      { 
+        $setOnInsert: { userId: user?._id } 
+      },
+      { upsert: true }
+    );
 
     revalidatePath(path);
-    return { success: 'Subscription was successful!!' }
-  } else {
-    const newSubscriber = await Newsletter.create({ email: email });
-    newSubscriber.save();
-
-    revalidatePath(path);
-    return { success: true, message: 'Subscription was successful!!', status: 200 }
+    return { success: true, message: "Subscribed successfully!", status: 200 };
+  } catch (error: any) {
+    if (error.code === 11000) {
+      return { success: true, message: "Already subscribed!", status: 200 };
+    }
+    return { success: false, message: "Subscription failed", status: 500 };
   }
-
-}
+};

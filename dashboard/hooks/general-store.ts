@@ -64,7 +64,10 @@ export interface UserForRestriction {
   surName: string;
   lastName: string;
   email: string;
+  username?: string;
+  adminId?: string
   phoneNumber?: string;
+  createdAt?: string;
   userType: 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin';
   isActive: boolean;
   isSuspended?: boolean;
@@ -126,6 +129,37 @@ interface DeletionReminderModalStore {
   reset: () => void;
 }
 
+interface UserInfo {
+  _id: string;
+  email: string;
+  surName: string;
+  lastName: string;
+  firstName?: string;
+  phoneNumber?: string;
+}
+
+export interface AdminListData {
+  _id: string;
+  userId: UserInfo;
+  role: 'admin' | 'creator' | 'superAdmin';
+  adminAccess: 'full_access' | 'limited_access' | 'no_access';
+  adminOnboarded: boolean;
+  createdAt: string | Date;
+  adminId: string;
+  isActive: boolean;
+  isActivated?: boolean;
+  isSuspended?: boolean;
+  deactivated?: boolean;
+  updatedAt?: string | Date;
+}
+
+interface DeactivateUserModalStore {
+  isOpen: boolean;
+  user: AdminListData | null;
+  onOpen: (user: AdminListData) => void;
+  onClose: () => void;
+}
+
 export const useCookiesModal = create<ModalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
@@ -157,6 +191,18 @@ export const useRejectAgentModal = create<ModalControlProps>((set) => ({
 }));
 
 export const useRejectPropertyModal = create<ModalControlProps>((set) => ({
+  isOpen: false,
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+}));
+
+export const useCreateAdminModal = create<ModalControlProps>((set) => ({
+  isOpen: false,
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+}));
+
+export const useOnboardingModal = create<ModalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
   onClose: () => set({ isOpen: false }),
@@ -232,4 +278,11 @@ export const useDeletionReminderModal = create<DeletionReminderModalStore>((set)
     deletionDate: null,
     gracePeriodDays: null 
   })
+}));
+
+export const useDeactivateUserModal = create<DeactivateUserModalStore>((set) => ({
+  isOpen: false,
+  user: null,
+  onOpen: (user) => set({ isOpen: true, user }),
+  onClose: () => set({ isOpen: false, user: null }),
 }));

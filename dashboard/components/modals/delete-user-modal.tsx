@@ -169,7 +169,6 @@ const DeleteUserModal = () => {
       title={currentStep === 'confirmation' ? 'Confirm Deletion' : `Delete ${userTypeLabel} Account`}
       width="lg:w-[600px] xl:w-[650px] md:w-[550px]"
       useCloseButton
-      useSeparator
     >
       {currentStep === 'confirmation' ? (
         <div className="space-y-4">

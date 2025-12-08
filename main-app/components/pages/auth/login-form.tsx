@@ -65,6 +65,10 @@ const LoginForm = () => {
     }));
       
       const errorConfig = {
+        wrong_portal: {
+          message: 'Admins must use the admin portal.',
+          action: null
+        },
         account_deleted_by_admin: {
           message: 'Account was deleted by admin.',
           action: () => router.push('/account-deleted?deleted=admin')

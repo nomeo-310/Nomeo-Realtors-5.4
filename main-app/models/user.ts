@@ -142,31 +142,23 @@ const userSchema: Schema<IUser> = new Schema(
   }
 );
 
-// Single field indexes for non-unique fields
-userSchema.index({ role: 1 });
-userSchema.index({ city: 1 });
-userSchema.index({ state: 1 });
-userSchema.index({ userOnboarded: 1 });
-userSchema.index({ profileCreated: 1 });
-userSchema.index({ userVerified: 1 });
-userSchema.index({ userIsAnAgent: 1 });
-userSchema.index({ userAccountDeleted: 1 });
-userSchema.index({ userAccountSuspended: 1 });
-userSchema.index({ previousRole: 1 });
+// Single field indexes to KEEP:
+userSchema.index({ role: 1 }); // Keep if you query role alone frequently
+userSchema.index({ city: 1 }); // Keep for city-based queries
+userSchema.index({ state: 1 }); // Keep for state-based queries
+userSchema.index({ userVerified: 1 }); // Keep for verification queries
+userSchema.index({ previousRole: 1 }); // Unique enough to keep
 
-// Compound indexes for common query patterns
-userSchema.index({ email: 1, role: 1 });
-userSchema.index({ username: 1, userVerified: 1 });
-userSchema.index({ role: 1, userIsAnAgent: 1 });
-userSchema.index({ userAccountSuspended: 1, userAccountDeleted: 1 });
-userSchema.index({ city: 1, state: 1 });
-userSchema.index({ createdAt: -1 });
-userSchema.index({ updatedAt: -1 });
-userSchema.index({ userOnboarded: 1, profileCreated: 1 });
-userSchema.index({ suspendedAt: -1 });
-userSchema.index({ phoneNumber: 1, userVerified: 1 });
+// Compound indexes to KEEP:
+userSchema.index({ email: 1, role: 1 }); // Good for admin lookups
+userSchema.index({ username: 1, userVerified: 1 }); // Good for user lookups
+userSchema.index({ role: 1, userIsAnAgent: 1 }); // Good for agent management
+userSchema.index({ userAccountSuspended: 1, userAccountDeleted: 1 }); // Good for admin dashboard
+userSchema.index({ createdAt: -1 }); // Essential for pagination
+userSchema.index({ updatedAt: -1 }); // Good for activity tracking
+userSchema.index({ userOnboarded: 1, profileCreated: 1 }); // Good for onboarding flow
 
-// Text search index for search functionality
+// Text search - KEEP
 userSchema.index({
   username: 'text',
   email: 'text',
@@ -175,7 +167,7 @@ userSchema.index({
   bio: 'text'
 });
 
-// Sparse indexes for optional fields that are frequently queried
+// Sparse indexes - KEEP
 userSchema.index({ phoneNumber: 1 }, { sparse: true });
 userSchema.index({ agentId: 1 }, { sparse: true });
 
@@ -202,14 +194,8 @@ let User: Model<IUser>;
 
 if (mongoose.models.User) {
   User = mongoose.models.User;
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 Using cached User model');
-  }
 } else {
   User = mongoose.model<IUser>('User', userSchema);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Created new User model');
-  }
 }
 
 export default User;

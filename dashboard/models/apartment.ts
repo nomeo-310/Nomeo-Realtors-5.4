@@ -1,258 +1,227 @@
-import mongoose, { Schema, Types, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-type Fee = {
-  name: string;
-  amount: number;
-};
+const PROPERTY_TAGS = ['for-rent', 'for-sale'] as const;
+const AVAILABILITY_STATUS = ['available', 'rented', 'pending'] as const;
+const APPROVAL_STATUS = ['approved', 'pending', 'unapproved'] as const;
+const FURNITURE_STATUS = ['furnished', 'unfurnished'] as const;
+const FACILITY_STATUS = ['serviced', 'unserviced'] as const;
 
-type Landmark = {
-  name: string;
-  distanceAway: string;
-};
+export type PropertyTag = typeof PROPERTY_TAGS[number];
+export type AvailabilityStatus = typeof AVAILABILITY_STATUS[number];
+export type ApprovalStatus = typeof APPROVAL_STATUS[number];
+export type FurnitureStatus = typeof FURNITURE_STATUS[number];
+export type FacilityStatus = typeof FACILITY_STATUS[number];
 
-interface IApartment extends Document {
-  propertyTag: 'for-rent' | 'for-sale';
+type Fee = { name: string; amount: number };
+type Landmark = { name: string; distanceAway: string };
+
+
+export interface IApartment extends Document {
+  // Core
+  propertyTag: PropertyTag;
   propertyIdTag?: string;
-  propertyTypeTag: string;
+  propertyTypeTag?: string;
+
   title: string;
   description: string;
   address: string;
   city: string;
   state: string;
+
+  // Pricing
   monthlyRent: number;
-  propertyPrice: number;
   annualRent: number;
+  propertyPrice: number;
+
+  // Specs
   bedrooms: number;
   bathrooms: number;
   toilets: number;
+  squareFootage?: number;
+
+  // Amenities & Fees
   mainAmenities: string[];
   optionalAmenities: string[];
-  squareFootage: number;
-  hideProperty: boolean;
-  hiddenAt: Date;
-  hiddenReason: string;
-  status: string;
   mainFees: Fee[];
   optionalFees: Fee[];
   closestLandmarks: Landmark[];
-  apartmentImages: Types.ObjectId;
-  agent: Types.ObjectId;
-  availabilityStatus: 'available' | 'rented' | 'pending';
-  furnitureStatus: 'furnished' | 'non furnished';
-  facilityStatus: 'service' | 'non service';
-  propertyApproval: 'approved' | 'pending' | 'unapproved';
-  bookmarks: Types.ObjectId[];
-  likes: Types.ObjectId[];
-  reviews: Types.ObjectId[];
+
+  // Relationships
+  agent: mongoose.Types.ObjectId;
+  apartmentImages?: mongoose.Types.ObjectId;
+  bookmarks: mongoose.Types.ObjectId[];
+  likes: mongoose.Types.ObjectId[];
+  reviews: mongoose.Types.ObjectId[];
+
+  // Status
+  availabilityStatus: AvailabilityStatus;
+  propertyApproval: ApprovalStatus;
+  furnitureStatus: FurnitureStatus;
+  facilityStatus: FacilityStatus;
+
+  hideProperty: boolean;
+  hiddenAt?: Date;
+  hiddenReason?: string;
+
+  // Geolocation (RECOMMENDED!)
+  location?: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
+
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
 }
 
-const apartmentSchema: Schema<IApartment> = new Schema(
+// ==================== SCHEMA ====================
+const apartmentSchema = new Schema<IApartment>(
   {
-    propertyTag: { 
-      type: String, 
-      enum: ['for-rent', 'for-sale'], 
-      default: 'for-rent'
+    propertyTag: {
+      type: String,
+      enum: PROPERTY_TAGS,
+      default: 'for-rent',
+      index: true,
     },
-    propertyTypeTag: { 
-      type: String, 
-      default: undefined
+    propertyIdTag: { type: String, unique: true, sparse: true },
+    propertyTypeTag: String,
+
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    address: { type: String, required: true },
+    city: { type: String, required: true, index: true },
+    state: { type: String, required: true, index: true },
+
+    monthlyRent: { type: Number, default: 0, min: 0 },
+    annualRent: { type: Number, default: 0, min: 0 },
+    propertyPrice: { type: Number, default: 0, min: 0 },
+
+    bedrooms: { type: Number, default: 0, min: 0 },
+    bathrooms: { type: Number, default: 0, min: 0 },
+    toilets: { type: Number, default: 0, min: 0 },
+    squareFootage: { type: Number, min: 0 },
+
+    mainAmenities: [{ type: String }],
+    optionalAmenities: [{ type: String }],
+    mainFees: [{ name: String, amount: Number }],
+    optionalFees: [{ name: String, amount: Number }],
+    closestLandmarks: [{ name: String, distanceAway: String }],
+
+    agent: {
+      type: Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: true,
+      index: true,
     },
-    propertyIdTag: { 
-      type: String, 
-      default: undefined
+    apartmentImages: {
+      type: Schema.Types.ObjectId,
+      ref: 'Attachment',
     },
-    title: { 
-      type: String, 
-      default: undefined
+
+    bookmarks: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    reviews: [{ type: Schema.Types.ObjectId, ref: 'Review' }],
+
+    availabilityStatus: {
+      type: String,
+      enum: AVAILABILITY_STATUS,
+      default: 'available',
+      index: true,
     },
-    description: { 
-      type: String, 
-      default: undefined
+    propertyApproval: {
+      type: String,
+      enum: APPROVAL_STATUS,
+      default: 'pending',
+      index: true,
     },
-    address: { 
-      type: String, 
-      default: undefined
+    furnitureStatus: {
+      type: String,
+      enum: FURNITURE_STATUS,
+      default: 'unfurnished',
     },
-    city: { 
-      type: String, 
-      default: undefined
+    facilityStatus: {
+      type: String,
+      enum: FACILITY_STATUS,
+      default: 'unserviced',
     },
-    state: { 
-      type: String, 
-      default: undefined
-    },
-    mainAmenities: [{ 
-      type: String, 
-      default: undefined 
-    }],
-    optionalAmenities: [{ 
-      type: String, 
-      default: undefined 
-    }],
-    monthlyRent: { 
-      type: Number, 
-      default: 0
-    },
-    propertyPrice: { 
-      type: Number, 
-      default: 0
-    },
-    annualRent: { 
-      type: Number, 
-      default: 0
-    },
-    bedrooms: { 
-      type: Number, 
-      default: 0
-    },
-    bathrooms: { 
-      type: Number, 
-      default: 0
-    },
-    toilets: { 
-      type: Number, 
-      default: 0
-    },
-    squareFootage: { 
-      type: Number, 
-      default: 0
-    },
-    hideProperty: {
-      type: Boolean, 
-      default: false
-    },
-    hiddenAt: { 
-      type: Date, 
-      default: undefined
-    },
-    hiddenReason: { 
-      type: String, 
-      default: undefined
-    },
-    status: { 
-      type: String, 
-      default: undefined
-    },
-    mainFees: [{ 
-      name: { type: String, default: undefined }, 
-      amount: { type: Number, default: 0 } 
-    }],
-    optionalFees: [{ 
-      name: { type: String, default: undefined }, 
-      amount: { type: Number, default: 0 } 
-    }],
-    closestLandmarks: [{ 
-      name: { type: String, default: undefined }, 
-      distanceAway: { type: String, default: undefined } 
-    }],
-    apartmentImages: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Attachment'
-    },
-    agent: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Agent'
-    },
-    bookmarks: [{ 
-      type: Schema.Types.ObjectId, 
-      ref: 'User' 
-    }],
-    likes: [{ 
-      type: Schema.Types.ObjectId, 
-      ref: 'User' 
-    }],
-    reviews: [{ 
-      type: Schema.Types.ObjectId, 
-      ref: 'Review' 
-    }],
-    availabilityStatus: { 
-      type: String, 
-      enum: ['available', 'rented', 'pending'], 
-      default: 'available'
-    },
-    propertyApproval: { 
-      type: String, 
-      enum: ['approved', 'pending', 'unapproved'], 
-      default: 'unapproved'
-    },
-    furnitureStatus: { 
-      type: String, 
-      enum: ['furnished', 'non furnished'], 
-      default: 'non furnished'
-    },
-    facilityStatus: { 
-      type: String, 
-      enum: ['service', 'non service'], 
-      default: 'non service'
+
+    hideProperty: { type: Boolean, default: false },
+    hiddenAt: Date,
+    hiddenReason: String,
+
+    // Geospatial (HIGHLY RECOMMENDED)
+    location: {
+      type: { type: String, enum: ['Point'], default: 'Point' },
+      coordinates: { type: [Number], default: [0, 0] }, 
     },
   },
-  { 
+  {
     timestamps: true,
-    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// FIXED: Keep only essential single field indexes
-apartmentSchema.index({ propertyTag: 1 });
-apartmentSchema.index({ city: 1 });
-apartmentSchema.index({ state: 1 });
-apartmentSchema.index({ monthlyRent: 1 });
-apartmentSchema.index({ propertyPrice: 1 });
-apartmentSchema.index({ bedrooms: 1 });
-apartmentSchema.index({ agent: 1 });
-apartmentSchema.index({ availabilityStatus: 1 });
-apartmentSchema.index({ propertyApproval: 1 });
 
-// Compound indexes for common query patterns
-apartmentSchema.index({ propertyTag: 1, availabilityStatus: 1 });
-apartmentSchema.index({ propertyTag: 1, propertyApproval: 1 });
+apartmentSchema.index({ location: '2dsphere' });
+
+apartmentSchema.index(
+  {
+    title: 'text',
+    description: 'text',
+    address: 'text',
+    city: 'text',
+    state: 'text',
+    mainAmenities: 'text',
+  },
+  {
+    weights: {
+      title: 10,
+      description: 8,
+      address: 7,
+      city: 6,
+      mainAmenities: 5,
+    },
+    name: 'apartment_search_text',
+  }
+);
+
+
+apartmentSchema.index({ propertyTag: 1, propertyApproval: 1, availabilityStatus: 1 });
 apartmentSchema.index({ city: 1, state: 1 });
-apartmentSchema.index({ city: 1, propertyTag: 1 });
-apartmentSchema.index({ monthlyRent: 1, propertyTag: 1 });
-apartmentSchema.index({ propertyPrice: 1, propertyTag: 1 });
 apartmentSchema.index({ agent: 1, propertyApproval: 1 });
-apartmentSchema.index({ availabilityStatus: 1, propertyApproval: 1 });
-apartmentSchema.index({ createdAt: -1, propertyApproval: 1 });
+apartmentSchema.index({ propertyApproval: 1, createdAt: -1 }); // Admin pending list
+apartmentSchema.index({ availabilityStatus: 1, propertyTag: 1 });
 
-// Price range indexes
-apartmentSchema.index({ monthlyRent: 1, bedrooms: 1, city: 1 });
-apartmentSchema.index({ propertyPrice: 1, bedrooms: 1, city: 1 });
+// Price + location + bedrooms (common filter)
+apartmentSchema.index({ city: 1, bedrooms: 1, monthlyRent: 1 });
+apartmentSchema.index({ city: 1, bedrooms: 1, propertyPrice: 1 });
 
-// Multi-key indexes for array fields
-apartmentSchema.index({ mainAmenities: 1 });
-apartmentSchema.index({ likes: 1 });
+// Engagement sorting
+apartmentSchema.index({ 'likes.0': 1 }); // Has likes (avoid full array index)
+apartmentSchema.index({ createdAt: -1 });
 
-// Text search index for property search
-apartmentSchema.index({
-  title: 'text',
-  description: 'text',
-  address: 'text',
-  city: 'text',
-  state: 'text'
+
+apartmentSchema.virtual('totalLikes').get(function () {
+  return this.likes.length;
 });
 
-// Popular properties index (based on engagement)
-apartmentSchema.index({ 
-  likes: -1, 
-  propertyApproval: 1,
-  availabilityStatus: 1 
+apartmentSchema.virtual('totalBookmarks').get(function () {
+  return this.bookmarks.length;
 });
 
-// FIXED: Improved model creation with better caching
-let Apartment: Model<IApartment>;
 
-if (mongoose.models.Apartment) {
-  Apartment = mongoose.models.Apartment;
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 Using cached Apartment model');
+apartmentSchema.pre('save', function (next) {
+  if (!this.propertyIdTag) {
+    const tag = `${this.propertyTag === 'for-rent' ? 'RENT' : 'SALE'}-${Date.now().toString(36).toUpperCase()}`;
+    this.propertyIdTag = tag;
   }
-} else {
-  Apartment = mongoose.model<IApartment>('Apartment', apartmentSchema);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Created new Apartment model');
-  }
-}
+  next();
+});
 
-export default Apartment;
+
+const ApartmentModel =
+  (mongoose.models.Apartment as mongoose.Model<IApartment>) ||
+  mongoose.model<IApartment>('Apartment', apartmentSchema);
+
+export default ApartmentModel;

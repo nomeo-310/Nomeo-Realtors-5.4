@@ -137,7 +137,7 @@ const Menu = ({ user }: { user: ExtendedUserProps }) => {
       lastName: user.lastName,
       email: user.email,
       phoneNumber: user.phoneNumber,
-      userType: user.role, // 'user', 'agent', or 'admin'
+      userType: user.role, 
       isActive: user.userVerified,
       isSuspended: !user.userVerified
     };

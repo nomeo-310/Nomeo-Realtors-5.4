@@ -91,7 +91,6 @@ const suspensionSchema: Schema<ISuspension> = new Schema({
 });
 
 suspensionSchema.index({ user: 1, isActive: 1 });
-suspensionSchema.index({ suspendedUntil: 1 });
 
 suspensionSchema.index({ 
   suspendedUntil: 1 

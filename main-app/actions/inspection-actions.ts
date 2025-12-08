@@ -94,84 +94,60 @@ export const scheduleInspection = async (data: scheduleInspectionType) => {
 
   const { time, additionalPhoneNumber, date, agentId, apartment, path } = data;
 
+  // CRITICAL FIX: Convert string date to proper Date range
+  const dateRange = {
+    $gte: new Date(date + 'T00:00:00.000Z'),
+    $lt: new Date(date + 'T23:59:59.999Z')
+  };
+
   try {
-    // Parallel data fetching
     const [agent, currentApartment] = await Promise.all([
       Agent.findById(agentId),
       Apartment.findOne({ propertyIdTag: apartment })
     ]);
 
-    if (!agent) {
-      return { success: false, message: 'Agent attached to this property does not exist', status: 404 };
+    if (!agent || !currentApartment) {
+      return { success: false, message: 'Agent or property not found', status: 404 };
     }
 
     const agentUserDetails = await User.findById(agent.userId);
     if (!agentUserDetails) {
-      return { success: false, message: 'Agent attached to this property does not exist', status: 404 };
+      return { success: false, message: 'Agent user not found', status: 404 };
     }
 
-    if (!currentApartment) {
-      return { success: false, message: 'This property does not exist', status: 404 };
-    }
-
-    // Check if user is trying to schedule inspection for their own managed property
     if (compareIds(currentApartment.agent, authResult.current_user!.agentId)) {
-      return { 
-        success: false, 
-        message: 'You cannot schedule inspection for the property you are managing', 
-        status: 409 
-      };
+      return { success: false, message: 'You cannot inspect your own listing', status: 409 };
     }
 
-    // Check for existing inspections in parallel
-    const [existingInspection, existingInspectionForAgent, existingInspectionForSameDay] = await Promise.all([
+    // FIXED: All date queries now use proper Date range
+    const [existingInspection, agentConflict, userAgentConflict] = await Promise.all([
       Inspection.findOne({ 
         user: authResult.current_user!._id, 
         apartment: currentApartment._id, 
-        date 
+        date: dateRange
       }),
       Inspection.findOne({ 
-        agent: agent._id, 
-        date, 
-        time 
+        agent: agentId, 
+        date: dateRange,
+        time
       }),
       Inspection.findOne({ 
         user: authResult.current_user!._id, 
-        agent: agent._id, 
-        date, 
-        time 
+        agent: agentId,
+        date: dateRange,
+        time
       })
     ]);
 
-    if (existingInspection) {
-      return { 
-        success: false, 
-        message: 'You have already scheduled an inspection for this property', 
-        status: 409 
-      };
-    }
-
-    if (existingInspectionForAgent) {
-      return { 
-        success: false, 
-        message: 'The agent is already scheduled for an inspection for this date and time.', 
-        status: 409 
-      };
-    }
-
-    if (existingInspectionForSameDay) {
-      return { 
-        success: false, 
-        message: 'You have already scheduled an inspection with the agent for same day and time.', 
-        status: 409 
-      };
+    if (existingInspection || agentConflict || userAgentConflict) {
+      return { success: false, message: 'Inspection conflict detected', status: 409 };
     }
 
     const userFullName = getFullName(authResult.current_user!);
     const agentFullName = getFullName(agentUserDetails);
 
     const inspectionData = {
-      date,
+      date: new Date(date + 'T00:00:00.000Z'), // ← Store as proper Date
       time,
       user: authResult.current_user!._id,
       apartment: currentApartment._id,
@@ -179,7 +155,6 @@ export const scheduleInspection = async (data: scheduleInspectionType) => {
       additionalNumber: additionalPhoneNumber,
     };
 
-    // Create inspection and related data in parallel
     const newInspection = await Inspection.create(inspectionData);
 
     const messageContent = `${userFullName} scheduled an inspection of one of the apartments you are managing. For more details checkout your notification on our website.`;
@@ -208,7 +183,8 @@ export const scheduleInspection = async (data: scheduleInspectionType) => {
     // Update user and agent data in parallel
     await Promise.all([
       Agent.findByIdAndUpdate(agentId, { $push: { inspections: newInspection._id } }),
-      User.findByIdAndUpdate(authResult.current_user!._id, { $push: { notifications: userNotification._id } })
+      User.findByIdAndUpdate(authResult.current_user!._id, { $push: { notifications: userNotification._id } }),
+      User.findByIdAndUpdate(agent.userId, { $push: { notifications: agentNotification._id } })
     ]);
 
     // Send email asynchronously (don't await for better performance)
@@ -220,10 +196,10 @@ export const scheduleInspection = async (data: scheduleInspectionType) => {
     ).catch(console.error); // Log email errors but don't fail the request
 
     revalidatePath(path);
-    return { success: true, message: 'Apartment inspection successfully scheduled', status: 201 };
+    return { success: true, message: 'Inspection scheduled', status: 201 };
   } catch (error) {
     console.error('Schedule inspection error:', error);
-    return { success: false, message: 'Error occurred while creating schedule', status: 500 };
+    return { success: false, message: 'Server error', status: 500 };
   }
 };
 

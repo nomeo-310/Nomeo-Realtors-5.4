@@ -123,7 +123,6 @@ const validateRequiredFields = (data: Record<string, any>, requiredFields: strin
 export const initiateSellOut = async (data: initialProps) => {
   await ensureConnection();
 
-  // Validate required fields
   const fieldValidation = validateRequiredFields(data, [
     'userId', 'agentId', 'propertyIdTag', 'email', 'agentUserId'
   ]);
@@ -141,108 +140,68 @@ export const initiateSellOut = async (data: initialProps) => {
     const agentAccessResult = await validateAgentAccess(authResult.currentUser!, agentId);
     if (!agentAccessResult.success) return agentAccessResult;
 
-    // Parallelize all database queries for maximum performance
-    const [potentialClient, agentUserDetails, apartmentDetails, completedInspection, sellOutExists] = await Promise.all([
+    // Fetch only what we need — no wasted queries
+    const [potentialClient, agentUserDetails, apartmentDetails] = await Promise.all([
       User.findById(userId),
       User.findById(agentUserId),
-      Apartment.findOne({ propertyIdTag }),
+      Apartment.findOne({ propertyIdTag })
+    ]);
+
+    if (!potentialClient || !agentUserDetails || !apartmentDetails) {
+      return { success: false, message: 'User, agent, or property not found', status: 404 };
+    }
+
+    // Now do real checks with correct apartment._id
+    const [inspection, existingSellout] = await Promise.all([
       Inspection.findOne({
-        apartment: { $exists: true }, // Will be populated below
+        apartment: apartmentDetails._id,
         agent: agentId,
         status: 'completed',
         user: userId,
         verdict: 'accepted'
       }),
       Sellout.findOne({
-        apartment: { $exists: true }, // Will be populated below
+        apartment: apartmentDetails._id,
         agent: agentId
       })
     ]);
 
-    // Validate all required data exists
-    if (!potentialClient) {
-      return { success: false, message: 'Client seeking this property does not exist', status: 404 };
+    if (!inspection) {
+      return { success: false, message: 'No accepted inspection found', status: 403 };
     }
-
-    if (!agentUserDetails) {
-      return { success: false, message: 'Agent attached to this property does not exist', status: 404 };
-    }
-
-    if (!apartmentDetails) {
-      return { success: false, message: 'Property does not exist', status: 404 };
-    }
-
-    // Update inspection and sellout queries with actual apartment ID
-    const inspectionQuery = {
-      apartment: apartmentDetails._id,
-      agent: agentId,
-      status: 'completed',
-      user: userId,
-      verdict: 'accepted'
-    };
-
-    const sellOutQuery = {
-      apartment: apartmentDetails._id,
-      agent: agentId
-    };
-
-    // Re-check with actual apartment ID
-    const [finalCompletedInspection, finalSellOutExists] = await Promise.all([
-      Inspection.findOne(inspectionQuery),
-      Sellout.findOne(sellOutQuery)
-    ]);
-
-    if (!finalCompletedInspection) {
-      return { 
-        success: false, 
-        message: 'This property cannot be sold to this client without a completed and accepted inspection.', 
-        status: 403 
-      };
-    }
-
-    if (finalSellOutExists) {
-      return { 
-        success: false, 
-        message: 'A sell-out process has already been initiated for this property. To proceed, please cancel the initial one.', 
-        status: 409 
-      };
+    if (existingSellout) {
+      return { success: false, message: 'Sell-out already initiated', status: 409 };
     }
 
     const userFullName = getFullName(potentialClient);
     const agentFullName = getFullName(authResult.currentUser!);
-    
-    // Fixed grammar: "have" → "has"
-    const messageContent = `Your contact agent: ${agentFullName} has successfully initiated the sell-out process for the property with ID: ${propertyIdTag}. Check your account to continue with process of payment.\n\nThank you for using our service!`;
 
+    const messageContent = `Your contact agent ${agentFullName} has initiated the purchase process for property ID: ${propertyIdTag}. Please check your account to proceed with payment.`;
+
+    // FIXED: Use new schema
     const initialSellOutData = {
       user: userId,
       agent: agentId,
       apartment: apartmentDetails._id,
-      sold: false,
+      status: 'pending' as const,
     };
 
     const notificationData = {
-      title: 'Property Purchase',
-      content: `The sell-out process has been successfully initiated for the property with the ID: ${propertyIdTag}. You can go ahead and make payment.`,
+      title: 'Property Purchase Initiated',
+      content: `Purchase process started for property ID: ${propertyIdTag}. Proceed to payment.`,
       recipient: userId,
       issuer: agentUserDetails._id,
-      type: 'payment',
-      propertyId: propertyIdTag
+      type: 'payment' as const,
+      propertyId: apartmentDetails._id 
     };
 
-    // Create sellout and notification within transaction
-    const [initialSellOut, newNotification] = await Promise.all([
+    const [sellout, notification] = await Promise.all([
       Sellout.create([initialSellOutData], { session }),
       Notification.create([notificationData], { session })
     ]);
 
-    // Update user and apartment in parallel
     await Promise.all([
-      User.findByIdAndUpdate(
-        userId,
-        { $push: { notifications: newNotification[0]._id } },
-        { session }
-      ),
+      User.findByIdAndUpdate(userId, { $push: { notifications: notification[0]._id } }, { session }),
       Apartment.findOneAndUpdate(
         { propertyIdTag },
         { $set: { availabilityStatus: 'pending' } },
@@ -250,33 +209,15 @@ export const initiateSellOut = async (data: initialProps) => {
       )
     ]);
 
-    // Commit transaction first
     await session.commitTransaction();
 
-    // Send email asynchronously after transaction commit
-    sendSellOutEmail(
-      userFullName,
-      email,
-      'Property Sell-Out Initialization',
-      messageContent
-    );
+    sendSellOutEmail(userFullName, email, 'Property Purchase Initiated', messageContent);
 
-    return { 
-      success: true, 
-      message: 'Sell-out successfully initiated. Contact client', 
-      status: 200 
-    };
-
+    return { success: true, message: 'Sell-out initiated successfully', status: 200 };
   } catch (error) {
-    // Rollback transaction on error
     await session.abortTransaction();
     console.error('Sell-out initiation error:', error);
-
-    return { 
-      success: false, 
-      message: 'Error occurred while initiating sell-out. Please try again later.', 
-      status: 500 
-    };
+    return { success: false, message: 'Failed to initiate sell-out', status: 500 };
   } finally {
     session.endSession();
   }
@@ -285,10 +226,7 @@ export const initiateSellOut = async (data: initialProps) => {
 export const cancelSellOut = async (data: cancelProps) => {
   await ensureConnection();
 
-  // Validate required fields
-  const fieldValidation = validateRequiredFields(data, [
-    'agentId', 'propertyIdTag', 'path'
-  ]);
+  const fieldValidation = validateRequiredFields(data, ['agentId', 'propertyIdTag', 'path']);
   if (!fieldValidation.success) return fieldValidation;
 
   const { agentId, propertyIdTag, path } = data;
@@ -303,63 +241,39 @@ export const cancelSellOut = async (data: cancelProps) => {
     const agentAccessResult = await validateAgentAccess(authResult.currentUser!, agentId);
     if (!agentAccessResult.success) return agentAccessResult;
 
-    // Parallel data fetching with population
-    const [apartmentDetails, sellOut] = await Promise.all([
+    const [apartmentDetails, sellout] = await Promise.all([
       Apartment.findOne({ propertyIdTag }),
-      Sellout.findOne({ agent: agentId }).populate('user')
+      Sellout.findOne({ agent: agentId, apartment: { $exists: true } }).populate('user')
     ]);
 
-    if (!apartmentDetails) {
-      return { success: false, message: 'Property does not exist', status: 404 };
+    if (!apartmentDetails || !sellout) {
+      return { success: false, message: 'Property or sell-out not found', status: 404 };
     }
 
-    if (!sellOut) {
-      return { success: false, message: 'Property purchase process does not exist', status: 404 };
+    const client = sellout.user as any;
+    if (!client) {
+      return { success: false, message: 'Client not found', status: 404 };
     }
 
-    // Use populated user data
-    const potentialClient = sellOut.user as any;
-    if (!potentialClient) {
-      return { success: false, message: 'Client seeking this property does not exist', status: 404 };
-    }
-
-    const clientFullName = getFullName(potentialClient);
+    const clientFullName = getFullName(client);
     const agentFullName = getFullName(authResult.currentUser!);
-    
-    const messageContent = `Your contact agent: ${agentFullName} has cancelled the sell-out process for the property with ID: ${propertyIdTag}. You can reach out to the agent to find out the reason for this change.\n\nThank you for using our service!`;
+
+    const messageContent = `Your contact agent ${agentFullName} has cancelled the purchase process for property ID: ${propertyIdTag}.`;
 
     const notificationData = {
-      title: 'Property Purchase Cancellation',
-      content: `The sell-out process initiated for the property with the ID: ${propertyIdTag} has been cancelled. For further details reach out to the contact agent.`,
-      recipient: sellOut.user,
+      title: 'Purchase Cancelled',
+      content: `The purchase process for property ID: ${propertyIdTag} has been cancelled.`,
+      recipient: client._id,
       issuer: authResult.currentUser!._id,
-      type: 'payment',
-      propertyId: propertyIdTag
+      type: 'payment' as const,
+      propertyId: apartmentDetails._id
     };
 
-    // Prepare email template asynchronously while doing other work
-    const emailPromise = sendSellOutEmail(
-      clientFullName,
-      potentialClient.email,
-      'Property Purchase Cancellation',
-      messageContent
-    );
-
-    // Execute all database operations within transaction
-    const [newNotification] = await Promise.all([
-      Notification.create([notificationData], { session })
-    ]);
+    const [notification] = await Notification.create([notificationData], { session });
 
     await Promise.all([
-      User.findByIdAndUpdate(
-        sellOut.user,
-        { $push: { notifications: newNotification[0]._id } },
-        { session }
-      ),
-      Sellout.findOneAndDelete(
-        { apartment: apartmentDetails._id, agent: agentId },
-        { session }
-      ),
+      User.findByIdAndUpdate(client._id, { $push: { notifications: notification._id } }, { session }),
+      Sellout.deleteOne({ _id: sellout._id }, { session }),
       Apartment.findOneAndUpdate(
         { propertyIdTag },
         { $set: { availabilityStatus: 'available' } },
@@ -367,33 +281,18 @@ export const cancelSellOut = async (data: cancelProps) => {
       )
     ]);
 
-    // Commit transaction first
     await session.commitTransaction();
 
-    // Wait for email to complete (but don't fail operation if it fails)
-    await emailPromise.catch(error => 
-      console.error('Failed to send cancellation email:', error)
-    );
+    await sendSellOutEmail(clientFullName, client.email, 'Purchase Cancelled', messageContent)
+      .catch(err => console.error('Email failed:', err));
 
-    // Revalidate path after successful operation
     revalidatePath(path);
 
-    return { 
-      success: true, 
-      message: 'Property purchase successfully cancelled.', 
-      status: 200 
-    };
-
+    return { success: true, message: 'Purchase cancelled successfully', status: 200 };
   } catch (error) {
-    // Rollback transaction on error
     await session.abortTransaction();
     console.error('Cancel sell-out error:', error);
-
-    return { 
-      success: false, 
-      message: 'Error occurred while cancelling sell-out.', 
-      status: 500 
-    };
+    return { success: false, message: 'Failed to cancel sell-out', status: 500 };
   } finally {
     session.endSession();
   }

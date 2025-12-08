@@ -13,6 +13,7 @@ import { ClockIcon, CalendarIcon, Mail01Icon, User03Icon } from "@hugeicons/core
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AlertTriangleIcon } from "lucide-react";
 import { calculateDeletionStatus } from "@/utils/account-deletion-utils";
+import ScrollableWrapper from "../ui/scrollable-wrapper";
 
 interface DeletionReminderModalProps {
   deletionDate?: string;
@@ -22,7 +23,6 @@ interface DeletionReminderModalProps {
 const DeletionReminderModal = ({ deletionDate: propDeletionDate, gracePeriodDays: propGracePeriodDays }: DeletionReminderModalProps) => {
   const { onClose, isOpen, user, deletionDate: storeDeletionDate, gracePeriodDays: storeGracePeriodDays } = useDeletionReminderModal();
   
-  // Use props if provided, otherwise use store values
   const deletionDate = propDeletionDate || storeDeletionDate;
   const gracePeriodDays = propGracePeriodDays || storeGracePeriodDays || 30;
 
@@ -36,18 +36,12 @@ const DeletionReminderModal = ({ deletionDate: propDeletionDate, gracePeriodDays
   const [daysRemaining, setDaysRemaining] = useState<number>(0);
   const [isUrgent, setIsUrgent] = useState(false);
 
-  // Calculate remaining days and urgency
   useEffect(() => {
     if (deletionDate) {
       const status = calculateDeletionStatus(deletionDate);
       setDaysRemaining(status.remainingDays);
-      // Calculate urgency based on days remaining
       const urgent = status.remainingDays <= 3;
       setIsUrgent(urgent);
-      
-      console.log('Deletion Status:', status);
-      console.log('Days Remaining:', status.remainingDays);
-      console.log('Is Urgent (calculated):', urgent);
     }
   }, [deletionDate]);
 
@@ -194,13 +188,6 @@ The Data Protection Team`
         setCustomSubject(processed.subject);
         setCustomMessage(processed.message);
       }
-      
-      console.log('Form initialized with:', {
-        daysRemaining,
-        isUrgent,
-        template: defaultTemplateId,
-        reminderType: defaultReminderType
-      });
     }
   }, [user, deletionDate, daysRemaining, isUrgent]);
 
@@ -284,17 +271,6 @@ The Data Protection Team`
         toast.success('Deletion reminder sent successfully!', {
           description: `Reminder sent to ${user.email}`
         });
-        
-        // Log the reminder
-        console.log('Deletion reminder sent:', {
-          userId: user?.id,
-          userType: user?.userType,
-          template: selectedTemplate,
-          type: reminderType,
-          daysRemaining: daysRemaining,
-          includeLink: includeRecoveryLink,
-          isUrgent: isUrgent
-        });
 
         onClose();
         resetForm();
@@ -346,180 +322,170 @@ The Data Protection Team`
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isUrgent ? 'bg-red-100' : 'bg-orange-100'}`}>
-            <AlertTriangleIcon className={`w-4 h-4 ${isUrgent ? 'text-red-600' : 'text-orange-600'}`} />
-          </div>
-          <div>
-            <div className="font-semibold">Send Deletion Reminder</div>
-            <div className="text-xs text-gray-500">
-              {isUrgent ? 'Urgent: ' : ''}{daysRemaining} days remaining
-            </div>
-          </div>
-        </div>
-      }
+      title={'Send Deletion Reminder'}
       width="lg:w-[750px] xl:w-[800px] md:w-[650px]"
       useCloseButton
       useSeparator
     >
-      <div className="space-y-4">
-        {showPreview ? (
-          <div className="space-y-4">
-            {/* Preview Header */}
-            <div className={`p-4 rounded-xl border ${isUrgent ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-semibold text-gray-900">Message Preview</h4>
-                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getUrgencyColor()} border`}>
-                  {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
-                </span>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <HugeiconsIcon icon={Mail01Icon} className="w-4 h-4 text-gray-500" />
-                  <p><span className="font-medium">To:</span> {displayName} &lt;{user.email}&gt;</p>
+      <ScrollableWrapper>
+        <div className="space-y-4 p-1">
+          {showPreview ? (
+            <div className="space-y-4">
+              {/* Preview Header */}
+              <div className={`p-4 rounded-xl border ${isUrgent ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-gray-900">Message Preview</h4>
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getUrgencyColor()} border`}>
+                    {daysRemaining} {daysRemaining === 1 ? 'day' : 'days'} remaining
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <AlertTriangleIcon className="w-4 h-4 text-gray-500" />
-                  <p><span className="font-medium">Subject:</span> {currentSubject}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <HugeiconsIcon icon={CalendarIcon} className="w-4 h-4 text-gray-500" />
-                  <p><span className="font-medium">Deletion Date:</span> {deletionDateFormatted}</p>
-                </div>
-                {isUrgent && (
-                  <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
-                    <p className="text-xs font-medium text-red-800 flex items-center gap-1">
-                      <AlertTriangleIcon className="w-3 h-3" />
-                      URGENT REMINDER: User has only {daysRemaining} days left
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Message Preview */}
-            <div className="border rounded-xl p-6 bg-white">
-              <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">
-                {currentMessage}
-              </pre>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 justify-between pt-6 border-t">
-              <button
-                onClick={() => setShowPreview(false)}
-                className="px-4 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Edit
-              </button>
-              <button
-                onClick={handleSendReminder}
-                disabled={isSending}
-                className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow-md"
-              >
-                {isSending ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Sending Reminder...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Send Deletion Reminder
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* User Information Card */}
-            <div className={`p-4 rounded-xl ${isUrgent ? 'bg-gradient-to-r from-red-50 to-orange-50 border border-red-200' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200'}`}>
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                    <HugeiconsIcon icon={User03Icon} className="w-5 h-5" />
-                    {userTypeLabel}: {displayName}
-                    <span className={`ml-2 px-2 py-1 text-xs font-bold rounded-full ${userTypeLabel === 'Agent' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                      {userTypeLabel}
-                    </span>
-                  </h4>
-                  <p className="text-sm text-gray-600 mt-1">{user.email}</p>
-                </div>
-                <div className={`px-3 py-2 rounded-lg flex items-center gap-3 ${isUrgent ? 'bg-red-100 border border-red-300' : 'bg-blue-100 border border-blue-300'}`}>
-                  <div className="text-xs font-medium text-gray-600">Days Remaining:</div>
-                  <div className={`text-2xl font-bold ${isUrgent ? 'text-red-700' : 'text-blue-700'}`}>
-                    {daysRemaining}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <HugeiconsIcon icon={CalendarIcon} className="w-4 h-4 text-gray-500" />
+                <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="font-medium text-gray-600">Deletion Date: </div>
-                    <div className="font-semibold text-gray-900">{deletionDateFormatted}</div>
+                    <HugeiconsIcon icon={Mail01Icon} className="w-4 h-4 text-gray-500" />
+                    <p><span className="font-medium">To:</span> {displayName} &lt;{user.email}&gt;</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <HugeiconsIcon icon={ClockIcon} className="w-4 h-4 text-gray-500" />
                   <div className="flex items-center gap-2">
-                    <div className="font-medium text-gray-600">Grace Period</div>
-                    <div className="font-semibold text-gray-900">{gracePeriodDays} days</div>
+                    <AlertTriangleIcon className="w-4 h-4 text-gray-500" />
+                    <p><span className="font-medium">Subject:</span> {currentSubject}</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <HugeiconsIcon icon={CalendarIcon} className="w-4 h-4 text-gray-500" />
                   <div className="flex items-center gap-2">
-                    <div className="font-medium text-gray-600">Registered</div>
-                    <div className="font-semibold text-gray-900">{registrationDate}</div>
+                    <HugeiconsIcon icon={CalendarIcon} className="w-4 h-4 text-gray-500" />
+                    <p><span className="font-medium">Deletion Date:</span> {deletionDateFormatted}</p>
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <AlertTriangleIcon className="w-4 h-4 text-gray-500" />
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium text-gray-600">Status</div>
-                    <div className={`font-semibold ${isUrgent ? 'text-red-600' : 'text-orange-600'}`}>
-                      {isUrgent ? 'URGENT' : 'Scheduled for Deletion'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {isUrgent && (
-                <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangleIcon className="w-5 h-5 text-red-600" />
-                    <div>
-                      <p className="font-semibold text-red-800">Urgent Attention Required</p>
-                      <p className="text-sm text-red-700">
-                        This user has only {daysRemaining} days left before permanent deletion.
-                        Consider using the "Urgent Warning" template for maximum impact.
+                  {isUrgent && (
+                    <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
+                      <p className="text-xs font-medium text-red-800 flex items-center gap-1">
+                        <AlertTriangleIcon className="w-3 h-3" />
+                        URGENT REMINDER: User has only {daysRemaining} days left
                       </p>
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Message Preview */}
+              <div className="border rounded-xl p-4 bg-white">
+                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">
+                  {currentMessage}
+                </pre>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-between">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="px-4 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to Edit
+                </button>
+                <button
+                  onClick={handleSendReminder}
+                  disabled={isSending}
+                  className="px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg hover:from-red-700 hover:to-red-600 transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow-md"
+                >
+                  {isSending ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Sending Reminder...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send Deletion Reminder
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* User Information Card */}
+              <div className={`p-4 rounded-xl ${isUrgent ? 'bg-gradient-to-r from-red-50 to-orange-50 border border-red-200' : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200'}`}>
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                      <HugeiconsIcon icon={User03Icon} className="w-5 h-5" />
+                      {userTypeLabel}: {displayName}
+                      <span className={`ml-2 px-2 py-1 text-xs font-bold rounded-full ${userTypeLabel === 'Agent' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                        {userTypeLabel}
+                      </span>
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">{user.email}</p>
+                  </div>
+                  <div className={`px-3 py-2 rounded-lg flex items-center gap-3 ${isUrgent ? 'bg-red-100 border border-red-300' : 'bg-blue-100 border border-blue-300'}`}>
+                    <div className="text-xs font-medium text-gray-600">Days Remaining:</div>
+                    <div className={`text-2xl font-bold ${isUrgent ? 'text-red-700' : 'text-blue-700'}`}>
+                      {daysRemaining}
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Reminder Type */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <HugeiconsIcon icon={CalendarIcon} className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-gray-600">Deletion Date: </div>
+                      <div className="font-semibold text-gray-900">{deletionDateFormatted}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <HugeiconsIcon icon={ClockIcon} className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-gray-600">Grace Period</div>
+                      <div className="font-semibold text-gray-900">{gracePeriodDays} days</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <HugeiconsIcon icon={CalendarIcon} className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-gray-600">Registered</div>
+                      <div className="font-semibold text-gray-900">{registrationDate}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangleIcon className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium text-gray-600">Status</div>
+                      <div className={`font-semibold ${isUrgent ? 'text-red-600' : 'text-orange-600'}`}>
+                        {isUrgent ? 'URGENT' : 'Scheduled for Deletion'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {isUrgent && (
+                  <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangleIcon className="w-5 h-5 text-red-600" />
+                      <div>
+                        <p className="font-semibold text-red-800">Urgent Attention Required</p>
+                        <p className="text-sm text-red-700">
+                          This user has only {daysRemaining} days left before permanent deletion.
+                          Consider using the "Urgent Warning" template for maximum impact.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            {/* Replace the entire grid section with this: */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Reminder Type - Fixed */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
                   <Label htmlFor="reminder-type" className="text-sm font-semibold text-gray-900">
                     Reminder Tone
                   </Label>
-                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 hidden lg:block">
+                  <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 hidden lg:inline-block">
                     {reminderTypes.find(t => t.value === reminderType)?.description}
                   </span>
                 </div>
@@ -528,142 +494,147 @@ The Data Protection Team`
                   options={reminderTypes}
                   value={reminderType}
                   onChange={handleReminderTypeChange}
-                  style={`border ${isUrgent ? 'border-red-300' : 'border-gray-300'} rounded-lg`}
+                  style={`w-full border ${isUrgent ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
                   height="h-10"
-                  placeholderStyle="lg:text-sm text-sm"
-                  itemText="lg:text-sm text-sm"
+                  placeholderStyle="text-sm"
+                  itemText="text-sm"
                 />
               </div>
 
-              {/* Template Selection */}
+                {/* Template Selection - Fixed */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="reminder-template" className="text-sm font-semibold text-gray-900">
+                      Message Template
+                    </Label>
+                    {/* Empty div to maintain alignment */}
+                    <div className="hidden lg:block h-6"></div>
+                  </div>
+                  <CustomSelect
+                    placeholder="Select message template..."
+                    options={deletionReminderTemplates.map(template => ({
+                      label: template.title,
+                      value: template.id
+                    }))}
+                    value={selectedTemplate}
+                    onChange={handleTemplateChange}
+                    style={`w-full border ${isUrgent ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
+                    height="h-10"
+                    placeholderStyle="text-sm"
+                    itemText="text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Custom Subject */}
               <div className="space-y-3">
-                <Label htmlFor="reminder-template" className="text-sm font-semibold text-gray-900">
-                  Message Template
-                </Label>
-                <CustomSelect
-                  placeholder="Select message template..."
-                  options={deletionReminderTemplates.map(template => ({
-                    label: template.title,
-                    value: template.id
-                  }))}
-                  value={selectedTemplate}
-                  onChange={handleTemplateChange}
-                  style={`border ${isUrgent ? 'border-red-300' : 'border-gray-300'} rounded-lg`}
-                  height="h-10"
-                  placeholderStyle="lg:text-sm text-sm"
-                  itemText="lg:text-sm text-sm"
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="custom-subject" className="text-sm font-semibold text-gray-900">
+                    Email Subject
+                  </Label>
+                  <span className="text-xs text-gray-500">{customSubject.length}/100 characters</span>
+                </div>
+                <input
+                  id="custom-subject"
+                  type="text"
+                  placeholder="Enter email subject..."
+                  value={customSubject}
+                  onChange={(e) => setCustomSubject(e.target.value.slice(0, 100))}
+                  className={`w-full p-3 border ${isUrgent ? 'border-red-300' : 'border-gray-300'} rounded-lg text-sm focus:ring-0 outline-none focus:outline-none focus:border-blue-500`}
+                  maxLength={100}
                 />
               </div>
-            </div>
 
-            {/* Custom Subject */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="custom-subject" className="text-sm font-semibold text-gray-900">
-                  Email Subject
-                </Label>
-                <span className="text-xs text-gray-500">{customSubject.length}/100 characters</span>
+              {/* Custom Message */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="custom-message" className="text-sm font-semibold text-gray-900">
+                    Message Content
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-gray-500">
+                      {customMessage.length}/2000 characters
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const template = deletionReminderTemplates.find(t => t.id === selectedTemplate);
+                        if (template) {
+                          const processed = processTemplate(template);
+                          setCustomSubject(processed.subject);
+                          setCustomMessage(processed.message);
+                        }
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Reset to Template
+                    </button>
+                  </div>
+                </div>
+                <Textarea
+                  id="custom-message"
+                  placeholder="Customize your deletion reminder message..."
+                  value={customMessage}
+                  onChange={(e) => setCustomMessage(e.target.value.slice(0, 2000))}
+                  rows={8}
+                  className={`text-sm resize-none border ${isUrgent ? 'border-red-300' : 'border-gray-300'} rounded-lg`}
+                  maxLength={2000}
+                />
               </div>
-              <input
-                id="custom-subject"
-                type="text"
-                placeholder="Enter email subject..."
-                value={customSubject}
-                onChange={(e) => setCustomSubject(e.target.value.slice(0, 100))}
-                className={`w-full p-3 border ${isUrgent ? 'border-red-300' : 'border-gray-300'} rounded-lg text-sm focus:ring-0 outline-none focus:outline-none focus:border-blue-500`}
-                maxLength={100}
-              />
-            </div>
 
-            {/* Custom Message */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="custom-message" className="text-sm font-semibold text-gray-900">
-                  Message Content
-                </Label>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs text-gray-500">
-                    {customMessage.length}/2000 characters
-                  </span>
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-between">
+                <button
+                  onClick={handleClose}
+                  className="px-4 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                >
+                  Cancel
+                </button>
+
+                <div className="flex gap-3">
                   <button
-                    type="button"
-                    onClick={() => {
-                      const template = deletionReminderTemplates.find(t => t.id === selectedTemplate);
-                      if (template) {
-                        const processed = processTemplate(template);
-                        setCustomSubject(processed.subject);
-                        setCustomMessage(processed.message);
-                      }
-                    }}
-                    className="text-xs text-blue-600 hover:text-blue-800"
+                    onClick={() => setShowPreview(true)}
+                    disabled={!customSubject.trim() || !customMessage.trim()}
+                    className="px-4 py-2.5 bg-blue-100 text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    Reset to Template
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Preview Message
+                  </button>
+                  <button
+                    onClick={handleSendReminder}
+                    disabled={!customSubject.trim() || !customMessage.trim() || isSending}
+                    className={`px-4 py-2.5 text-white rounded-lg transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow-md ${
+                      isUrgent 
+                        ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600' 
+                        : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
+                    }`}
+                  >
+                    {isSending ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        {isUrgent ? 'Send Urgent Reminder' : 'Send Reminder'}
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
-              <Textarea
-                id="custom-message"
-                placeholder="Customize your deletion reminder message..."
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value.slice(0, 2000))}
-                rows={8}
-                className={`resize-none border ${isUrgent ? 'border-red-300' : 'border-gray-300'} rounded-lg`}
-                maxLength={2000}
-              />
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 justify-between">
-              <button
-                onClick={handleClose}
-                className="px-4 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-              >
-                Cancel
-              </button>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowPreview(true)}
-                  disabled={!customSubject.trim() || !customMessage.trim()}
-                  className="px-4 py-2.5 bg-blue-100 text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  Preview Message
-                </button>
-                <button
-                  onClick={handleSendReminder}
-                  disabled={!customSubject.trim() || !customMessage.trim() || isSending}
-                  className={`px-4 py-2.5 text-white rounded-lg transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm hover:shadow-md ${
-                    isUrgent 
-                      ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600' 
-                      : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
-                  }`}
-                >
-                  {isSending ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                      {isUrgent ? 'Send Urgent Reminder' : 'Send Reminder'}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </ScrollableWrapper>
     </Modal>
   );
 };

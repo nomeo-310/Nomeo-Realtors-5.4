@@ -15,7 +15,7 @@ import { Ban, Bell, Eye, MoreHorizontalIcon, RotateCcw, Trash2 } from 'lucide-re
 import { cn } from '@/lib/utils'
 import TableLoading from '../table-loading'
 import Pagination from '@/components/ui/pagination'
-import { useDeleteUserModal, UserForRestriction } from '@/hooks/general-store'
+import { useDeleteUserModal, useDeletionReminderModal, UserForRestriction } from '@/hooks/general-store'
 
 interface ApiResponse {
   users: ExtendedUserProps[];
@@ -120,8 +120,9 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
     const [showMenu, setShowMenu] = React.useState(false);
 
     const deleteUserModal = useDeleteUserModal();
+    const deleteReminderModal = useDeletionReminderModal();
 
-    const handleDeleteUser = (user: ExtendedUserProps) => {
+    const handleDeleteUser = () => {
       const userForBlocking: UserForRestriction = {
         id: user._id,
         surName: user.surName,
@@ -136,17 +137,20 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
       deleteUserModal.onOpen(userForBlocking);
     };
 
-    const handleBlockUser = (user: ExtendedUserProps) => {
-      // Implement block user logic here
-      console.log('Block user:', user);
-      // You might want to open a modal or make an API call
-    };
-
-    const handleSendReminder = (user: ExtendedUserProps) => {
-      // Implement send reminder logic here
-      console.log('Send reminder to:', user);
-      // You might want to open a modal or make an API call
-    };
+      const handleSendReminder = () => {
+        deleteReminderModal.onOpen(
+          {
+            id: user._id,
+            email: user.email,
+            surName: user.surName,
+            lastName: user.lastName,
+            userType: (user.role === 'user' || user.role === 'agent') ? user.role : 'user',
+            registrationDate: user.createdAt
+          },
+          user.deletedAt,
+          30
+        )
+      }
 
     return (
       <DropdownMenu modal={false} open={showMenu} onOpenChange={setShowMenu}>
@@ -159,7 +163,7 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Actions</p>
             <DropdownMenuItem 
               className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50 mb-1"
-              onClick={() => handleSendReminder(user)}
+              onClick={() => handleSendReminder()}
             >
               <Bell className="w-4 h-4" />
               Send Reminder
@@ -172,24 +176,12 @@ const DeletedUsersClient = ({user}:{user:AdminDetailsProps}) => {
             </DropdownMenuItem>
           </div>
 
-          {/* Restriction Actions */}
-          <div className="p-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Restrictions</p>
-            <DropdownMenuItem 
-              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-amber-600 focus:text-amber-600 focus:bg-amber-50 mb-1"
-              onClick={() => handleBlockUser(user)}
-            >
-              <Ban className="w-4 h-4" />
-              Block User
-            </DropdownMenuItem>
-          </div>
-
           {/* Permanent Actions */}
           <div className="p-2 border-t border-gray-100">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Danger Zone</p>
             <DropdownMenuItem 
               className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-destructive focus:text-destructive focus:bg-destructive/10" 
-              onClick={() => handleDeleteUser(user)}
+              onClick={() => handleDeleteUser()}
             >
               <Trash2 className="w-4 h-4" />
               Delete Permanently

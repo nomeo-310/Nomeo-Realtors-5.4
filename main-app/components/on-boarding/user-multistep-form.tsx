@@ -26,16 +26,18 @@ import { useBioAnalyzer } from '@/hooks/use-bio-analyzer';
 
 const fieldNames = [
   {
-    name: 'Step 1',
-    fields: ['surName', 'lastName', 'city', 'state',]
+    name: 'Personal Info',
+    fields: ['surName', 'lastName', 'city', 'state'],
+    icon: User03Icon
   },
   {
-    name: 'Step 2',
-    fields: ['phoneNumber', 'additionalPhoneNumber', 'userBio']
+    name: 'Contact & Bio',
+    fields: ['phoneNumber', 'additionalPhoneNumber', 'userBio'],
+    icon: TelephoneIcon
   }
 ];
 
-const UserMultiStepForm = ({user}:{user:userDetails}) => {
+const UserMultiStepForm = ({ user }: { user: userDetails }) => {
   type FieldName = keyof userProfileValues;
   const onboarding = useUserOnboardingModal();
 
@@ -44,8 +46,16 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
   const [uploadingImage, setUploadingImage] = React.useState(false);
   const [imageCropped, setImageCropped] = React.useState<File | null>(null);
   const [imageFile, setImageFile] = React.useState<File>();
-  const [imageUrls, setImageUrls] = React.useState({public_id: '', secure_url: ''});
-  const [imageUploaded, setImageUploaded] = React.useState(false);
+  const [imageUrls, setImageUrls] = React.useState({ 
+    public_id: user?.profileImage?.public_id || '', 
+    secure_url: user?.profileImage?.secure_url || '' 
+  });
+  const [hasExistingImage, setHasExistingImage] = React.useState(
+    !!user?.profileImage?.secure_url
+  );
+  const [imageUploaded, setImageUploaded] = React.useState(
+    !!user?.profileImage?.secure_url
+  );
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const cropperRef = React.useRef<ReactCropperElement>(null);
@@ -56,6 +66,8 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
     minLength: 200,
     targetLength: 400
   });
+
+  const totalSteps = fieldNames.length;
 
   const onImageSelection = (image: File | undefined) => {
     if (!image) {
@@ -96,22 +108,23 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
     if (imageCropped) {
       handleUploadImage()
     }
-  },[imageCropped]);
+  }, [imageCropped]);
 
   const handleUploadImage = async () => {
     if (!imageCropped) {
       return;
     };
-    
-    const data = {image: imageCropped, uploadPreset: 'profileImages'}
+
+    const data = { image: imageCropped, uploadPreset: 'profileImages' }
     try {
       setUploadingImage(true);
       const imageData = await uploadImage(data)
       const imageUrls = { public_id: imageData?.public_id, secure_url: imageData?.secure_url };
       setImageUrls(imageUrls);
-      toast.success('Profile image succesfully uploaded!');
+      toast.success('Profile image successfully uploaded!');
       setUploadingImage(false);
       setImageUploaded(true);
+      setHasExistingImage(true);
     } catch (error) {
       setUploadingImage(false);
       setImageCropped(null);
@@ -120,26 +133,39 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
     }
   };
 
+  const removeImage = () => {
+    setImageUrls({ public_id: "", secure_url: "" });
+    setImageUploaded(false);
+    setHasExistingImage(false);
+    setImageCropped(null);
+    setImageFile(undefined);
+    toast.info("Profile image removed. Please upload a new one.");
+  };
+
   const resetField = () => {
     form.reset();
     setCurrentStep(0);
     setImageCropped(null);
     setImageFile(undefined);
-    setImageUrls({public_id: '', secure_url: ''});
-    setImageUploaded(false);
+    setImageUrls({ 
+      public_id: user?.profileImage?.public_id || '', 
+      secure_url: user?.profileImage?.secure_url || '' 
+    });
+    setImageUploaded(!!user?.profileImage?.secure_url);
+    setHasExistingImage(!!user?.profileImage?.secure_url);
     form.reset();
   };
 
   const form = useForm<userProfileValues>({
     resolver: zodResolver(userProfileSchema),
     defaultValues: {
-      surName: '',
-      lastName: '',
-      city: '',
-      state: '',
-      phoneNumber: '',
-      additionalPhoneNumber: '',
-      userBio: '',
+      surName: user.surName || '',
+      lastName: user.lastName || '',
+      city: user.city || '',
+      state: user.state || '',
+      phoneNumber: user.phoneNumber || '',
+      additionalPhoneNumber: user.additionalPhoneNumber || '',
+      userBio: user.bio || '',
     }
   });
 
@@ -156,83 +182,226 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
 
   const nextStep = async () => {
     const fields = fieldNames[currentStep].fields;
-    const output = await form.trigger(fields as FieldName[], {shouldFocus: true})
+    const output = await form.trigger(fields as FieldName[], { shouldFocus: true })
 
     if (!output) {
       return;
     };
 
-    if (output && !imageFile && !imageCropped ) {
-      toast.error('Profile image is required!!')
+    // Allow users to proceed if they have an existing image OR have uploaded a new one
+    if (!imageUploaded && !imageCropped && !hasExistingImage) {
+      toast.error('Profile image is required!');
       return;
     };
 
-    if (currentStep < fieldNames.length - 1) {
-      if (currentStep === 0 && imageCropped && !imageUploaded) {
-        toast.error('Upload your profile image')
-        return;
-      }
+    // If user uploaded a new image but hasn't completed upload
+    if (currentStep === 0 && imageCropped && !imageUploaded && !hasExistingImage) {
+      toast.error('Upload your profile image');
+      return;
     }
 
     setCurrentStep((current) => current + 1);
   };
 
   const onSubmit: (values: userProfileValues) => Promise<void> = async (values) => {
-    setIsLoading(true)
-    await createUserProfile({ ...values, profileImage: imageUrls, userId: user._id })
-    .then((response) => {
-      if (response.success && response.status === 201) {
-        toast.success(response.message);
-        resetField();
-        setIsLoading(false);
-        onboarding.onClose();
-      };
-
-      if (!response.success) {
-        toast.error(response.message);
-      }
-    }).catch((error) => {
-      toast.error('Something went wrong!!')
+    setIsLoading(true);
+    
+    // Prepare image data - use existing if no new upload
+    const profileImageData = imageUploaded || hasExistingImage ? imageUrls : { public_id: '', secure_url: '' };
+    
+    await createUserProfile({ 
+      ...values, 
+      profileImage: profileImageData, 
+      userId: user._id
     })
+      .then((response) => {
+        if (response.success && response.status === 201) {
+          toast.success(response.message);
+          resetField();
+          setIsLoading(false);
+          onboarding.onClose();
+        };
+
+        if (!response.success) {
+          toast.error(response.message);
+        }
+      }).catch((error) => {
+        toast.error('Something went wrong!!')
+      })
+  };
+
+  // Step Header
+  const renderStepHeader = () => {
+    const currentStepInfo = fieldNames[currentStep];
+    const stepTitles = [
+      "Personal Information & Profile",
+      "Contact & Bio Information"
+    ];
+    const stepDescriptions = [
+      "Start by adding your personal details and profile picture",
+      "Add your contact information and tell us about yourself"
+    ];
+
+    return (
+      <div className="space-y-2 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <HugeiconsIcon icon={currentStepInfo.icon} className="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {stepTitles[currentStep]}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {stepDescriptions[currentStep]}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Progress Indicator
+  const renderProgressIndicator = () => {
+    return (
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          {fieldNames.map((step, index) => (
+            <React.Fragment key={index}>
+              <div className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  index === currentStep
+                    ? 'bg-blue-600 text-white'
+                    : index < currentStep
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {index < currentStep ? '✓' : index + 1}
+                </div>
+                <span className={`ml-2 text-sm font-medium ${
+                  index === currentStep ? 'text-blue-600' :
+                    index < currentStep ? 'text-green-600' :
+                      'text-gray-500'
+                }`}>
+                  {step.name}
+                </span>
+              </div>
+
+              {index < totalSteps - 1 && (
+                <div className={`flex-1 h-0.5 mx-4 ${
+                  index < currentStep ? 'bg-green-600' : 'bg-gray-200'
+                }`} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
     <Form {...form}>
       <form className="flex flex-col gap-3 lg:gap-4 w-full" onSubmit={form.handleSubmit(onSubmit)}>
+        {/* Step Header */}
+        {renderStepHeader()}
+        
+        {/* Progress Indicator */}
+        {renderProgressIndicator()}
+
         {currentStep === 0 && (
           <React.Fragment>
-            { imageFile ?
+            {imageFile ?
               <div className="-mb-10 xl:w-[400px] xl:h-[500px] lg:w-[350] lg:h-[450px] md:w-[400px] md:h-[500px] w-[310px] h-[410px] rounded mx-auto my-auto">
-                <Cropper 
-                  src={URL.createObjectURL(imageFile)} 
-                  aspectRatio={1} 
-                  guides={false} 
-                  zoomable={false} 
+                <Cropper
+                  src={URL.createObjectURL(imageFile)}
+                  aspectRatio={1}
+                  guides={false}
+                  zoomable={false}
                   ref={cropperRef}
                   className='mx-auto xl:size-[400px] lg:size-[350px] md:size-[450px] size-[350px]'
                 />
                 <div className="flex items-center justify-end gap-3 mt-4">
-                  <Button variant={'secondary'} onClick={onClose} className='rounded' type="button">Cancel</Button>
-                  <Button onClick={crop} className='rounded' type="button">Crop</Button>
+                  <Button 
+                    variant={"outline"} 
+                    onClick={onClose} 
+                    className="rounded border-gray-300 hover:bg-gray-50" 
+                    type="button"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={crop} 
+                    className="rounded bg-blue-600 hover:bg-blue-700" 
+                    type="button"
+                  >
+                    Crop Image
+                  </Button>
                 </div>
               </div> :
               <React.Fragment>
                 <div className="xl:h-[165px] lg:[150px] md:h-[160px] h-auto sm:flex-row flex-col flex xl:gap-4 gap-3 w-full sm:items-center group">
-                  <div className="cursor-pointer xl:w-[165px] lg:[150px] md:w-[160px] w-[130px] aspect-square bg-gray-200 flex items-center justify-center rounded-lg mx-auto sm:mx-0 relative" onClick={() => fileInputRef.current?.click()}>
-                    <Input type="file" ref={fileInputRef} className="hidden sr-only" onChange={(e) => onImageSelection(e.target.files?.[0])}/>
-                    <Image src={ imageCropped ? URL.createObjectURL(imageCropped) : '/images/default_user.png' } alt="avatar" fill priority className='rounded-lg object-cover object-center' />
-                    <div className={cn("p-3 text-center text-white text-sm absolute top-0 right-0 w-full h-full bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 flex justify-center items-center", uploadingImage && "opacity-100")}>
-                      { imageCropped && uploadingImage ? 
-                        <Loader2 className='animate-spin size-[50px] xl:size-[60px]'/> : 
-                        <HugeiconsIcon icon={ImageAdd02Icon} className='size-[50px] xl:size-[60px]'/>
-                      }
+                  <div className="relative group">
+                    <div 
+                      className="cursor-pointer xl:w-[165px] lg:[150px] md:w-[160px] w-[130px] aspect-square bg-gray-200 flex items-center justify-center rounded-lg mx-auto sm:mx-0 relative" 
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden sr-only" 
+                        onChange={(e) => onImageSelection(e.target.files?.[0])} 
+                        accept="image/*"
+                      />
+                      <Image 
+                        src={
+                          imageCropped
+                            ? URL.createObjectURL(imageCropped)
+                            : imageUrls.secure_url || "/images/default_user.png"
+                        } 
+                        alt="avatar" 
+                        fill 
+                        priority 
+                        className='rounded-lg object-cover object-center'
+                      />
+                      <div className={cn(
+                        "p-3 text-center text-white text-sm absolute top-0 right-0 w-full h-full bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 flex justify-center items-center", 
+                        uploadingImage && "opacity-100"
+                      )}>
+                        {uploadingImage ? (
+                          <Loader2 className='animate-spin size-[50px] xl:size-[60px]' />
+                        ) : (
+                          <HugeiconsIcon icon={ImageAdd02Icon} className='size-[50px] xl:size-[60px]' />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Indicators container - positioned at top-right corner */}
+                    <div className="absolute -top-2 -right-2 flex flex-col items-end gap-1">
+                      {/* Current tag */}
+                      {hasExistingImage && (
+                        <div className="bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap shadow-sm">
+                          Current
+                        </div>
+                      )}
+                      
+                      {/* Remove button */}
+                      {(hasExistingImage || imageUploaded) && (
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-colors text-sm font-bold shadow-sm"
+                          aria-label="Remove profile image"
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="flex-1 flex flex-col xl:gap-4 gap-3">
                     <FormField
                       control={form.control}
                       name='surName'
-                      render={({field}) => (
+                      render={({ field }) => (
                         <FormItem>
                           <FormControl>
                             <InputWithIcon
@@ -243,14 +412,14 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
                               {...field}
                             />
                           </FormControl>
-                          <FormMessage/>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
                       control={form.control}
                       name='lastName'
-                      render={({field}) => (
+                      render={({ field }) => (
                         <FormItem>
                           <FormControl>
                             <InputWithIcon
@@ -261,7 +430,7 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
                               {...field}
                             />
                           </FormControl>
-                          <FormMessage/>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -269,41 +438,41 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
                 </div>
                 <div className="flex-1 flex xl:gap-4 gap-3 flex-col">
                   <FormField
-                      control={form.control}
-                      name='city'
-                      render={({field}) => (
-                        <FormItem>
-                          <FormControl>
-                            <InputWithIcon
-                              className='bg-gray-200 rounded-lg'
-                              icon={Location06Icon}
-                              inputClassName='rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 '
-                              placeholder='Enter city of residence'
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage/>
-                        </FormItem>
-                      )}
-                    />
+                    control={form.control}
+                    name='city'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <InputWithIcon
+                            className='bg-gray-200 rounded-lg'
+                            icon={Location06Icon}
+                            inputClassName='rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 '
+                            placeholder='Enter city of residence'
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
-                      control={form.control}
-                      name='state'
-                      render={({field}) => (
-                        <FormItem>
-                          <FormControl>
-                            <InputWithIcon
-                              className='bg-gray-200 rounded-lg'
-                              icon={Location06Icon}
-                              inputClassName='rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 '
-                              placeholder='Enter state of residence'
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage/>
-                        </FormItem>
-                      )}
-                    />
+                    control={form.control}
+                    name='state'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <InputWithIcon
+                            className='bg-gray-200 rounded-lg'
+                            icon={Location06Icon}
+                            inputClassName='rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 '
+                            placeholder='Enter state of residence'
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </React.Fragment>
             }
@@ -311,54 +480,56 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
         )}
         {currentStep === 1 && (
           <div className="flex xl:gap-4 gap-3 flex-col">
-            <FormField
-              control={form.control}
-              name='phoneNumber'
-              render={({field}) => (
-                <FormItem>
-                  <FormControl>
-                    <InputWithIcon
-                      className='bg-gray-200 rounded-lg'
-                      inputClassName='rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 '
-                      icon={TelephoneIcon}
-                      placeholder='Enter your main phone number'
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage/>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='additionalPhoneNumber'
-              render={({field}) => (
-                <FormItem>
-                  <FormControl>
-                    <InputWithIcon
-                      className='bg-gray-200 rounded-lg'
-                      inputClassName='rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 '
-                      icon={TelephoneIcon}
-                      placeholder='Enter an additional phone number'
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage/>
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 xl:gap-4 gap-3">
+              <FormField
+                control={form.control}
+                name='phoneNumber'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <InputWithIcon
+                        className='bg-gray-200 rounded-lg'
+                        inputClassName='rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 '
+                        icon={TelephoneIcon}
+                        placeholder='Enter your main phone number'
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='additionalPhoneNumber'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <InputWithIcon
+                        className='bg-gray-200 rounded-lg'
+                        inputClassName='rounded-lg dark:placeholder:text-white/70 placeholder:text-black/70 '
+                        icon={TelephoneIcon}
+                        placeholder='Enter an additional phone number'
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <div className="space-y-4">
               <FormField
                 control={form.control}
                 name='userBio'
-                render={({field}) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormControl>
                       <div className='w-full h-[200px] relative'>
-                        <HugeiconsIcon icon={SparklesIcon} className='absolute top-3 left-3'/>
-                        <Textarea 
-                          className='border-0 h-full resize-none shadow-none bg-gray-200 p-3 pl-10 placeholder:text-black text-base' 
-                          placeholder='Describe what you are looking for in a property. Mention your preferences, lifestyle, and needs...' 
+                        <HugeiconsIcon icon={SparklesIcon} className='absolute top-3 left-3' />
+                        <Textarea
+                          className='border-0 h-full resize-none shadow-none bg-gray-200 p-3 pl-10 placeholder:text-black text-sm'
+                          placeholder='Describe what you are looking for in a property. Mention your preferences, lifestyle, and needs...'
                           {...field}
                           onChange={(e) => {
                             field.onChange(e);
@@ -367,11 +538,11 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
                         />
                       </div>
                     </FormControl>
-                    <FormMessage/>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               {/* Bio Analysis Panel */}
               {analysis && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -382,7 +553,7 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
                     </h4>
                     <div className="flex items-center gap-2">
                       <div className="w-24 bg-blue-200 rounded-full h-2">
-                        <div 
+                        <div
                           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${analysis.score}%` }}
                         ></div>
@@ -451,11 +622,92 @@ const UserMultiStepForm = ({user}:{user:userDetails}) => {
             </div>
           </div>
         )}
+
+        {/* Profile Summary (for review) */}
+        {currentStep === totalSteps - 1 && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+            <h4 className="text-sm font-semibold text-gray-900 mb-2">User Profile Summary</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Name:</span>
+                <span className="font-medium">
+                  {form.watch('surName')} {form.watch('lastName')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Location:</span>
+                <span className="font-medium">
+                  {form.watch('city')}, {form.watch('state')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Contact:</span>
+                <span className="font-medium">{form.watch('phoneNumber')}</span>
+              </div>
+              {form.watch('userBio') && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Bio Length:</span>
+                  <span className="font-medium">{form.watch('userBio')?.length || 0} characters</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Profile Picture:</span>
+                <span className={`font-medium ${imageUploaded || hasExistingImage ? 'text-green-600' : 'text-amber-600'}`}>
+                  {(imageUploaded || hasExistingImage) ? 'Uploaded ✓' : 'Required'}
+                </span>
+              </div>
+              {/* Show preview of profile image */}
+              {(imageUploaded || hasExistingImage) && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-gray-600">Preview:</span>
+                  <div className="w-12 h-12 relative rounded-full overflow-hidden border-2 border-green-500">
+                    <Image
+                      src={imageUrls.secure_url || user.profileImage?.secure_url || ""}
+                      alt="Profile preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step Navigation */}
         <div className="mt-3 flex items-center justify-between">
-          { currentStep > 0 && <button className="rounded-lg py-3 px-5 bg-black text-white text-sm lg:text-sm" type="button" onClick={previousStep}>Previous</button> }
-          { currentStep === 1 ?   
-            <LoadingButton isLoading={isLoading} disabled={isLoading} className="rounded-lg py-3 px-5 bg-green-600 text-white text-sm lg:text-sm" type="submit" label='Create Profile' loadingLabel='Creating Profile...'/>
-            : <button className="rounded-lg py-3 px-5 bg-black text-white text-sm lg:text-sm" type="button" onClick={nextStep}>Next</button> }
+          {currentStep > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={previousStep}
+              disabled={isLoading}
+              className="rounded-lg py-3 px-5 border-gray-300 hover:bg-gray-50"
+            >
+              Previous
+            </Button>
+          )}
+          {currentStep === totalSteps - 1 ? (
+            <LoadingButton
+              isLoading={isLoading}
+              disabled={isLoading || (!imageUploaded && !hasExistingImage)}
+              className="rounded-lg py-3 px-5 bg-green-600 hover:bg-green-700 text-white text-sm lg:text-sm"
+              type="submit"
+              label='Complete Profile'
+              loadingLabel='Creating Profile...'
+            />
+          ) : (
+            <Button
+              type="button"
+              onClick={nextStep}
+              className="rounded-lg py-3 px-5 bg-blue-600 hover:bg-blue-700 text-white text-sm lg:text-sm"
+            >
+              Next Step
+              <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Button>
+          )}
         </div>
       </form>
     </Form>

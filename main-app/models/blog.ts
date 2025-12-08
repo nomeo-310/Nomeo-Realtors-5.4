@@ -1,160 +1,133 @@
-import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
-interface attachment {
+const BLOG_APPROVAL = ['approved', 'pending', 'unapproved'] as const;
+export type BlogApproval = typeof BLOG_APPROVAL[number];
+
+type CloudinaryImage = {
   public_id: string;
   secure_url: string;
-}
+};
 
-interface IBlog extends Document {
+export interface IBlog extends Document {
   title: string;
   description: string;
-  content?: string;  
-  author: Types.ObjectId;
+  content?: string;
+  author: mongoose.Types.ObjectId;
   collaboration: boolean;
-  collaborators?: Types.ObjectId[];
-  banner: attachment;
-  total_likes: number;
-  total_comments: number;
-  total_saves: number;
-  total_reads: number;
-  likes: Types.ObjectId[];
-  reads: Types.ObjectId[];
-  comments: Types.ObjectId[];
-  saves: Types.ObjectId[];
+  collaborators?: mongoose.Types.ObjectId[];
+  banner: CloudinaryImage;
+  likes: mongoose.Types.ObjectId[];
+  saves: mongoose.Types.ObjectId[];
+  reads: mongoose.Types.ObjectId[]; 
+  comments: mongoose.Types.ObjectId[];
+  guest_readers: string[];
   is_draft: boolean;
   is_published: boolean;
   is_deleted: boolean;
+  blog_approval: BlogApproval;
   read_time: number;
-  blog_approval: 'approved' | 'pending' | 'unapproved';
-  guest_readers: string[];
-  created_at: Date;
-  updated_at: Date;
+  total_likes: number;
+  total_saves: number;
+  total_reads: number;
+  total_comments: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const blogSchema: Schema<IBlog> = new Schema(
+const blogSchema = new Schema<IBlog>(
   {
-    title: { 
-      type: String, 
-      required: true
+    title: { type: String, required: true, trim: true },
+    description: { type: String, required: true, trim: true },
+    content: { type: String, default: '' },
+
+    author: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
-    description: { 
-      type: String, 
-      required: true
-    },
-    content: { 
-      type: String, 
-      default: ''
-    },
-    author: { 
-      type: Schema.Types.ObjectId, 
-      ref: "User", 
-      required: true
-    },
-    collaboration: { 
-      type: Boolean, 
-      default: false
-    },
-    collaborators: [{ 
-      type: Schema.Types.ObjectId, 
-      ref: "User" 
-    }],
+    collaboration: { type: Boolean, default: false },
+    collaborators: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+
     banner: {
       public_id: { type: String, required: true },
       secure_url: { type: String, required: true },
     },
-    total_likes: { 
-      type: Number, 
-      default: 0
+
+    likes: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    saves: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    reads: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }],
+
+    guest_readers: [{ type: String }], // IPs
+
+    is_draft: { type: Boolean, default: true, index: true },
+    is_published: { type: Boolean, default: false, index: true },
+    is_deleted: { type: Boolean, default: false, index: true },
+
+    blog_approval: {
+      type: String,
+      enum: BLOG_APPROVAL,
+      default: 'pending',
+      index: true,
     },
-    total_comments: { 
-      type: Number, 
-      default: 0
-    },
-    total_saves: { 
-      type: Number, 
-      default: 0
-    },
-    total_reads: { 
-      type: Number, 
-      default: 0
-    },
-    likes: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    reads: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }],
-    saves: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    is_draft: { 
-      type: Boolean, 
-      default: true
-    },
-    is_published: { 
-      type: Boolean, 
-      default: false
-    },
-    is_deleted: { 
-      type: Boolean, 
-      default: false
-    },
-    read_time: { 
-      type: Number, 
-      default: 0, 
-      required: true
-    },
-    blog_approval: { 
-      type: String, 
-      enum: ['approved', 'pending', 'unapproved'], 
-      default: 'unapproved'
-    },
-    guest_readers: [{ type: String }],
-    created_at: { type: Date, default: Date.now },
-    updated_at: { type: Date, default: Date.now },
+
+    read_time: { type: Number, default: 0, min: 0 },
   },
-  { 
+  {
     timestamps: true,
-    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// FIXED: Keep only essential single field indexes
-blogSchema.index({ author: 1 });
-blogSchema.index({ is_published: 1 });
-blogSchema.index({ blog_approval: 1 });
-blogSchema.index({ is_draft: 1 });
-blogSchema.index({ created_at: -1 });
+blogSchema.virtual('total_likes').get(function () {
+  return this.likes.length;
+});
+blogSchema.virtual('total_saves').get(function () {
+  return this.saves.length;
+});
+blogSchema.virtual('total_comments').get(function () {
+  return this.comments.length;
+});
+blogSchema.virtual('total_reads').get(function () {
+  return this.reads.length + this.guest_readers.length;
+});
 
-// Compound indexes for common query patterns
-blogSchema.index({ author: 1, is_published: 1 });
 blogSchema.index({ is_published: 1, blog_approval: 1 });
-blogSchema.index({ blog_approval: 1, created_at: -1 });
-blogSchema.index({ total_likes: -1, is_published: 1 });
+blogSchema.index({ is_published: 1, createdAt: -1 });   
+blogSchema.index({ author: 1, is_published: 1 });
+blogSchema.index({ blog_approval: 1, createdAt: -1 }); 
+blogSchema.index({ is_draft: 1, author: 1 });
 
-// Text search index for blog content search (keep this - very important for blogs)
-blogSchema.index({
-  title: 'text',
-  description: 'text',
-  content: 'text'
+// Text search (highest priority fields)
+blogSchema.index(
+  {
+    title: 'text',
+    description: 'text',
+    content: 'text',
+  },
+  {
+    weights: { title: 10, description: 8, content: 5 },
+    name: 'blog_search_text',
+  }
+);
+
+// Hot/trending sort (use in aggregation)
+blogSchema.index({ createdAt: -1 }); // Recent
+blogSchema.index({ 'likes.0': 1 });  // Has likes (avoid full array index)
+
+
+blogSchema.pre('save', function (next) {
+
+  if (this.is_published && this.blog_approval === 'unapproved') {
+    this.blog_approval = 'pending';
+  }
+  next();
 });
 
+const BlogModel =
+  (mongoose.models.Blog as mongoose.Model<IBlog> | undefined) ??
+  mongoose.model<IBlog>('Blog', blogSchema);
 
-// Popular blogs index (combination of engagement metrics)
-blogSchema.index({ 
-  total_likes: -1, 
-  total_reads: -1, 
-  is_published: 1 
-});
-
-// FIXED: Improved model creation with better caching
-let Blog: Model<IBlog>;
-
-if (mongoose.models.Blog) {
-  Blog = mongoose.models.Blog;
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 Using cached Blog model');
-  }
-} else {
-  Blog = mongoose.model<IBlog>("Blog", blogSchema);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Created new Blog model');
-  }
-}
-
-export default Blog;
+export default BlogModel;

@@ -50,6 +50,10 @@ export const authOptions: AuthOptions = {
           throw new Error('email_not_verified');
         }
 
+        if (['admin', 'creator', 'superAdmin'].includes(user.role)) {
+          throw new Error('wrong_portal');
+        }
+
         const passwordMatch = await bcryptjs.compare(password, user.password);
 
         if (user.userAccountDeleted) {

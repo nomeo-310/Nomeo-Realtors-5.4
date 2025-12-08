@@ -55,6 +55,7 @@ const createOrUpdateSuperAdmin = async () => {
 
       // Step 2: Create Admin record with proper history and tracking
       const newAdmin = new Admin({
+        isActive: true,
         userId: savedUser._id,
         role: 'superAdmin',
         adminAccess: 'full_access',
@@ -90,6 +91,7 @@ const createOrUpdateSuperAdmin = async () => {
       if (!existingAdmin) {
         // Create Admin record if it doesn't exist with proper history
         const newAdmin = new Admin({
+          isActive: true,
           userId: existingUser._id,
           role: 'superAdmin',
           adminAccess: 'full_access',

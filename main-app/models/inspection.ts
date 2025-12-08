@@ -1,94 +1,123 @@
-import mongoose, { Schema, Document, Model, Types } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
-interface IInspection extends Document {
-  date: string;
-  time: string;
-  user: Types.ObjectId;
-  apartment: Types.ObjectId;
-  agent: Types.ObjectId;
+const INSPECTION_STATUS = ['pending', 'completed', 'cancelled', 'no-show'] as const;
+const VERDICT = ['pending', 'accepted', 'rejected'] as const;
+
+export type InspectionStatus = typeof INSPECTION_STATUS[number];
+export type InspectionVerdict = typeof VERDICT[number];
+
+export interface IInspection extends Document {
+  date: Date;                    
+  time: string;                  
+  user: mongoose.Types.ObjectId;   
+  apartment: mongoose.Types.ObjectId;
+  agent: mongoose.Types.ObjectId;
   additionalNumber?: string;
-  status: string;
-  verdict: string;
+  status: InspectionStatus;
+  verdict: InspectionVerdict;
   createdAt: Date;
   updatedAt: Date;
+  isPast: boolean;
+  isToday: boolean;
 }
 
-const inspectionSchema: Schema<IInspection> = new Schema(
+const inspectionSchema = new Schema<IInspection>(
   {
-    date: { 
-      type: String, 
-      required: true
+    date: {
+      type: Date,
+      required: true,
+      index: true,
     },
-    time: { 
-      type: String, 
-      required: true
+    time: {
+      type: String,
+      required: true,
+      match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
     },
-    user: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'User'
+
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
-    apartment: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Apartment'
+    apartment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Apartment',
+      required: true,
+      index: true,
     },
-    agent: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'Agent'
+    agent: {
+      type: Schema.Types.ObjectId,
+      ref: 'Agent',
+      required: true,
+      index: true,
     },
-    additionalNumber: { 
-      type: String, 
-      default: undefined
-    },
+
+    additionalNumber: String,
+
     status: {
-      type: String, 
-      enum: ['completed', 'pending', 'uncompleted'], 
-      default: 'pending'
+      type: String,
+      enum: INSPECTION_STATUS,
+      default: 'pending',
+      index: true,
     },
     verdict: {
-      type: String, 
-      enum: ['accepted', 'rejected', 'pending'], 
-      default: 'pending'
-    }
+      type: String,
+      enum: VERDICT,
+      default: 'pending',
+      index: true,
+    },
   },
-  { 
+  {
     timestamps: true,
-    autoIndex: process.env.NODE_ENV !== 'development' // Disable auto-indexing in dev
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// FIXED: Keep only essential single field indexes
-inspectionSchema.index({ date: 1 });
-inspectionSchema.index({ user: 1 });
-inspectionSchema.index({ agent: 1 });
-inspectionSchema.index({ apartment: 1 });
+inspectionSchema.virtual('isPast').get(function () {
+  const now = new Date();
+  const inspectionDate = new Date(this.date);
+  const [hours, minutes] = this.time.split(':').map(Number);
+  inspectionDate.setHours(hours, minutes, 0, 0);
+  return inspectionDate < now;
+});
+
+inspectionSchema.virtual('isToday').get(function () {
+  const today = new Date();
+  const inspectionDate = new Date(this.date);
+  return (
+    inspectionDate.getFullYear() === today.getFullYear() &&
+    inspectionDate.getMonth() === today.getMonth() &&
+    inspectionDate.getDate() === today.getDate()
+  );
+});
+
+// Core lookups
+inspectionSchema.index({ user: 1, date: -1 });      
+inspectionSchema.index({ agent: 1, date: -1 });    
+inspectionSchema.index({ apartment: 1 });            
+
+// Status filtering
 inspectionSchema.index({ status: 1 });
-inspectionSchema.index({ createdAt: -1 });
+inspectionSchema.index({ verdict: 1 });
 
-// Compound indexes for common query patterns
-inspectionSchema.index({ date: 1, time: 1 });
-inspectionSchema.index({ user: 1, status: 1 });
-inspectionSchema.index({ agent: 1, status: 1 });
-inspectionSchema.index({ agent: 1, date: 1 });
-inspectionSchema.index({ status: 1, verdict: 1 });
-inspectionSchema.index({ date: 1, status: 1 });
+// Most common compound queries
+inspectionSchema.index({ agent: 1, date: 1, status: 1 });    
+inspectionSchema.index({ user: 1, status: 1, date: -1 });  
+inspectionSchema.index({ date: 1, status: 1 });         
+inspectionSchema.index({ status: 1, createdAt: -1 });  
 
-// Date range queries for scheduling
-inspectionSchema.index({ date: 1, time: 1, status: 1 });
-inspectionSchema.index({ date: 1, agent: 1, status: 1 });
-
-// FIXED: Improved model creation with better caching
-let Inspection: Model<IInspection>;
-
-if (mongoose.models.Inspection) {
-  Inspection = mongoose.models.Inspection;
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔄 Using cached Inspection model');
+inspectionSchema.pre('save', function (next) {
+  if (this.time) {
+    const [h, m] = this.time.split(':');
+    this.time = `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
   }
-} else {
-  Inspection = mongoose.model<IInspection>('Inspection', inspectionSchema);
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ Created new Inspection model');
-  }
-}
+  next();
+});
 
-export default Inspection;
+const InspectionModel =
+  (mongoose.models.Inspection as mongoose.Model<IInspection> | undefined) ??
+  mongoose.model<IInspection>('Inspection', inspectionSchema);
+
+export default InspectionModel;

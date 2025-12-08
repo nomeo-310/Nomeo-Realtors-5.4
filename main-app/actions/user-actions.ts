@@ -188,7 +188,13 @@ export const getCurrentUser = async (): Promise<userProps | null> => {
 
   try {
     const user = await User.findOne({email: currentUserSession.user.email, userAccountDeleted: false })
-    .select('-password -otp -otpWxpiredIn -resetPasswordOtp ')
+    .select('-password -otp -otpWxpiredIn -resetPasswordOtp')
+    .populate({
+      path: 'agentId',
+      model: Agent,
+      select: 'agencyName officeAddress officeNumber licenseNumber inspectionFeePerHour agentVerified verificationStatus agencyWebsite',
+      match: { _id: { $exists: true } }
+    })
     .lean().exec();
 
     if (!user) return null;
@@ -215,7 +221,13 @@ export const getCurrentUserDetails = async (): Promise<any> => {
       email: currentUserSession.user.email,
       userAccountDeleted: false,
     })
-      .select("_id profilePicture username surName lastName bio phoneNumber additionalPhoneNumber address city state role userOnboarded profileCreated userVerified placeholderColor email")
+      .select("_id profilePicture username surName lastName bio phoneNumber additionalPhoneNumber address city state role userOnboarded profileCreated userVerified placeholderColor email agentId profileImage")
+      .populate({
+        path: 'agentId',
+        model: Agent,
+        select: 'agencyName officeAddress officeNumber licenseNumber inspectionFeePerHour agentVerified verificationStatus agencyWebsite',
+        match: { _id: { $exists: true } }
+      })
       .lean()
       .exec();
 

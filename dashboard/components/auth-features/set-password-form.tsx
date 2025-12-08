@@ -3,13 +3,16 @@
 import React from 'react'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form'
 import { SquareLock01Icon } from '@hugeicons/core-free-icons'
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { setPasswordSchema, SetPasswordValues } from '@/utils/form-validations';
 import { zodResolver } from "@hookform/resolvers/zod"
 import CustomInput from '../ui/custom-input';
 import { LoadingButton } from '../ui/loading-button';
 import { CheckIcon, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { createPassword } from '@/actions/admin-actions';
+import { signIn } from 'next-auth/react';
+import { toast } from 'sonner';
 
 const SetPasswordForm = () => {
   
@@ -25,6 +28,8 @@ const SetPasswordForm = () => {
   });
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email');
 
   const form = useForm<SetPasswordValues>({
     resolver: zodResolver(setPasswordSchema),
@@ -32,8 +37,8 @@ const SetPasswordForm = () => {
       password: '',
       confirmPassword: ''
     },
-    mode: 'onChange', // Validate on every change
-    reValidateMode: 'onChange' // Re-validate on every change
+    mode: 'onChange', 
+    reValidateMode: 'onChange' 
   })
 
   const checkPasswordStrength = (password: string) => {
@@ -104,15 +109,22 @@ const SetPasswordForm = () => {
 
     setIsLoading(true);
     try {
-      console.log('Setting up password:', value);
-      // Add your actual API call here
-      // await setupPasswordAPI(value);
+      const values = {email: email || '', password: value.password}
+      const response = await createPassword(values);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Redirect or show success message
-      router.push('/dashboard');
+      if (response.success) {
+        const result = await signIn("credentials", {
+          ...values, 
+          redirect: false
+        });
+  
+        if (result?.error) {
+          toast.error(result.error);
+        } else if (result?.ok) {
+          toast.success('Password successfully set');
+          window.location.href = "/";
+        }
+      }
     } catch (error) {
       console.error('Password setup failed:', error);
       form.setError('root', { 

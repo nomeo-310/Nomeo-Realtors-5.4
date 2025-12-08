@@ -10,12 +10,10 @@ import generatePropertyId from "@/utils/generatePropertyId";
 import Agent from "@/models/agent";
 import User from "@/models/user";
 import { revalidatePath } from "next/cache";
-import { propertyProps } from "@/lib/types";
 import { deleteArrayOfImages } from "./delete-cloudinary-image";
 import Inspection from "@/models/inspection";
 import Notification from "@/models/notification";
 import Rented from "@/models/rentout";
-import { ObjectId } from "mongodb";
 import type { Document } from 'mongoose';
 
 type imageProps = {
@@ -70,10 +68,6 @@ const validateAgentAccess = async (currentUser: any) => {
 // Helper functions
 const compareIds = (id1: any, id2: any): boolean => {
   return id1?.toString() === id2?.toString();
-};
-
-const toObjectId = (id: string | ObjectId): ObjectId => {
-  return id instanceof ObjectId ? id : new ObjectId(id);
 };
 
 // Type-safe document ID extraction
@@ -182,37 +176,26 @@ export const getSingleProperty = async (id: string) => {
       .select('-propertyApproval')
       .populate({
         path: 'agent',
-        model: Agent,
         select: 'agencyName inspectionFeePerHour userId officeAddress officeNumber _id',
         populate: {
           path: 'userId',
-          model: User,
           select: '_id surName lastName city state profilePicture'
         }
       })
       .populate({
         path: 'apartmentImages',
-        model: Attachment,
         select: '_id images'
-      });
+      })
+      .lean({ virtuals: true });
 
     if (!property) {
-      return { 
-        success: false, 
-        message: 'Property not found', 
-        status: 404 
-      };
+      return { success: false, message: 'Property not found', status: 404 };
     }
 
-    const singleProperty = JSON.parse(JSON.stringify(property));
-    return singleProperty as propertyProps;
+    return { success: true, data: property, status: 200 };
   } catch (error) {
     console.error('Get single property error:', error);
-    return { 
-      success: false, 
-      message: 'Internal server error', 
-      status: 500 
-    };
+    return { success: false, message: 'Server error', status: 500 };
   }
 };
 
@@ -228,7 +211,9 @@ const togglePropertyInteraction = async (
   const { path, propertyId } = values;
 
   try {
-    const current_property = await Apartment.findById(propertyId);
+    const current_property = await Apartment.findById(propertyId)
+    .select('likes bookmarks agent getListings')
+    .lean({virtuals: true});
 
     if (!current_property) {
       return { 
@@ -404,7 +389,7 @@ export const getDeletedProperty = async (id: string) => {
           model: User,
           select: 'username email firstName lastName profilePicture bio address city state phoneNumber additionalPhoneNumber role'
         }
-      });
+      }).lean({virtuals: true});
 
     if (!propertyData) {
       return { 
@@ -495,42 +480,19 @@ export const hideProperty = async (id: string) => {
   if (!agentAccessResult.success) return agentAccessResult;
 
   try {
-    const property = await Apartment.findOne({ 
-      _id: id, 
-      agent: authResult.currentUser!.agentId 
-    });
+    const property = await Apartment.findOneAndUpdate(
+      { _id: id, agent: authResult.currentUser!.agentId },
+      [{ $set: { hideProperty: { $not: '$hideProperty' } } }], // Toggle in one query
+      { new: true }
+    ).lean({ virtuals: true });
 
     if (!property) {
-      return { 
-        success: false, 
-        message: 'Property not found or you are not authorized to modify it', 
-        status: 404 
-      };
+      return { success: false, message: 'Not found or unauthorized', status: 404 };
     }
 
-    const newHideStatus = !property.hideProperty;
-    const updatedProperty = await Apartment.findOneAndUpdate(
-      { _id: id }, 
-      { hideProperty: newHideStatus },
-      { new: true }
-    );
-
-    if (!updatedProperty) {
-      return { 
-        success: false, 
-        message: 'Failed to update property', 
-        status: 500 
-      };
-    }
-
-    const propertyData = JSON.parse(JSON.stringify(updatedProperty));
-    return propertyData;
+    return JSON.parse(JSON.stringify(property));
   } catch (error) {
-    console.error('Hide property error:', error);
-    return { 
-      success: false, 
-      message: 'Internal server error', 
-      status: 500 
-    };
+    console.error(error);
+    return { success: false, message: 'Server error', status: 500 };
   }
 };

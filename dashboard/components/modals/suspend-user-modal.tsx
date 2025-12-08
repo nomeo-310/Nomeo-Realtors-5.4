@@ -11,6 +11,30 @@ import { suspendUser } from "@/actions/suspension-actions";
 import { SuspensionCategory, SuspensionDuration } from "@/models/suspension";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { suspendAdmin } from "@/actions/admin-actions";
+import { formatDateWithFullMonth } from "@/utils/formatDate";
+
+// Define a type for the user object that could come from different sources
+type SuspendedUser = {
+  id: string | number;
+  userType: string;
+  email: string;
+  // Regular user fields (may be undefined for admins)
+  surName?: string;
+  lastName?: string;
+  firstName?: string;
+  name?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  // Admin-specific fields (may be undefined for regular users)
+  adminName?: string;
+  adminId?: string;
+  // Common fields that could exist on both
+  username?: string;
+  displayName?: string;
+  profilePicture?: string;
+  createdAt?: string;
+};
 
 const SuspendUserModal = () => {
   const { onClose, isOpen, user } = useSuspendUserModal();
@@ -24,6 +48,48 @@ const SuspendUserModal = () => {
   const [suspendedUntil, setSuspendedUntil] = React.useState<Date | null>(null);
 
   const path = usePathname();
+
+  // Admin roles that should use handleSuspendAdmin
+  const adminRoles = ['superadmin', 'admin', 'creator', 'compliance'];
+  
+  // Check if user is an admin type
+  const isAdminUser = user?.userType ? adminRoles.includes(user.userType.toLowerCase()) : false;
+
+  // Helper function to get user display name
+  const getDisplayName = (user: SuspendedUser | null): string => {
+    if (!user) return 'Unknown User';
+    
+    // Try different possible name fields in order of preference
+    if (user.displayName) return user.displayName;
+    if (user.fullName) return user.fullName;
+    if (user.name) return user.name;
+    
+    // For regular users
+    if (user.surName && user.lastName) return `${user.surName} ${user.lastName}`.trim();
+    if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`.trim();
+    if (user.surName) return user.surName;
+    if (user.firstName) return user.firstName;
+    if (user.lastName) return user.lastName;
+    
+    // For admins
+    if (user.adminName) return user.adminName;
+    if (user.username) return user.username;
+    
+    // Fallback to email username part
+    if (user.email) {
+      const emailParts = user.email.split('@');
+      return emailParts[0] || 'User';
+    }
+    
+    return 'Unknown User';
+  };
+
+  // Helper to get identifier for suspension (ID or email)
+  const getUserIdentifier = (user: SuspendedUser): string => {
+    if (isAdminUser && user.adminId) return user.adminId;
+    if (user.id) return user.id.toString();
+    return user.email;
+  };
 
   // Suspension durations with time calculations
   const suspensionDurations = [
@@ -121,39 +187,90 @@ const SuspendUserModal = () => {
     }
   };
 
-  const handleSuspendUser = async () => {
+  const handleSuspendRegularUser = async () => {
     if (!user || !suspensionReason.trim() || !selectedCategory || !selectedDuration) return;
 
     setIsSubmitting(true);
     try {
       const suspensionData = {
-        userId: user.id,
+        userId: getUserIdentifier(user),
         reason: suspensionReason,
         category: selectedCategory as SuspensionCategory,
         duration: selectedDuration as SuspensionDuration,
         path
       };
 
-      await suspendUser(suspensionData)
-        .then((response) => {
-          const untilText = suspendedUntil ? `until ${formatSuspendedUntil(suspendedUntil)}` : 'indefinitely';
-          if (response.success) {
-            toast.success(`User suspended successfully! ${user.surName} has been suspended ${untilText}.`);
-            queryClient.invalidateQueries({ queryKey: ['active-users'] });
-            queryClient.invalidateQueries({ queryKey: ['suspended-users'] });
-            queryClient.invalidateQueries({ queryKey: ['active-agents'] });
-            queryClient.invalidateQueries({ queryKey: ['suspended-agents'] });
-            onClose();
-            resetForm();
-          } else {
-            toast.error(response.message);
-          }
-        })
+      const response = await suspendUser(suspensionData);
+      const untilText = suspendedUntil ? `until ${formatSuspendedUntil(suspendedUntil)}` : 'indefinitely';
+      const displayName = getDisplayName(user);
+      
+      if (response.success) {
+        toast.success(`User suspended successfully! ${displayName} has been suspended ${untilText}.`);
+        
+        // Invalidate relevant queries
+        queryClient.invalidateQueries({ queryKey: ['active-users'] });
+        queryClient.invalidateQueries({ queryKey: ['suspended-users'] });
+        queryClient.invalidateQueries({ queryKey: ['active-agents'] });
+        queryClient.invalidateQueries({ queryKey: ['suspended-agents'] });
+        
+        onClose();
+        resetForm();
+      } else {
+        toast.error(response.message || 'Failed to suspend user');
+      }
     } catch (error) {
       console.error('Error suspending user:', error);
       toast.error('Failed to suspend user. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSuspendAdminUser = async () => {
+    if (!user || !suspensionReason.trim() || !selectedCategory || !selectedDuration) return;
+
+    setIsSubmitting(true);
+    try {
+      const suspensionData = {
+        adminId: getUserIdentifier(user),
+        reason: suspensionReason,
+        category: selectedCategory as SuspensionCategory,
+        duration: selectedDuration as SuspensionDuration,
+        path
+      };
+
+      const response = await suspendAdmin(suspensionData);
+      const untilText = suspendedUntil ? `until ${formatSuspendedUntil(suspendedUntil)}` : 'indefinitely';
+      const displayName = getDisplayName(user);
+      
+      if (response.success) {
+        toast.success(`Admin suspended successfully! ${displayName} has been suspended ${untilText}.`);
+        
+        // Invalidate admin-related queries
+        queryClient.invalidateQueries({ queryKey: ['active-admins'] });
+        queryClient.invalidateQueries({ queryKey: ['suspended-admins'] });
+        queryClient.invalidateQueries({ queryKey: ['all-admins'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+        queryClient.invalidateQueries({ queryKey: ['super-admins'] });
+        
+        onClose();
+        resetForm();
+      } else {
+        toast.error(response.message || 'Failed to suspend admin');
+      }
+    } catch (error) {
+      console.error('Error suspending admin:', error);
+      toast.error('Failed to suspend admin. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitSuspension = async () => {
+    if (isAdminUser) {
+      await handleSuspendAdminUser();
+    } else {
+      await handleSuspendRegularUser();
     }
   };
 
@@ -172,64 +289,154 @@ const SuspendUserModal = () => {
   };
 
   const getSuspensionImpact = () => {
-    const userType = user?.userType || 'user';
+    const userType = user?.userType?.toLowerCase() || 'user';
     const impacts = {
       user: [
         'Cannot log in to the application',
         'Cannot make transactions or payments',
-        'Cannot access property listings or features',
-        'Cannot contact agents or landlords',
+        'Cannot access platform features',
+        'Cannot contact support or other users',
         'All active sessions will be terminated'
       ],
       agent: [
         'Cannot access agent dashboard',
-        'Cannot manage properties or listings',
+        'Cannot manage listings or properties',
         'Cannot communicate with clients',
         'Cannot process payments or transactions',
         'All active sessions will be terminated'
       ],
-      admin: [
+      superadmin: [
         'Cannot access admin dashboard',
         'Cannot manage users or system settings',
         'Cannot perform administrative actions',
+        'Cannot access sensitive platform data',
+        'All active sessions will be terminated'
+      ],
+      admin: [
+        'Cannot access admin dashboard',
+        'Cannot perform assigned administrative tasks',
+        'Cannot manage user accounts or content',
+        'Cannot access certain admin features',
+        'All active sessions will be terminated'
+      ],
+      creator: [
+        'Cannot access content creation tools',
+        'Cannot publish or manage content',
+        'Cannot access creator dashboard',
+        'Cannot receive payments or analytics',
+        'All active sessions will be terminated'
+      ],
+      compliance: [
+        'Cannot access compliance dashboard',
+        'Cannot review or approve transactions',
+        'Cannot perform KYC/AML checks',
+        'Cannot generate compliance reports',
         'All active sessions will be terminated'
       ]
     };
+
+    // Return impacts based on user type, default to admin if admin role
+    if (adminRoles.includes(userType)) {
+      return impacts[userType as keyof typeof impacts] || impacts.admin;
+    }
+    
     return impacts[userType as keyof typeof impacts] || impacts.user;
   };
 
   if (!user) return null;
 
-  const displayName = `${user.surName || ''} ${user.lastName || ''}`.trim();
-  const userTypeLabel = user.userType;
+  const displayName = getDisplayName(user);
+  const userType = user.userType?.toLowerCase() || 'user';
+  
+  // Format user type for display
+  const formatUserType = (type: string) => {
+    const typeMap: Record<string, string> = {
+      'superadmin': 'Super Admin',
+      'admin': 'Admin',
+      'creator': 'Content Creator',
+      'compliance': 'Compliance Officer',
+      'agent': 'Agent',
+      'user': 'User'
+    };
+    return typeMap[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
+  // Get additional user info for display
+  const getUserInfoFields = () => {
+    const fields = [];
+    
+    // Always show email
+    fields.push({
+      label: 'Email',
+      value: user.email || 'No email provided',
+      important: true
+    });
+    
+    // Show phone number if available
+    if (user.phoneNumber) {
+      fields.push({
+        label: 'Phone Number',
+        value: user.phoneNumber
+      });
+    }
+    
+    // Show ID (different for admins vs regular users)
+    if (isAdminUser && user.adminId) {
+      fields.push({
+        label: 'Admin ID',
+        value: user.adminId.toLowerCase()
+      });
+    }
+    
+    // Show creation date if available
+    if (user.createdAt) {
+      fields.push({
+        label: 'Account Created',
+        value: formatDateWithFullMonth(new Date(user.createdAt).toLocaleDateString())
+      });
+    }
+    
+    return fields;
+  };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={currentStep === 'confirmation' ? 'Confirm Suspension' : `Suspend ${user.userType.charAt(0).toUpperCase() + user.userType.slice(1)}`}
+      title={currentStep === 'confirmation' ? 'Confirm Suspension' : `Suspend ${formatUserType(user.userType)}`}
       width="lg:w-[600px] xl:w-[650px] md:w-[550px]"
       useCloseButton
-      useSeparator
     >
       {currentStep === 'confirmation' ? (
         <div className="space-y-4">
           {/* User Information */}
           <div className="">
-            <h4 className="font-semibold text-gray-900 mb-3">User Information</h4>
+            <h4 className="font-semibold text-gray-900 mb-3">Account Information</h4>
             <div className="grid grid-cols-1 gap-3 text-sm bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between">
                 <span className="font-medium text-gray-600">Name:</span>
-                <span>{displayName}</span>
+                <span className="font-semibold">{displayName}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-600">Email:</span>
-                <span>{user.email}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-600">Current Role:</span>
-                <span className="capitalize font-semibold text-blue-600">{userTypeLabel}</span>
-              </div>
+              
+              {/* Dynamic user info fields */}
+              {getUserInfoFields().map((field, index) => (
+                <div key={index} className="flex justify-between">
+                  <span className="font-medium text-gray-600">{field.label}:</span>
+                  <span className={field.important ? 'font-medium' : ''}>{field.value}</span>
+                </div>
+              ))}
+              
+              {isAdminUser && (
+                <div className="flex justify-between">
+                  <span className="font-medium text-gray-600">Role Level:</span>
+                  <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                    {userType === 'superadmin' ? 'Highest Privilege' : 
+                     userType === 'admin' ? 'Standard Admin' : 
+                     userType === 'compliance' ? 'Compliance Officer' :
+                     'Content Creator'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -243,12 +450,12 @@ const SuspendUserModal = () => {
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-semibold text-amber-800 mb-2">
-                  What does suspending this {user.userType} mean?
+                  What does suspending this {formatUserType(user.userType).toLowerCase()} mean?
                 </h4>
                 <div className="text-sm text-amber-700 space-y-2">
                   <p>
                     Suspending {displayName} will temporarily restrict their account access.
-                    This action is reversible and should be used for temporary restrictions.
+                    {isAdminUser && ' As an admin user, this action requires careful consideration.'}
                   </p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
                     {getSuspensionImpact().map((impact, index) => (
@@ -256,7 +463,7 @@ const SuspendUserModal = () => {
                     ))}
                   </ul>
                   <p className="text-xs font-medium mt-2">
-                    The user will be able to regain access after the suspension period ends or when manually reinstated.
+                    The account will be able to regain access after the suspension period ends or when manually reinstated.
                   </p>
                 </div>
               </div>
@@ -312,12 +519,12 @@ const SuspendUserModal = () => {
             />
             {suspendedUntil && (
               <p className="text-sm text-green-600 font-medium -mt-2">
-                User will be suspended until: {formatSuspendedUntil(suspendedUntil)}
+                Account will be suspended until: {formatSuspendedUntil(suspendedUntil)}
               </p>
             )}
             {selectedDuration === 'indefinite' && (
               <p className="text-sm text-amber-600 font-medium -mt-2">
-                User will be suspended indefinitely until manually reinstated
+                Account will be suspended indefinitely until manually reinstated
               </p>
             )}
           </div>
@@ -346,16 +553,32 @@ const SuspendUserModal = () => {
             </Label>
             <Textarea
               id="suspension-reason"
-              placeholder="Provide detailed explanation for suspending this user..."
+              placeholder={`Provide detailed explanation for suspending this ${formatUserType(user.userType).toLowerCase()}...`}
               value={suspensionReason}
               onChange={(e) => setSuspensionReason(e.target.value)}
               rows={4}
               className="resize-none text-sm leading-relaxed"
             />
             <p className="text-xs text-gray-500">
-              The reason will be visible to the user if notifications are enabled. Provide clear and professional explanation for the suspension.
+              The reason will be visible to the account holder if notifications are enabled. 
+              {isAdminUser && ' Note: Suspending admin accounts may affect platform operations.'}
             </p>
           </div>
+
+          {/* Admin Warning (if applicable) */}
+          {isAdminUser && (
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <div className="flex items-start space-x-2">
+                <svg className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-sm text-purple-700">
+                  <span className="font-medium">Admin Account Warning:</span> Suspending an admin account may affect platform management. 
+                  Ensure proper backup of responsibilities and notify other admins if necessary.
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3 justify-end pt-2">
@@ -367,21 +590,23 @@ const SuspendUserModal = () => {
               Back
             </button>
             <button
-              onClick={handleSuspendUser}
+              onClick={handleSubmitSuspension}
               disabled={!suspensionReason.trim() || !selectedCategory || !selectedDuration || isSubmitting}
-              className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className={`px-4 py-2 text-white rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                isAdminUser ? 'bg-purple-600 hover:bg-purple-700' : 'bg-amber-600 hover:bg-amber-700'
+              }`}
             >
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Suspending...
+                  {isAdminUser ? 'Suspending Admin...' : 'Suspending...'}
                 </>
               ) : (
                 <>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
-                  Confirm Suspension
+                  {isAdminUser ? 'Confirm Admin Suspension' : 'Confirm Suspension'}
                 </>
               )}
             </button>

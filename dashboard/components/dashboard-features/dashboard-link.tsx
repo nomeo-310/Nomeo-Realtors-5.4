@@ -2,8 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React from "react";
 
 type dashboardLinkProps = {
@@ -16,6 +15,7 @@ type dashboardLinkProps = {
 
 const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkProps) => {
   const pathname = usePathname();
+  const router = useRouter();
 
   const useIsActive = (text: string, path: string, pathname: string) => {
     return React.useMemo(() => {
@@ -50,9 +50,9 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
 
   return (
     <React.Fragment>
-      <Link
-        prefetch
-        href={path}
+      <button
+        title={text}
+        onClick={() => router.push(path)}
         className={cn(
           "group hidden lg:py-3 w-full lg:flex items-center lg:gap-2 rounded-r-lg lg:pl-3 hover:bg-secondary-blue/30 dark:hover:bg-secondary-blue hover:rounded-lg",
           isActive &&
@@ -77,9 +77,10 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
             {notification}
           </span>
         )}
-      </Link>
-      <Link
-        href={path}
+      </button>
+      <button
+        title={text}
+        onClick={() => router.push(path)}
         className={cn(
           "relative aspect-square flex lg:hidden rounded-lg lg:pl-3 hover:bg-secondary-blue/30 dark:hover:bg-secondary-blue hover:rounded-lg items-center justify-center",
           isActive && "dark:bg-secondary-blue bg-secondary-blue/30"
@@ -92,7 +93,7 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
             {notification}
           </span>
         )}
-      </Link>
+      </button>
     </React.Fragment>
   );
 };

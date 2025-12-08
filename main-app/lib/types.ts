@@ -75,6 +75,17 @@ export interface userDetails {
   userOnboarded: boolean;
   profileCreated: boolean;
   userVerified: boolean;
+  agentId?:{
+    _id: string;
+    agentVerified: boolean,
+    verificationStatus: string;
+    inspectionFeePerHour: number;
+    licenseNumber: string;
+    agencyName: string;
+    officeAddress: string;
+    officeNumber: string;
+    agencyWebsite: string;
+  }
 };
 
 export interface notificationProps {

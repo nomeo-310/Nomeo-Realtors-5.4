@@ -33,6 +33,11 @@ export interface BasicAgentProps extends ExtendedUserProps {
   }
 }
 
+type Image = {
+  public_id: string;
+  secure_url: string;
+};
+
 export interface AdminDetailsProps {
   _id: string;
   userId: {
@@ -42,6 +47,10 @@ export interface AdminDetailsProps {
     lastName: string; 
     placeholderColor: string;
     profilePicture: string;
+    profileImage: Image;
+    phoneNumber: string;
+    username: string;
+    bio: string;
   };
   role: string;
   adminAccess: 'full_access' | 'limited_access' | 'no_access';
@@ -55,6 +64,7 @@ export interface AdminDetailsProps {
 };
 
 export interface FullAdminDetailsProps extends AdminDetailsProps {
+  isActive: boolean;
   activatedAt: string;
   activatedBy: string;
   suspendedAt: string;
