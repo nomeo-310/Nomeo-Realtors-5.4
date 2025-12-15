@@ -64,7 +64,7 @@ const AllUserBlogsClient = ({user}:{user:userProps}) => {
     if (!searchText) {
       router.push(`/${user.role === 'superAdmin' ? 'admin': user.role === 'creator' ? 'admin': user.role}-dashboard/created-blogs`);
     }
-  }, [searchText, router]);
+  }, [searchText, router, user]);
 
   const createSearchParam = (searchText: string) => {
     updateParams(1, searchText);
@@ -77,6 +77,8 @@ const AllUserBlogsClient = ({user}:{user:userProps}) => {
   };
 
   const allUserBlogs = data?.data as userBlogData
+
+  console.log(allUserBlogs)
 
   const BlogCard = ({blog}:{blog:Blog}) => {
     const isCollaboration = blog.collaboration;

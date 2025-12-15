@@ -211,7 +211,7 @@ const Menu = ({ user }: { user: ExtendedUserProps }) => {
         <div className="p-2">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Information & Communication</p>
           <DropdownMenuItem 
-            className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-gray-700 focus:text-gray-700 focus:bg-gray-50 mb-1"
+            className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-gray-700 focus:text-gray-700 focus:bg-gray-50 mb-1 dark:text-white/80 dark:focus:text-gray-700"
             onClick={() => router.push(`/${userRole === 'superAdmin' ? 'superadmin' : userRole}-dashboard/manage-users/${user._id}`)}
           >
             <Eye className="w-4 h-4" />

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Mail, Phone, MapPin, Clock, AlertTriangle, CheckCircle, MessageSquare, Loader2, XCircle, Building, Shield, Award, Wallet } from 'lucide-react';
+import { Calendar, Mail, Phone, MapPin, Clock, AlertTriangle, CheckCircle, MessageSquare, Loader2, XCircle, Building, Shield, Award, Wallet, History } from 'lucide-react';
 import { AdminDetailsProps, SuspensionData } from '@/lib/types';
 import { formatDateWithFullMonth } from '@/utils/formatDate';
 import { usePathname, useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ import { extendSuspension, handleAppeal, liftUserSuspension } from '@/actions/su
 import { toast } from 'sonner';
 import React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { SuspensionDuration } from '@/models/user';
 
 // Type guard to check if agent is populated
 function isAgentPopulated(agentId: any): agentId is { 
@@ -91,6 +92,26 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
   });
 
   const queryClient = useQueryClient();
+
+    // Simple check if performedBy is an object with user details
+  const getPerformerInfo = (performedBy: any) => {
+    if (!performedBy) return null;
+    
+    // If it's a string (ObjectId), return null
+    if (typeof performedBy === 'string') return null;
+    
+    // If it has email and name properties, it's populated
+    if (performedBy.email && performedBy.surName) {
+      return {
+        name: `${performedBy.surName} ${performedBy.lastName || ''}`,
+        email: performedBy.email,
+        image: performedBy.profilePicture,
+        initials: `${performedBy.surName[0]}${performedBy.lastName?.[0] || ''}`.toUpperCase()
+      };
+    }
+    
+    return null;
+  };
 
   const processSuspensionAppeal = async (decision: 'approve' | 'reject') => {
     setLoadingStates(prev => ({ ...prev, [decision]: true }));
@@ -248,7 +269,7 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
     const data = {
       suspensionId: suspensionDetails._id,
       userId: suspensionDetails.user._id,
-      duration: durationForApi as any,
+      duration: originalDuration as SuspensionDuration,
       extensionReason: extensionReason,
       category: suspensionEntry?.data?.category || 'other',
       path: path,
@@ -482,45 +503,74 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="history" className="space-y-4">
+            <TabsContent value="history">
               <Card>
-                <CardHeader>
-                  <CardTitle className="font-quicksand">Activity Timeline</CardTitle>
+                <CardHeader className="p-4">
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="size-5" />
+                    Activity Timeline
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4">
                   <div className="space-y-4">
-                    {history.map((entry, index) => (
-                      <div key={entry._id} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-3 h-3 rounded-full ${entry.action === 'suspension' ? 'bg-destructive' :
-                            entry.action === 'appeal' ? 'bg-blue-500' : 'bg-green-500'
-                            }`} />
-                          {index < history.length - 1 && (
-                            <div className="w-0.5 h-full bg-border mt-1" />
-                          )}
-                        </div>
-                        <div className="flex-1 pb-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant={
-                              entry.action === 'suspension' ? 'destructive' :
-                                entry.action === 'appeal' ? 'secondary' : 'default'
-                            } className="font-quicksand">
-                              {entry.action}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground font-quicksand">
-                              {formatDateWithFullMonth(entry.performedAt)}
-                            </span>
+                    {history.map((entry, index) => {
+                      const performerInfo = getPerformerInfo(entry.performedBy);
+                      const actionText = entry.action.replace('_', ' ');
+                      
+                      return (
+                        <div key={entry._id} className="flex gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-3 h-3 rounded-full ${entry.action === 'suspension' ? 'bg-destructive' :
+                              entry.action === 'appeal' ? 'bg-blue-500' : 'bg-green-500'}`} />
+                            {index < history.length - 1 && (
+                              <div className="w-0.5 h-full bg-border mt-1" />
+                            )}
                           </div>
-                          <p className="text-sm font-quicksand">{entry.description}</p>
-                          {entry.reason && (
-                            <div className="mt-2 p-3 bg-muted rounded-lg">
-                              <p className="text-sm font-medium font-quicksand">Reason:</p>
-                              <p className="text-sm mt-1 font-quicksand">{entry.reason}</p>
+                          <div className="flex-1 pb-4">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-2 mb-2">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={
+                                    entry.action === 'suspension' ? 'destructive' :
+                                      entry.action === 'appeal' ? 'secondary' : 'default'
+                                  } className="text-xs">
+                                    {actionText}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatDateWithFullMonth(entry.performedAt)}
+                                  </span>
+                                </div>
+                                <p className="text-sm mt-1">{entry.description}</p>
+                              </div>
+                              
+                              {performerInfo && (
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="size-8">
+                                    <AvatarImage src={performerInfo.image} alt={performerInfo.name} />
+                                    <AvatarFallback className="text-xs">
+                                      {performerInfo.initials}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="text-xs font-medium">{performerInfo.name}</p>
+                                    <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                                      {performerInfo.email}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
+                            
+                            {entry.reason && (
+                              <div className="mt-2 p-2 bg-muted rounded">
+                                <p className="text-xs font-medium">Reason:</p>
+                                <p className="text-sm mt-1">{entry.reason}</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -531,7 +581,7 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 font-quicksand">
-                      <MessageSquare className="w-5 h-5 text-blue-500" />
+                      <MessageSquare className="size-5 text-blue-500" />
                       User Appeal
                     </CardTitle>
                     <CardDescription className="font-quicksand">
@@ -542,7 +592,7 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-sm text-blue-900 font-quicksand">{appealEntry.reason}</p>
                     </div>
-                    {suspensionEntry?.performedBy === currentUser.userId._id && (
+                    {suspensionEntry?.performedBy._id === currentUser.userId._id && (
                       <div className="flex gap-3">
                         <Button 
                           onClick={() => processSuspensionAppeal('approve')}
@@ -599,7 +649,7 @@ const SuspendedUserClient = ({ suspensionDetails, currentUser }: { suspensionDet
           </Tabs>
 
           {/* Action Buttons */}
-          {suspensionEntry?.performedBy === currentUser.userId._id && (
+          {suspensionEntry?.performedBy._id === currentUser.userId._id && (
             <Card>
               <CardContent className="lg:p-4 p-3">
                 <div className="flex gap-3">

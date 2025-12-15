@@ -22,15 +22,6 @@ const RestoreAccountForm = () => {
 
   const router = useRouter();
 
-  React.useEffect(() => {
-    const values = JSON.parse(localStorage.getItem('restore-details') || '{}');
-    if (values) {
-      form.setValue('email', values.email)
-      form.setValue('password', values.password)
-      form.setValue('username', values.username)
-    }
-  }, []);
-
   const form = useForm<restoreValues>({
     resolver: zodResolver(restoreSchema),
     defaultValues: {
@@ -39,6 +30,15 @@ const RestoreAccountForm = () => {
       password: '',
     }
   });
+
+  React.useEffect(() => {
+    const values = JSON.parse(localStorage.getItem('restore-details') || '{}');
+    if (values) {
+      form.setValue('email', values.email)
+      form.setValue('password', values.password)
+      form.setValue('username', values.username)
+    }
+  }, [form]);
 
   const submitForm = async (value: restoreValues) => {
     setIsLoading(true);

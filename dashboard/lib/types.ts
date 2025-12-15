@@ -79,6 +79,7 @@ export interface FullAdminDetailsProps extends AdminDetailsProps {
   resetAccessIdOtp?: string;
   resetAccessIdOtpExpiresIn?: number;
   lockUntil?: string;
+  deactivated: boolean
   deactivatedAt: string;
   deactivatedBy: string;
   deactivationReason: string;
@@ -323,7 +324,12 @@ interface SuspensionHistory {
   _id: string;
   action: 'suspension' | 'lift' | 'extension' | 'appeal' | 'appeal_approved' | 'appeal_rejected' | 'auto_lift';
   description: string;
-  performedBy: string;
+  performedBy:{
+    _id: string;
+    email: string;
+    surName: string;
+    lastName: string;
+  };
   performedAt: string;
   reason: string;
   data?: {

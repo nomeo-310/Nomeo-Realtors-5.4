@@ -40,7 +40,7 @@ const TipTap = ({onChange, clearContent, edit, content}:tiptapProps) => {
     if (editor && edit) {
       editor.commands.setContent(content ? content : '');
     }
-  }, [editor, edit]);
+  }, [editor, edit, content]);
 
   //clear content when the document is successfully submitted
   React.useEffect(() => {

@@ -36,7 +36,7 @@ const ActiveAgent = async ({ params }: { params: { id: string } }) => {
     return <ActiveAgentClient userDetails={activeUserDetails} />
 
   } catch (error) {
-    console.error('Error loading suspended user page:', error);
+    console.error('Error loading active agent page:', error);
     return notFound();
   }
 }

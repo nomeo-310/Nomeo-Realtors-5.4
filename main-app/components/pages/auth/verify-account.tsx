@@ -36,7 +36,7 @@ const VerifyAccountForm = () => {
   const hasAutoSentRef = React.useRef(false);
 
   // Dedicated function for sending OTP
-  const sendOtp = async (isAutoSend: boolean = false) => {
+  const sendOtp = React.useCallback(async (isAutoSend: boolean = false) => {
     if (!email) {
       toast.error('Email not found. Please refresh the page.');
       return false;
@@ -69,7 +69,7 @@ const VerifyAccountForm = () => {
         setIsSending(false);
       }
     }
-  };
+  }, [email, setIsSending]);
 
   const submitForm = async (value: verifyEmailValues) => {
     const { otp } = value;
@@ -128,9 +128,9 @@ const VerifyAccountForm = () => {
     }
   };
 
-  const startCountdown = () => {
+  const startCountdown = React.useCallback(() => {
     setTimeLeft(60);
-  };
+  }, [setTimeLeft]);
 
   // Countdown timer effect
   React.useEffect(() => {
@@ -166,7 +166,7 @@ const VerifyAccountForm = () => {
     };
 
     initialize();
-  }, [autoResend, email]); // Remove hasAutoSent from dependencies
+  }, [autoResend, email, sendOtp, startCountdown]);
 
   return (
     <React.Fragment>

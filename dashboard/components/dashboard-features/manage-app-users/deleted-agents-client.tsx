@@ -11,7 +11,7 @@ import EmptyState from '@/components/ui/empty-state'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDate } from '@/utils/formatDate'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Bell, Eye, MessageCircle, MoreHorizontalIcon, PlayCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { Bell, MoreHorizontalIcon, RotateCcw, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import TableLoading from '../table-loading';
 import Pagination from '@/components/ui/pagination';
@@ -190,39 +190,251 @@ const DeletedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const MobileItem = ({open, toggleTable, user }:mobileItemProps) => {
+  const MobileItem = ({ open, toggleTable, user }: mobileItemProps) => {
+    const deleteUserModal = useDeleteUserModal();
+    const deleteReminderModal = useDeletionReminderModal();
+    
+    const { remainingDays } = calculateDeletionStatus(user.deletedAt);
+
+    const handleDeleteUser = () => {
+      const userForBlocking: UserForRestriction = {
+        id: user._id,
+        surName: user.surName,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        userType: user.role,
+        isActive: user.userVerified,
+        isSuspended: !user.userVerified,
+      };
+      deleteUserModal.onOpen(userForBlocking);
+    };
+
+    const handleSendReminder = () => {
+      deleteReminderModal.onOpen(
+        {
+          id: user._id,
+          email: user.email,
+          surName: user.surName,
+          lastName: user.lastName,
+          userType: (user.role === 'agent' || user.role === 'user') ? user.role : 'user',
+          registrationDate: user.createdAt
+        },
+        user.deletedAt,
+        30
+      )
+    };
+
+    const handleRestoreAgent = () => {
+      // Add restore agent function here
+      console.log('Restore agent:', user._id);
+    };
+
     return (
-      <div className={cn("shadow-sm border-b last:border-b-0 w-full h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
+      <div 
+        className={cn(
+          "shadow-sm border-b last:border-b-0 w-full p-4 cursor-pointer transition-all duration-300 bg-white dark:bg-[#424242]",
+          open ? 'h-auto' : 'h-[72px]'
+        )}
+        onClick={toggleTable}
+      >
+        {/* Compact View (when not open) */}
         <div className="flex items-center justify-between">
-          <p className="text-sm capitalize font-semibold">{user.surName} {user.lastName}</p>
-          <p className="text-sm capitalize font-semibold">{user.agentId.agencyName}</p>
+          {/* Left side: User info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              {/* User avatar/initials */}
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                remainingDays === 0 
+                  ? 'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/30 dark:to-red-800/30'
+                  : 'bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800'
+              }`}>
+                <span className={`text-sm font-semibold ${
+                  remainingDays === 0 
+                    ? 'text-red-600 dark:text-red-300'
+                    : 'text-gray-600 dark:text-gray-300'
+                }`}>
+                  {user.surName?.[0]?.toUpperCase() || 'U'}
+                </span>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate capitalize dark:text-white">
+                  {user.surName} {user.lastName}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    remainingDays === 0
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      : remainingDays <= 7
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    {remainingDays === 0 ? 'Expired' : `${remainingDays} days left`}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {user.email}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side: Status and date */}
+          <div className="flex flex-col items-end ml-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+              {user.city}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formatDate(user.deletedAt)}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center justify-between mt-1">
-          <p className={cn("text-center text-sm")}>{user.email}</p>
-          <p className="text-sm">{user.city}, {user.state}</p>
-        </div>
-        <div className="border-b border-black my-3"/>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Verification Status</p>
-          <p className="text-sm capitalize text-green-600 font-semibold">{user.userVerified ? 'verified' : 'unverified'}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Location</p>
-          <p className="text-sm capitalize">{user.city}, {user.state}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Date Joined</p>
-          <p className="text-sm capitalize">{formatDate(user.createdAt)}</p>
-        </div>
+
+        {/* Expanded View (when open) */}
+        {open && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 space-y-4">
+            {/* Status Indicator */}
+            <div className={`p-3 rounded-lg ${
+              remainingDays === 0 
+                ? 'bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30'
+                : remainingDays <= 7
+                ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30'
+                : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium dark:text-white">
+                    {remainingDays === 0 ? 'Account Deletion Expired' : 'Pending Permanent Deletion'}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    {remainingDays === 0 
+                      ? 'This account has passed the recovery period'
+                      : `Will be permanently deleted in ${remainingDays} days`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Deleted on</p>
+                  <p className="text-sm font-medium dark:text-white">
+                    {formatDate(user.deletedAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Information Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</p>
+                <p className="text-sm font-medium dark:text-white truncate">
+                  {user.agentId?.agencyName || 'N/A'}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">License No.</p>
+                <p className="text-sm font-medium dark:text-white font-mono">
+                  {user.agentId?.licenseNumber || 'N/A'}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Location</p>
+                <p className="text-sm font-medium dark:text-white capitalize">
+                  {user.city}, {user.state}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Date Joined</p>
+                <p className="text-sm font-medium dark:text-white">
+                  {formatDate(user.createdAt)}
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="space-y-2">
+              {user.phoneNumber && (
+                <div className="flex items-center justify-between py-2 px-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Phone</p>
+                  <p className="text-sm dark:text-white font-medium">{user.phoneNumber}</p>
+                </div>
+              )}
+              
+              {user.userVerified !== undefined && (
+                <div className="flex items-center justify-between py-2 px-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Verification</p>
+                  <p className={`text-sm font-medium ${
+                    user.userVerified 
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  }`}>
+                    {user.userVerified ? 'Verified' : 'Unverified'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+              <div className="grid grid-cols-2 gap-2">
+                {remainingDays !== 0 && (
+                  <>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRestoreAgent();
+                      }}
+                      className="px-3 py-2.5 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Restore
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendReminder();
+                      }}
+                      className="px-3 py-2.5 bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                    >
+                      <Bell className="w-4 h-4" />
+                      Send Reminder
+                    </button>
+                  </>
+                )}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteUser();
+                  }}
+                  className={`px-3 py-2.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium ${
+                    remainingDays === 0 
+                      ? 'col-span-2 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+                      : 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 col-span-2'
+                  }`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {remainingDays === 0 ? 'Delete Permanently' : 'Delete Now'}
+                </button>
+              </div>
+              {remainingDays === 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                  Recovery period has expired
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-    )
+    );
   };
 
   const TableList = () => {
 
     return (
       <div className='w-full flex flex-col gap-6 md:gap-8 lg:gap-10 bg-inherit overflow-hidden'>
-        <div className='min-h-[300px] max-h-[490px] h-[560px]'>
+        <div className='min-h-[300px] md:max-h-[490px] h-full'>
           {status === 'pending' &&
             <div className='w-full'>
               <TableLoading tableHeader={header}/>

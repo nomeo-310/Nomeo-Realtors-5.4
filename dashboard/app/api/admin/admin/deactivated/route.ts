@@ -16,12 +16,12 @@ export const GET = async () => {
 
     await guardAdminAccess(currentUser.role);
 
-    const admins = await Admin.find({ isActive: false })
-    .select('userId role adminAccess adminOnboarded createdAt adminId')
+    const admins = await Admin.find({ isActive: false, deactivated: true })
+    .select('userId role adminAccess adminOnboarded createdAt adminId deactivatedAt')
     .populate({
       path: 'userId',
       model: User,
-      select: 'email surName lastName'
+      select: '_id email surName lastName placeholderColor phoneNumber'
     })
     .lean()
     .exec();

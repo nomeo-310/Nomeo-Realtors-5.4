@@ -64,7 +64,7 @@ export function InspectionEmailTemplate(props: EmailTemplateProps) {
           <Section style={contactSectionStyle}>
             <Text style={labelStyle}>Need Assistance?</Text>
             <Text style={textStyle}>
-              If you have any questions or need to make changes, please don't hesitate to contact your Nomeo Realtors agent or our support team.
+              If you have any questions or need to make changes, please don&apos;t hesitate to contact your Nomeo Realtors agent or our support team.
             </Text>
           </Section>
 

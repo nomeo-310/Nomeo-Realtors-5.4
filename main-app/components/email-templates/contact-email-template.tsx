@@ -22,7 +22,7 @@ export function ContactEmailTemplate(props: EmailTemplateProps) {
               New Contact Message
             </Text>
             <Text style={headerSubtitleStyle}>
-              You've received a new message from your website
+              You&apos;ve received a new message from your website
             </Text>
           </Section>
 

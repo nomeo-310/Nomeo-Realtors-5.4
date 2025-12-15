@@ -89,8 +89,10 @@ const UnverifiedUsersClient = ({ user }: { user: AdminDetailsProps }) => {
     return (
       <TableHeader className="rounded-lg h-11 [&_tr]:border-b">
         <TableRow className="bg-white hover:bg-white border-b-0 dark:bg-[#424242]">
-          {header.map((item: string) => (
-            <TableHead className="text-center font-semibold uppercase border-r text-xs last:border-r-0">{item}</TableHead>
+          {header.map((item: string, idx: number) => (
+            <TableHead key={idx} className="text-center font-semibold uppercase border-r text-xs last:border-r-0">
+              {item}
+            </TableHead>
           ))}
         </TableRow>
       </TableHeader>
@@ -184,31 +186,225 @@ const UnverifiedUsersClient = ({ user }: { user: AdminDetailsProps }) => {
   };
 
   const MobileItem = ({ open, toggleTable, user }: mobileItemProps) => {
+    const verificationReminderModal = useVerificationReminderModal();
+    const deleteUserModal = useDeleteUserModal();
+
+    const handleDeleteUser = () => {
+      const userForBlocking: UserForRestriction = {
+        id: user._id,
+        surName: user.surName,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        userType: user.role,
+        isActive: user.userVerified,
+        isSuspended: !user.userVerified,
+      };
+      deleteUserModal.onOpen(userForBlocking);
+    };
+
+    const handleSendReminder = () => {
+      const unverifiedUser = {
+        id: user._id,
+        surName: user.surName,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        userType: user.role,
+        registrationDate: user.createdAt
+      };
+      verificationReminderModal.onOpen(unverifiedUser);
+    };
+
+    const handleVerifyUser = () => {
+      // Add verify user function
+      console.log('Verify user:', user._id);
+    };
+
+    const handleViewProfile = () => {
+      // Add view profile function
+      console.log('View profile:', user._id);
+    };
+
     return (
-      <div className={cn("shadow-sm border-b last:border-b-0 w-full h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto' : '')} onClick={toggleTable}>
+      <div 
+        className={cn(
+          "shadow-sm border-b last:border-b-0 w-full p-4 cursor-pointer transition-all duration-300 bg-white dark:bg-[#424242]",
+          open ? 'h-auto' : 'h-[72px]'
+        )}
+        onClick={toggleTable}
+      >
+        {/* Compact View (when not open) */}
         <div className="flex items-center justify-between">
-          <p className="text-sm capitalize font-semibold">{user.surName}</p>
-          <p className="text-sm capitalize font-semibold">{user.lastName}</p>
+          {/* Left side: User info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              {/* User avatar/initials with unverified indicator */}
+              <div className="flex-shrink-0 relative">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 flex items-center justify-center">
+                  <span className="text-sm font-semibold text-amber-600 dark:text-amber-300">
+                    {user.surName?.[0]?.toUpperCase() || user.username?.[0]?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-[#424242]"></div>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate capitalize dark:text-white">
+                  {user.surName} {user.lastName}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                    Unverified
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 capitalize">
+                    {user.role || 'user'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side: Status and date */}
+          <div className="flex flex-col items-end ml-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+              @{user.username || 'no-username'}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formatDate(user.createdAt)}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center justify-between mt-1">
-          <p className={cn("text-center text-sm")}>{user.email}</p>
-          <p className="text-sm">{user.city}, {user.state}</p>
-        </div>
-        <div className="border-b border-black my-3" />
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Verification Status</p>
-          <p className="text-sm capitalize text-green-600 font-semibold">{user.userVerified ? 'verified' : 'unverified'}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Location</p>
-          <p className="text-sm capitalize">{user.city}, {user.state}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Date Joined</p>
-          <p className="text-sm capitalize">{formatDate(user.createdAt)}</p>
-        </div>
+
+        {/* Expanded View (when open) */}
+        {open && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 space-y-4">
+            {/* Verification Status Banner */}
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium dark:text-white">Account Pending Verification</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    This user account requires verification before activation
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Waiting Since</p>
+                  <p className="text-sm font-medium dark:text-white">
+                    {formatDate(user.createdAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Information Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Username</p>
+                <p className="text-sm font-medium dark:text-white">
+                  @{user.username || 'N/A'}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email</p>
+                <p className="text-sm font-medium dark:text-white truncate">
+                  {user.email}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Location</p>
+                <p className="text-sm font-medium dark:text-white capitalize">
+                  {user.city || 'N/A'}, {user.state || 'N/A'}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Account Type</p>
+                <p className="text-sm font-medium dark:text-white capitalize">
+                  {user.role || 'Standard User'}
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="space-y-2">
+              {user.phoneNumber && (
+                <div className="flex items-center justify-between py-2 px-1">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Phone</p>
+                  <p className="text-sm dark:text-white font-medium">{user.phoneNumber}</p>
+                </div>
+              )}
+              
+              <div className="flex items-center justify-between py-2 px-1">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Account Status</p>
+                <p className={`text-sm font-medium ${
+                  user.userVerified 
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-amber-600 dark:text-amber-400'
+                }`}>
+                  {user.userVerified ? 'Active' : 'Inactive'}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewProfile();
+                  }}
+                  className="px-3 py-2.5 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <Eye className="w-4 h-4" />
+                  View Profile
+                </button>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleVerifyUser();
+                  }}
+                  className="px-3 py-2.5 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <BadgeCheck className="w-4 h-4" />
+                  Verify User
+                </button>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendReminder();
+                  }}
+                  className="px-3 py-2.5 bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <Bell className="w-4 h-4" />
+                  Send Reminder
+                </button>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteUser();
+                  }}
+                  className="px-3 py-2.5 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete User
+                </button>
+              </div>
+              
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 text-center">
+                This account requires verification to access platform features
+              </p>
+            </div>
+          </div>
+        )}
       </div>
-    )
+    );
   };
 
   const TableList = () => {
@@ -238,7 +434,7 @@ const UnverifiedUsersClient = ({ user }: { user: AdminDetailsProps }) => {
                   <UserListHeader />
                   <TableBody>
                     {users.map((user: ExtendedUserProps, index: number) => (
-                      <UserListItem user={user} index={index} />
+                      <UserListItem key={user._id} user={user} index={index} />
                     ))}
                   </TableBody>
                 </Table>

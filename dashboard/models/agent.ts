@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import generateAgentId from '../utils/generateAgentId';
 
-
 type Image = {
   public_id: string;
   secure_url: string;
@@ -15,7 +14,6 @@ const VERIFICATION_STATUS = [
 ] as const;
 
 export type VerificationStatus = typeof VERIFICATION_STATUS[number];
-
 
 export interface IAgent extends mongoose.Document {
   licenseNumber: string;
@@ -104,56 +102,35 @@ const agentSchema = new mongoose.Schema<IAgent>(
     apartments: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Apartment',
+      default: [],
     }],
     inspections: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Inspection',
+      default: [],
     }],
     clients: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      default: [],
     }],
     potentialClients: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      default: [],
     }],
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
+    // CRITICAL: Disable virtuals completely
+    toJSON: { virtuals: false },
+    toObject: { virtuals: false },
   }
 );
 
-// Core filters
+// Only essential indexes
 agentSchema.index({ verificationStatus: 1 });
 agentSchema.index({ agentVerified: 1 });
-agentSchema.index({ getListings: 1 });
-agentSchema.index({ isACollaborator: 1 });
-
-// Common compound queries
-agentSchema.index({ verificationStatus: 1, createdAt: -1 });
-agentSchema.index({ verificationStatus: 1, agentVerified: 1 });
-agentSchema.index({ getListings: 1, verificationStatus: 1 });
-agentSchema.index({ isACollaborator: 1, verificationStatus: 1 });
-
-// Search & discovery
-agentSchema.index({
-  agencyName: 'text',
-  officeAddress: 'text',
-  licenseNumber: 'text',
-}, {
-  weights: { agencyName: 10, licenseNumber: 8, officeAddress: 5 },
-  name: 'agent_search_text',
-});
-
-// Sorting by activity/rating
-agentSchema.index({ 'apartments.0': 1 }); // Has at least one apartment (partial index alternative)
-agentSchema.index({ inspectionFeePerHour: 1, verificationStatus: 1 });
-agentSchema.index({ createdAt: -1 });
-
-// Sparse/optional fields
-agentSchema.index({ agencyWebsite: 1 }, { sparse: true });
 
 agentSchema.pre('save', function (next) {
   // Generate license number only once
@@ -169,17 +146,10 @@ agentSchema.pre('save', function (next) {
   next();
 });
 
-// Example: Total portfolio size
-agentSchema.virtual('portfolioSize').get(function () {
-  return this.apartments.length;
-});
+// NO VIRTUAL PROPERTIES AT ALL
 
-agentSchema.virtual('totalClients').get(function () {
-  return this.clients.length + this.potentialClients.length;
-});
-
-const AgentModel =
+const Agent =
   mongoose.models.Agent ||
   mongoose.model<IAgent>('Agent', agentSchema);
 
-export default AgentModel;
+export default Agent;

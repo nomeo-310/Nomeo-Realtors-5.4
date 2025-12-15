@@ -79,19 +79,19 @@ const adminSchema = new mongoose.Schema<IAdmin>(
       ref: 'User',
       required: true,
       unique: true,
-      index: true, // ✅ Added inline index (removes need for separate userId index)
+      index: true,
     },
     role: {
       type: String,
       enum: ADMIN_ROLES,
       default: 'admin',
-      index: true, // ✅ Added inline index
+      index: true,
     },
     adminAccess: {
       type: String,
       enum: ADMIN_ACCESS_LEVELS,
       default: 'no_access',
-      index: true, // ✅ Added inline index
+      index: true,
     },
     adminPermissions: {
       type: [String],
@@ -101,23 +101,24 @@ const adminSchema = new mongoose.Schema<IAdmin>(
       type: String,
       unique: true,
       sparse: true,
-      index: true, // ✅ Added inline index
+      index: true,
     },
 
     // Status
     isActive: { type: Boolean, default: false },
-    isActivated: { type: Boolean, default: false, index: true }, // ✅ Added inline index
-    activatedAt: { type: Date, index: true }, // ✅ Added inline index
+    isActivated: { type: Boolean, default: false, index: true },
+    activatedAt: { type: Date, index: true }, 
 
-    isSuspended: { type: Boolean, default: false, index: true }, // ✅ Added inline index
+    isSuspended: { type: Boolean, default: false, index: true },
     suspendedAt: { type: Date },
     suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     suspensionReason: String,
 
-    deactivated: { type: Boolean, default: false, index: true }, // ✅ Added inline index
+    deactivated: { type: Boolean, default: false, index: true },
     deactivatedAt: { type: Date },
     deactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     deactivationReason: String,
+    
     reactivatedAt: { type: Date },
     reactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
 
@@ -157,11 +158,6 @@ adminSchema.index({ isActivated: 1, isSuspended: 1, deactivated: 1 });
 adminSchema.index({ role: 1, isActivated: 1 });
 adminSchema.index({ adminAccess: 1, isActivated: 1 });
 
-// KEEP THESE TTL INDEXES:
-adminSchema.index({ otpExpiresIn: 1 }, { expireAfterSeconds: 0 });
-adminSchema.index({ accessIdExpires: 1 }, { expireAfterSeconds: 0 });
-adminSchema.index({ resetAccessIdOtpExpiresIn: 1 }, { expireAfterSeconds: 0 });
-
 // KEEP THESE SPARSE INDEXES (but remove duplicates):
 adminSchema.index({ activatedBy: 1 }, { sparse: true });
 adminSchema.index({ suspendedBy: 1 }, { sparse: true });
@@ -173,10 +169,10 @@ adminSchema.index({ "adminHistory.changedAt": -1 });
 adminSchema.index({ "adminHistory.changedBy": 1 });
 
 // ADD THESE NEW INDEXES FOR BETTER QUERY PERFORMANCE:
-adminSchema.index({ activatedAt: -1, isActivated: 1 }); // For sorting active admins
-adminSchema.index({ suspendedAt: -1, isSuspended: 1 }); // For suspension reports
-adminSchema.index({ deactivatedAt: -1, deactivated: 1 }); // For deactivation reports
-adminSchema.index({ passwordAdded: 1, isActivated: 1 }); // For onboarding flows
+adminSchema.index({ activatedAt: -1, isActivated: 1 }); 
+adminSchema.index({ suspendedAt: -1, isSuspended: 1 }); 
+adminSchema.index({ deactivatedAt: -1, deactivated: 1 });
+adminSchema.index({ passwordAdded: 1, isActivated: 1 });
 
 adminSchema.pre('save', async function (next) {
   // Generate adminId only once
@@ -211,6 +207,6 @@ adminSchema.methods.comparePassword = async function (candidate: string): Promis
   return bcrypt.compare(candidate, this.password);
 };
 
-const AdminModel = mongoose.models.Admin || mongoose.model<IAdmin>('Admin', adminSchema);
+const Admin = mongoose.models.Admin || mongoose.model<IAdmin>('Admin', adminSchema);
 
-export default AdminModel;
+export default Admin;

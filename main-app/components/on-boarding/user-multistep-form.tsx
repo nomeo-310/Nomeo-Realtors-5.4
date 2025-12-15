@@ -104,34 +104,45 @@ const UserMultiStepForm = ({ user }: { user: userDetails }) => {
     onClose();
   };
 
+const handleUploadImage = React.useCallback(async () => {
+  if (!imageCropped) {
+    return;
+  }
+
+  const data = { image: imageCropped, uploadPreset: "profileImages" };
+  try {
+    setUploadingImage(true);
+    const imageData = await uploadImage(data);
+    const imageUrls = {
+      public_id: imageData?.public_id,
+      secure_url: imageData?.secure_url,
+    };
+    setImageUrls(imageUrls);
+    toast.success("Profile image successfully uploaded!");
+    setUploadingImage(false);
+    setImageUploaded(true);
+    setHasExistingImage(true);
+  } catch (error) {
+    setUploadingImage(false);
+    setImageCropped(null);
+    setImageFile(undefined);
+    toast.error("Error while uploading profile image, try again later.");
+  }
+}, [
+  imageCropped,
+  setUploadingImage,
+  setImageUrls,
+  setImageUploaded,
+  setHasExistingImage,
+  setImageCropped,
+  setImageFile,
+]);
+
   React.useEffect(() => {
     if (imageCropped) {
       handleUploadImage()
     }
-  }, [imageCropped]);
-
-  const handleUploadImage = async () => {
-    if (!imageCropped) {
-      return;
-    };
-
-    const data = { image: imageCropped, uploadPreset: 'profileImages' }
-    try {
-      setUploadingImage(true);
-      const imageData = await uploadImage(data)
-      const imageUrls = { public_id: imageData?.public_id, secure_url: imageData?.secure_url };
-      setImageUrls(imageUrls);
-      toast.success('Profile image successfully uploaded!');
-      setUploadingImage(false);
-      setImageUploaded(true);
-      setHasExistingImage(true);
-    } catch (error) {
-      setUploadingImage(false);
-      setImageCropped(null);
-      setImageFile(undefined);
-      toast.error('Error while uploading profile image, try again later.')
-    }
-  };
+  }, [imageCropped, handleUploadImage]);
 
   const removeImage = () => {
     setImageUrls({ public_id: "", secure_url: "" });

@@ -49,7 +49,6 @@ export const GET = async (req: Request) => {
     const cached = searchCache.get(cacheKey);
     
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log(`Cache hit for: ${cacheKey}`);
       return Response.json(cached.data);
     }
 

@@ -118,7 +118,9 @@ const EditBlogForm = ({blog, user}:{blog:BlogPost, user:userProps}) => {
   const [collaboratorDetails, setCollaboratorDetails] = React.useState<searchedUserDetail[]>([]);
   const [openInput, setOpenInput] = React.useState(false);
 
-  const initialCollaborators = blog.collaborators || [];
+  const initialCollaborators = React.useMemo(() => {
+    return blog.collaborators || [];
+  }, [blog.collaborators]);
 
   const isACollaborator = initialCollaborators.includes(user._id);
   const isAuthor = blog.author === user._id;

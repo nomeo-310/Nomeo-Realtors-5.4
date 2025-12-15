@@ -11,11 +11,15 @@ import CustomInput from '../ui/custom-input';
 import { LoadingButton } from '../ui/loading-button';
 import { signIn } from 'next-auth/react'
 import { toast } from 'sonner';
+import { useAdminAppealModal, useAppealForm } from '@/hooks/general-store';
 
 const LoginForm = () => {
   
   const [isLoading, setIsLoading] = React.useState(false);
   const router = useRouter();
+
+  const { setAppealType, setRoleType } = useAppealForm();
+  const { onOpen } = useAdminAppealModal();
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -25,20 +29,85 @@ const LoginForm = () => {
     }
   })
 
+  const parseAdminError = (error: string) => {
+    const errorMap: Record<string, { type: 'suspension' | 'deactivation'; role: 'admin' | 'creator' | 'superAdmin' }> = {
+      'account_suspended_creator': { type: 'suspension', role: 'creator' },
+      'account_suspended_admin': { type: 'suspension', role: 'admin' },
+      'account_suspended_superAdmin': { type: 'suspension', role: 'superAdmin' },
+      'account_deactivated_creator': { type: 'deactivation', role: 'creator' },
+      'account_deactivated_admin': { type: 'deactivation', role: 'admin' },
+      'account_deactivated_superAdmin': { type: 'deactivation', role: 'superAdmin' },
+    };
+
+    return errorMap[error];
+  };
+
+
   const submitForm = async (values: LoginValues) => {
     setIsLoading(true);
     
     try {
       const result = await signIn("credentials", {
         ...values, 
-        redirect: false
+        redirect: false,
+        callbackUrl: '/admin-dashboard'
       });
 
       if (result?.error) {
-        toast.error(result.error);
+        const parsedError = parseAdminError(result.error);
+        
+        if (parsedError) {
+          setAppealType(parsedError.type);
+          setRoleType(parsedError.role);
+          toast.error(`Account ${parsedError.type === 'suspension' ? 'suspended!' : 'deactivated!'}! Reach out to admin!`);
+          
+          // Show modal after toast duration (usually 4-5 seconds)
+          setTimeout(() => {
+           onOpen();
+          }, 4000);
+        } else {
+          toast.error(result.error);
+        }
       } else if (result?.ok) {
         toast.success("Login Successful");
-        window.location.href = "/";
+        
+        // Define redirect map with proper typing
+        const redirectMap = {
+          superAdmin: '/superadmin-dashboard',
+          admin: '/admin-dashboard',
+          creator: '/creator-dashboard',
+        } as const;
+        
+        type RoleKey = keyof typeof redirectMap;
+        
+        // Extract callbackUrl from result.url
+        if (result.url) {
+          const urlObj = new URL(result.url, window.location.origin);
+          const callbackUrl = urlObj.searchParams.get('callbackUrl');
+          
+          if (callbackUrl) {
+            const decodedUrl = decodeURIComponent(callbackUrl);
+            router.replace(decodedUrl);
+          } else {
+            setTimeout(async () => {
+              try {
+                const response = await fetch('/api/auth/session');
+                const session = await response.json();
+                
+
+                const role = session?.user?.role as RoleKey;
+                
+                if (role && redirectMap[role]) {
+                  router.replace(redirectMap[role]);
+                } else {
+                  router.replace('/admin-dashboard');
+                }
+              } catch {
+                router.replace('/admin-dashboard');
+              }
+            }, 100);
+          }
+        }
       }
     } catch (error) {
       console.error('Login error:', error);

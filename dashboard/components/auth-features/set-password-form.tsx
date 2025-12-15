@@ -111,6 +111,8 @@ const SetPasswordForm = () => {
     try {
       const values = {email: email || '', password: value.password}
       const response = await createPassword(values);
+
+      console.log(response)
       
       if (response.success) {
         const result = await signIn("credentials", {

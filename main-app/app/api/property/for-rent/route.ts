@@ -87,12 +87,11 @@ export const GET = async (req: Request) => {
     state,
     city,
     propertyTag: 'for-rent',
-    propertyApproval: 'pending'
+    propertyApproval: 'approved'
   });
 
   try {
     const skip = (page - 1) * limit;
-
     const properties = await Apartment.find(query)
       .select('_id propertyTag propertyIdTag propertyTypeTag city state bedrooms bathrooms toilets squareFootage annualRent propertyPrice facilityStatus')
       .populate({
@@ -113,6 +112,7 @@ export const GET = async (req: Request) => {
       .skip(skip)
       .limit(limit)
       .sort({created_at: -1})
+      .lean()
       .exec();
 
     const totalProperties = await Apartment.countDocuments(query);

@@ -14,6 +14,7 @@ import { sendEmail } from "@/utils/send-email";
 import { capitalizeName } from "@/utils/capitalizeName";
 import { formatDateWithFullMonth } from "@/utils/formatDate";
 import mongoose from "mongoose";
+import Admin from "@/models/admin";
 
 interface userDetails {
   userId: string;
@@ -253,6 +254,7 @@ export const suspendUser = async (values: suspendAccountProps) => {
         const suspensionCount = await getSuspensionCount(userId) + 1;
         const suspendedUntil = calculateSuspendedUntil(duration);
         const suspendedAt = new Date();
+        const suspensionDuration = duration;
 
         const newSuspensionData = {
           user: focusedUser._id,
@@ -275,6 +277,7 @@ export const suspendUser = async (values: suspendAccountProps) => {
         const userSuspensionUpdate = {
           userAccountSuspended: true,
           suspensionReason: reason,
+          suspensionDuration,
           suspendedAt,
           suspendedBy: new Types.ObjectId(current_user.userId._id)
         };
@@ -345,7 +348,24 @@ export const liftUserSuspension = async (values: liftSuspensionProps) => {
 
     // Check if current user is the one who performed the suspension
     if (!canModifySuspension(suspension, current_user)) {
-      return { success: false, message: 'Only the admin who suspended this user can lift the suspension', status: 403 };
+      // For admin suspensions, allow superAdmins to lift any suspension
+      const user = await User.findById(suspension.user);
+      if (user && ['admin', 'superAdmin', 'creator'].includes(user.role)) {
+        // Only superAdmins can lift admin suspensions (including those by other admins)
+        if (!permissions.isSuperAdmin) {
+          return { 
+            success: false, 
+            message: 'Only Super Admins can lift suspensions on admin accounts', 
+            status: 403 
+          };
+        }
+      } else {
+        return { 
+          success: false, 
+          message: 'Only the admin who suspended this user can lift the suspension', 
+          status: 403 
+        };
+      }
     }
 
     const user = await User.findById(suspension.user);
@@ -353,55 +373,107 @@ export const liftUserSuspension = async (values: liftSuspensionProps) => {
       return { success: false, message: 'User not found', status: 404 };
     }
 
-    // Lift suspension
-    suspension.isActive = false;
-    suspension.suspendedUntil = undefined;
-    suspension.history.push({
-      action: 'lift',
-      description: liftReason ? `Suspension lifted: ${liftReason}` : 'Suspension lifted by administrator',
-      performedBy: new Types.ObjectId(current_user.userId._id),
-      performedAt: new Date(),
-      reason: liftReason || 'Suspension lifted by administrator'
-    });
+    // Check if this is an admin account
+    const isAdminAccount = ['admin', 'superAdmin', 'creator'].includes(user.role);
+    const adminRecord = isAdminAccount ? await Admin.findOne({ userId: user._id }) : null;
 
-    await suspension.save();
+    // Start transaction for atomic operations
+    const session = await mongoose.startSession();
 
-    // Update user account
-    const updateUserData = {
-      userAccountSuspended: false,
-      suspensionReason: '',
-      suspendedAt: undefined,
-      suspendedBy: undefined
-    };
+    try {
+      await session.withTransaction(async () => {
+        // Lift suspension
+        suspension.isActive = false;
+        suspension.suspendedUntil = undefined;
+        suspension.history.push({
+          action: 'lift',
+          description: liftReason ? `Suspension lifted: ${liftReason}` : 'Suspension lifted by administrator',
+          performedBy: new Types.ObjectId(current_user.userId._id),
+          performedAt: new Date(),
+          reason: liftReason || 'Suspension lifted by administrator'
+        });
 
-    await User.findByIdAndUpdate(suspension.user, updateUserData);
+        await suspension.save({ session });
 
-    // Reactivate agent properties if applicable
-    if (user.role === 'agent') {
-      await Apartment.updateMany(
-        { agent: user.agentId },
-        { hideProperty: false }
-      );
+        // Update user account
+        const updateUserData = {
+          userAccountSuspended: false,
+          suspensionReason: '',
+          suspendedAt: undefined,
+          suspendedBy: undefined,
+          suspensionDuration: undefined,
+        };
+
+        await User.findByIdAndUpdate(suspension.user, updateUserData, { session });
+
+        // If it's an admin, also update the Admin record
+        if (isAdminAccount && adminRecord) {
+          const adminUpdateData = {
+            isActive: true,
+            isSuspended: false,
+            suspendedAt: undefined,
+            suspendedBy: undefined,
+            suspensionReason: ''
+          };
+
+          await Admin.findByIdAndUpdate(adminRecord._id, adminUpdateData, { session });
+        }
+
+        // Reactivate agent properties if applicable
+        if (user.role === 'agent') {
+          await Apartment.updateMany(
+            { agent: user.agentId },
+            { hideProperty: false },
+            { session }
+          );
+        }
+
+        const currentDate = new Date();
+        const formattedDate = formatDateWithFullMonth(currentDate);
+        const name = `${capitalizeName(user.surName ?? '')} ${capitalizeName(user.lastName ?? '')}`;
+
+        // Send appropriate lift email based on user type
+        if (isAdminAccount) {
+          await sendSuspensionEmail(
+            'lift',
+            name,
+            liftReason || 'Your admin suspension has been lifted',
+            'Admin Suspension Lifted',
+            formattedDate || "",
+            user.email,
+            'ADMIN ACCOUNT SUSPENSION LIFTED',
+            false,
+            'admin-support@yourdomain.com'
+          );
+        } else {
+          await sendSuspensionEmail(
+            'lift',
+            name,
+            liftReason || 'Your suspension has been lifted by an administrator',
+            '',
+            formattedDate || "",
+            user.email,
+            'Account Suspension Lifted',
+            false
+          );
+        }
+      });
+
+      path && revalidatePath(path);
+      
+      return { 
+        success: true, 
+        message: isAdminAccount ? 'Admin suspension successfully lifted' : 'Suspension successfully lifted', 
+        status: 200,
+        data: {
+          userType: user.role,
+          liftedBy: current_user.userId._id
+        }
+      };
+
+    } finally {
+      await session.endSession();
     }
-
-    const currentDate = new Date();
-    const formattedDate = formatDateWithFullMonth(currentDate);
-    const name = `${capitalizeName(user.surName ?? '')} ${capitalizeName(user.lastName ?? '')}`;
-
-    // Send lift email
-    await sendSuspensionEmail(
-      'lift',
-      name,
-      liftReason || 'Your suspension has been lifted by an administrator',
-      '',
-      formattedDate || "",
-      user.email,
-      'Account Suspension Lifted',
-      false
-    );
-
-    path && revalidatePath(path);
-    return { success: true, message: 'Suspension successfully lifted', status: 200 };
 
   } catch (error) {
     console.error('Error lifting suspension:', error);
@@ -966,6 +1038,7 @@ export const suspendAdmin = async (values: SuspendAdminProps) => {
         const suspensionCount = await getSuspensionCount(adminId) + 1;
         const suspendedUntil = calculateSuspendedUntil(duration);
         const suspendedAt = new Date();
+        const suspensionDuration = duration;
 
         const newSuspensionData = {
           user: adminToSuspend._id,
@@ -981,7 +1054,7 @@ export const suspendAdmin = async (values: SuspendAdminProps) => {
             data: { 
               category, 
               suspensionCount,
-              adminType: adminToSuspend.role // Store the admin type
+              adminType: adminToSuspend.role
             }
           }]
         };
@@ -994,15 +1067,19 @@ export const suspendAdmin = async (values: SuspendAdminProps) => {
           suspensionReason: reason,
           suspendedAt,
           suspendedBy: new Types.ObjectId(current_user.userId._id),
-          // Additional admin-specific fields
-          adminSuspended: true,
-          adminSuspensionCategory: category
         };
 
-        await User.findByIdAndUpdate(adminId, adminSuspensionUpdate, { session });
+        const suspensionUpdateData ={
+          isActive: false,
+          isSuspended: true,
+          suspendedAt: Date.now(),
+          suspendedBy: new Types.ObjectId(current_user.userId._id),
+          suspensionDuration,
+          suspensionReason: reason
+        }
 
-        // For admin accounts, we might want to log this in an admin audit log
-        // You can add additional logging here if needed
+        await User.findByIdAndUpdate(adminId, adminSuspensionUpdate, { session });
+        await Admin.findOneAndUpdate({userId: adminId}, suspensionUpdateData, { session })
 
         const formattedDate = formatDateWithFullMonth(suspendedAt);
         const name = `${capitalizeName(adminToSuspend.surName ?? '')} ${capitalizeName(adminToSuspend.lastName ?? '')}`;
@@ -1017,7 +1094,7 @@ export const suspendAdmin = async (values: SuspendAdminProps) => {
           adminToSuspend.email,
           'ADMIN ACCOUNT SUSPENDED',
           false,
-          'admin-support@yourdomain.com' // Special admin support email
+          'admin-support@yourdomain.com'
         );
       });
 

@@ -17,11 +17,11 @@ export const GET = async () => {
     await guardAdminAccess(currentUser.role);
 
     const admins = await Admin.find({ isSuspended: true })
-    .select('userId role adminAccess adminOnboarded createdAt adminId')
+    .select('userId role adminAccess adminOnboarded createdAt adminId isActive isSuspended')
     .populate({
       path: 'userId',
       model: User,
-      select: 'email surName lastName'
+      select: '_id email surName lastName phoneNumber placeholderColor suspendedAt suspendedBy suspensionReason suspensionDuration'
     })
     .lean()
     .exec();

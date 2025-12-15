@@ -14,18 +14,15 @@ const HomeClient = ({user}:{user:any}) => {
   const onboardingUser = useUserOnboardingModal();
   const onboardingAgent = useAgentOnboardingModal();
 
-  React.useLayoutEffect(() => {
+  React.useEffect(() => {
     if (user && user.userOnboarded === false && user.profileCreated === false) {
       if (user.role === 'agent') {
         onboardingAgent.onOpen();
-      };
-
-      if (user.role === 'user') {
+      } else if (user.role === 'user') {
         onboardingUser.onOpen();
-      };
+      }
     }
-
-  },[user, user?.role ]);
+  }, [user, onboardingAgent, onboardingUser]);
 
 
   return (

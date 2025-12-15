@@ -21,7 +21,7 @@ export const GET = async () => {
     .populate({
       path: 'userId',
       model: User,
-      select: 'email surName lastName phoneNumber profileImage'
+      select: 'email surName lastName phoneNumber profileImage placeholderColor'
     })
     .lean()
     .exec();

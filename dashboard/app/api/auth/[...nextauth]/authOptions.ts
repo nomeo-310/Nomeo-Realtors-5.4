@@ -13,6 +13,7 @@ declare module 'next-auth' {
     role: 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin';
     adminId?: string;
     userId?: string;
+    redirectTo?: string; // Add this
   }
 
   interface Session extends DefaultSession {
@@ -24,6 +25,7 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       role: 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin';
+      redirectTo?: string; // Add this
     } & DefaultSession['user'];
   }
 }
@@ -62,9 +64,13 @@ export const authOptions: AuthOptions = {
             throw new Error('Admin account not found');
           }
 
+          if (admin.isSuspended) {
+            throw new Error(`account_suspended_${user.role}`)
+          }
+
           // 4. Check if admin is activated
-          if (!admin.isActive) {
-            throw new Error('Admin account is deactivated');
+          if (!admin.isActive && admin.deactivated) {
+            throw new Error(`account_deactivated_${user.role}`);
           }
 
           // 5. Verify password - check both user and admin passwords
@@ -84,6 +90,9 @@ export const authOptions: AuthOptions = {
             throw new Error('Invalid email or password');
           }
 
+          // Determine redirect URL based on role
+          const redirectTo = getRedirectUrlByRole(user.role);
+
           // Return with both user and admin IDs
           return {
             id: admin._id.toString(),
@@ -92,6 +101,7 @@ export const authOptions: AuthOptions = {
             name: `${user.surName || ''} ${user.lastName || ''}`.trim() || user.email,
             email: user.email,
             role: user.role,
+            redirectTo, // Add redirect URL
           };
         } catch (error) {
           console.error('Authorization error:', error);
@@ -105,7 +115,8 @@ export const authOptions: AuthOptions = {
   ],
   pages: { 
     signIn: '/',
-    error: '/',
+    signOut: '/',
+    error: '/?error=', // Better error handling
   },
   session: { 
     strategy: 'jwt', 
@@ -124,6 +135,7 @@ export const authOptions: AuthOptions = {
         token.role = user.role;
         token.name = user.name;
         token.email = user.email;
+        token.redirectTo = (user as any).redirectTo; // Pass redirect URL
       }
       return token;
     },
@@ -135,19 +147,59 @@ export const authOptions: AuthOptions = {
           userId: token.userId as string, 
           name: token.name as string,
           email: token.email as string,
-          role: token.role as 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin'
+          role: token.role as 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin',
+          redirectTo: token.redirectTo as string, // Add to session
         };
       }
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl
+      // If redirecting to login page but user is authenticated, redirect to dashboard
+      if (url.includes('/?callbackUrl=')) {
+        // Extract the callbackUrl from the URL
+        const urlObj = new URL(url, baseUrl);
+        const callbackUrl = urlObj.searchParams.get('callbackUrl');
+        
+        if (callbackUrl) {
+          // Return the decoded callbackUrl
+          return decodeURIComponent(callbackUrl);
+        }
+      }
+      
+      // Default: redirect to the provided URL
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      } else if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      
+      return baseUrl;
     },
   },
   debug: process.env.NODE_ENV === 'development',
   secret: process.env.NEXTAUTH_SECRET,
+  // Add these for better control
+  useSecureCookies: process.env.NODE_ENV === 'production',
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+  },
+}
+
+// Helper function to get redirect URL based on role
+function getRedirectUrlByRole(role: string): string {
+  const redirectMap: Record<string, string> = {
+    superAdmin: '/superadmin-dashboard',
+    admin: '/admin-dashboard',
+    creator: '/creator-dashboard',
+  };
+  
+  return redirectMap[role] || '/admin-dashboard';
 }

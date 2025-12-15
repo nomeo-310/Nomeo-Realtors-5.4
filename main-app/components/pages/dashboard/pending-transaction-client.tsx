@@ -1,11 +1,12 @@
 'use client'
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ArrowUpRightIcon, MoreHorizontalIcon, SearchIcon } from '@/components/ui/icons'
 import InputWithIcon from '@/components/ui/input-with-icon'
 import Pagination from '@/components/ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn, nairaSign } from '@/lib/utils';
+import { ArrowUpRight01Icon, MoreHorizontalIcon, SearchIcon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import React from 'react'
 
 type mobileItemProps = {
@@ -97,7 +98,7 @@ const PendingTransactionClient = () => {
       return (
         <DropdownMenu modal={false}>
           <DropdownMenuTrigger className='outline-none focus:outline-none'>
-            <MoreHorizontalIcon/>
+            <HugeiconsIcon icon={MoreHorizontalIcon}/>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem>
@@ -182,7 +183,7 @@ const PendingTransactionClient = () => {
             inputClassName='placeholder:text-black/70 border dark:border-white/70 rounded-lg rounded-r-none dark:placeholder:text-white'
           />
           <button type="button" className='lg:h-12 h-11 aspect-square rounded-lg flex items-center justify-center border dark:border-white/70 rounded-l-none'>
-            <ArrowUpRightIcon className='rotate-45 text-black/60 dark:text-white/70'/>
+            <HugeiconsIcon icon={ArrowUpRight01Icon} className='rotate-45 text-black/60 dark:text-white/70'/>
           </button>
         </div>
         <PaymentHistory/>

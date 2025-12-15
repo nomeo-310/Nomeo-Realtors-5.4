@@ -178,10 +178,7 @@ const useBioAnalyzer = (config: { type: 'agent' | 'user'; minLength: number; tar
     return newAnalysis;
   }, [analyzeBio]);
 
-  return {
-    analysis,
-    updateAnalysis
-  };
+  return { analysis, updateAnalysis};
 };
 
 const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
@@ -267,7 +264,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
 
       return () => clearTimeout(timeoutId); // Cleanup on unmount or re-run
     }
-  }, [newBio, isEditingBio]); // REMOVED: updateAnalysis from dependencies
+  }, [newBio, isEditingBio, updateAnalysis]);
 
   // Enhanced bio parsing with fallbacks
   const parseBio = (bio: string) => {
@@ -385,32 +382,46 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
     onClose();
   };
 
-  const handleUploadImage = async () => {
-    if (!imageCropped) return;
+
+const handleUploadImage = React.useCallback(async () => {
+  if (!imageCropped) return;
+  
+  const data = {image: imageCropped, uploadPreset: 'profileImages'};
+  try {
+    setUploadingImage(true);
+    const imageData: { public_id: string; secure_url: string } = await uploadImage(data);
+    const newImageUrls = { 
+      public_id: imageData?.public_id, 
+      secure_url: imageData?.secure_url 
+    };
+    const value = {
+      ...newImageUrls, 
+      userId: user._id, 
+      isNewImage: true, 
+      path: pathname
+    };
     
-    const data = {image: imageCropped, uploadPreset: 'profileImages'}
-    try {
-      setUploadingImage(true);
-      const imageData: { public_id: string; secure_url: string } = await uploadImage(data)
-      const newImageUrls = { public_id: imageData?.public_id, secure_url: imageData?.secure_url };
-      const value = {...newImageUrls, userId: user._id, isNewImage: true, path: pathname}
-      await changeProfileImage(value).then((response) => {
-        if (response && response.status === 200) {
-          toast.success(response.message);
-          setUploadingImage(false);
-        }
-      })
-    } catch (error) {
+    const response = await changeProfileImage(value);
+    
+    if (response && response.status === 200) {
+      toast.success(response.message);
       setUploadingImage(false);
-      toast.error('Error while changing profile image, try again later.')
     }
-  };
+  } catch (error) {
+    setUploadingImage(false);
+    toast.error('Error while changing profile image, try again later.');
+  }
+}, [
+  imageCropped,                   
+  user._id,              
+  pathname,              
+]);
 
   React.useEffect(() => {
     if (imageCropped) {
       handleUploadImage();
     }
-  },[imageCropped]);
+  },[imageCropped, handleUploadImage]);
 
   // Password Change Handler
   const handlePasswordChange = async () => {
@@ -878,7 +889,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
                 
                 {lifeMotto && (
                   <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 lg:p-4 rounded-r-lg">
-                    <p className="text-xs lg:text-sm italic text-yellow-800">"{lifeMotto}"</p>
+                    <p className="text-xs lg:text-sm italic text-yellow-800">&quot;{lifeMotto}&quot;</p>
                   </div>
                 )}
 
@@ -929,7 +940,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
                 {!hasBio && (
                   <div className="text-center py-4 text-gray-500 dark:text-white text-sm border-2 border-dashed border-gray-300 rounded-lg">
                     <FileText className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p>You haven't added a bio yet.</p>
+                    <p>You haven&apos;t added a bio yet.</p>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1227,7 +1238,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-neutral-600">
                   <div className="flex-1">
                     <h5 className="font-medium">Show Liked Blogs</h5>
-                    <p className="text-sm text-gray-600">Display blogs you've liked in your profile</p>
+                    <p className="text-sm text-gray-600">Display blogs you&apos;ve liked in your profile</p>
                   </div>
                   <Switch 
                     checked={showLikedBlogs} 
@@ -1238,7 +1249,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-neutral-600">
                   <div className="flex-1">
                     <h5 className="font-medium">Show Bookmarked Blogs</h5>
-                    <p className="text-sm text-gray-600 dark:text-white">Display blogs you've saved in your profile</p>
+                    <p className="text-sm text-gray-600 dark:text-white">Display blogs you&apos;ve saved in your profile</p>
                   </div>
                   <Switch 
                     checked={showBookmarkedBlogs} 
@@ -1252,7 +1263,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-neutral-600">
                   <div className="flex-1">
                     <h5 className="font-medium">Show Liked Apartments</h5>
-                    <p className="text-sm text-gray-600">Display properties you've liked in your profile</p>
+                    <p className="text-sm text-gray-600">Display properties you&apos;ve liked in your profile</p>
                   </div>
                   <Switch 
                     checked={showLikedApartment} 
@@ -1263,7 +1274,7 @@ const SettingsClient = ({user, agent}:{user: userProps, agent?:agentProps}) => {
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg dark:bg-neutral-600">
                   <div className="flex-1">
                     <h5 className="font-medium">Show Bookmarked Apartments</h5>
-                    <p className="text-sm text-gray-600 dark:text-white">Display properties you've saved in your profile</p>
+                    <p className="text-sm text-gray-600 dark:text-white">Display properties you&apos;ve saved in your profile</p>
                   </div>
                   <Switch 
                     checked={showBookmarkedApartment} 

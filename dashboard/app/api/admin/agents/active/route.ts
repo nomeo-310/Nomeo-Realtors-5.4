@@ -47,7 +47,7 @@ export const POST = async (request: Request) => {
       userAccountDeleted: false, 
       userAccountSuspended: false,
       userVerified: true,
-      _id: { $ne: current_user.userId },
+      _id: { $ne: current_user.userId._id },
       ...(queryText && {
         $or: [
           { surName: new RegExp(queryText, 'i') },

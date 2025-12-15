@@ -138,7 +138,6 @@ const MessageUserModal = () => {
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      useSeparator
       title={`Message ${displayType.charAt(0).toUpperCase() + displayType.slice(1)}`}
       width="lg:w-[650px] xl:w-[700px] md:w-[550px]"
       useCloseButton
@@ -148,8 +147,8 @@ const MessageUserModal = () => {
           <div className="space-y-4">
             {/* Preview Header */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg lg:p-4 p-3">
-              <h4 className="font-semibold text-gray-900 mb-2">Message Preview</h4>
-              <div className="space-y-2 text-sm">
+              <h4 className="font-semibold text-gray-900 mb-2 ">Message Preview</h4>
+              <div className="space-y-2 text-sm dark:text-gray-700">
                 <p><span className="font-medium">To:</span> {displayName} &lt;{displayEmail}&gt;</p>
                 <p><span className="font-medium">Subject:</span> {isUrgent ? '[URGENT] ' : ''}{subject}</p>
                 {isUrgent && (
@@ -170,7 +169,7 @@ const MessageUserModal = () => {
             <div className="flex gap-3 justify-end pt-4">
               <button
                 onClick={() => setShowPreview(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                className="px-4 py-2 text-gray-700 dark:text-white/80 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
               >
                 Back to Edit
               </button>
@@ -197,18 +196,18 @@ const MessageUserModal = () => {
           <div className="space-y-4">
             {/* Recipient Information */}
             <div className="">
-              <h4 className="font-semibold text-gray-900 mb-2">Recipient</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm bg-gray-50 lg:p-4 p-3 rounded-lg">
-                <p><span className="font-medium">Name:</span> {displayName}</p>
-                <p>
+              <h4 className="font-semibold text-gray-900 dark:text-white/90 mb-2">Recipient</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm bg-gray-50 dark:bg-gray-200 lg:p-4 p-3 rounded-lg">
+                <p className="dark:text-gray-700"><span className="font-medium">Name:</span> {displayName}</p>
+                <p className="dark:text-gray-700">
                   <span className="font-medium">Current Role:</span>{' '}
                   <span className="inline-block px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded capitalize">
                     {displayType}
                   </span>
                 </p>
-                <p><span className="font-medium">Email:</span> {displayEmail}</p>
+                <p className="dark:text-gray-700"><span className="font-medium">Email:</span> {displayEmail}</p>
                 {recipient?.phoneNumber && (
-                  <p><span className="font-medium">Phone:</span> {recipient.phoneNumber}</p>
+                  <p className="dark:text-gray-700"><span className="font-medium">Phone:</span> {recipient.phoneNumber}</p>
                 )}
                 {recipient?.propertyAddress && (
                   <p className="col-span-2">
@@ -220,7 +219,7 @@ const MessageUserModal = () => {
 
             {/* Template Selection */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-900">
+              <label className="block text-sm font-semibold text-gray-900 dark:text-white/90">
                 Quick Templates
               </label>
               <CustomSelect
@@ -233,17 +232,17 @@ const MessageUserModal = () => {
                 onChange={handleTemplateChange}
                 style="border-gray-300 rounded-md"
                 height="h-10"
-                placeholderStyle="lg:text-sm text-sm"
+                placeholderStyle="lg:text-sm text-sm dark:text-white/70"
                 itemText="lg:text-sm text-sm"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-white/60">
                 Select a template to prefill, or write a custom message below
               </p>
             </div>
 
             {/* Subject */}
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">
+              <label className="block text-sm font-semibold text-gray-900 mb-2 dark:text-white/90">
                 Subject
               </label>
               <input
@@ -251,7 +250,7 @@ const MessageUserModal = () => {
                 placeholder="Enter message subject..."
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-0 outline-none focus:outline-none focus:border-blue-500"
+                className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-0 outline-none focus:outline-none focus:border-blue-500 placeholder:dark:text-white/70 dark:text-white/70"
               />
             </div>
 
@@ -264,7 +263,7 @@ const MessageUserModal = () => {
                 onChange={(e) => setIsUrgent(e.target.checked)}
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
               />
-              <label htmlFor="urgent-message" className="text-sm font-medium text-gray-900">
+              <label htmlFor="urgent-message" className="text-sm font-medium text-gray-900 dark:text-white/90">
                 Mark as urgent
               </label>
               {isUrgent && (
@@ -277,10 +276,10 @@ const MessageUserModal = () => {
             {/* Message Body */}
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-semibold text-gray-900">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white/90">
                   Message
                 </label>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-white/60">
                   {wordCount} words, {characterCount} characters
                 </div>
               </div>
@@ -289,7 +288,7 @@ const MessageUserModal = () => {
                 rows={5}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md text-sm resize-none focus:ring-0 outline-none focus:outline-none focus:border-blue-500"
+                className="w-full p-3 border border-gray-300 rounded-md text-sm resize-none focus:ring-0 outline-none focus:outline-none focus:border-blue-500 placeholder:dark:text-white/70"
               />
             </div>
 
@@ -297,7 +296,7 @@ const MessageUserModal = () => {
             <div className="flex gap-3 justify-between pt-4">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                className="px-4 py-2 text-gray-700 dark:text-white/80 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
               >
                 Cancel
               </button>

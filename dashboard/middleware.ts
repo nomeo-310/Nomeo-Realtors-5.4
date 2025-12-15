@@ -4,71 +4,94 @@ import { getToken } from 'next-auth/jwt';
 
 const secret = process.env.NEXTAUTH_SECRET;
 
+// Define role-based redirect paths
+const roleRedirects: Record<string, string> = {
+  superAdmin: '/superadmin-dashboard',
+  admin: '/admin-dashboard',
+  creator: '/creator-dashboard',
+};
+
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request, secret });
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  if (pathname === '/') {
+    const callbackUrl = searchParams.get('callbackUrl');
+    
+    // If there's a callbackUrl but no token (user logged out)
+    if (callbackUrl && !token) {
+      // Create a new URL without the callbackUrl
+      const newUrl = new URL(request.url);
+      newUrl.searchParams.delete('callbackUrl');
+      return NextResponse.redirect(newUrl);
+    }
+  }
 
   // Auth routes (only for admin roles)
-  const authRoutes = [
-    '/',
-    '/set-up',
-    '/set-password',
-  ];
-
-  // Admin dashboard routes
-  const adminDashboardRoutes = [
-    '/superadmin-dashboard',
-    '/admin-dashboard', 
-    '/creator-dashboard',
-  ];
+  const authRoutes = ['/', '/set-up', '/set-password'];
 
   // All protected routes
-  const allProtectedRoutes = [...adminDashboardRoutes];
+  const allProtectedRoutes = [
+    '/superadmin-dashboard',
+    '/admin-dashboard',
+    '/creator-dashboard',
+  ];
 
   // ===== AUTH ROUTES PROTECTION =====
   if (authRoutes.includes(pathname)) {
     if (token) {
-      const role = token.role as 'admin' | 'creator' | 'superAdmin';
+      const role = token.role as keyof typeof roleRedirects;
       
-      // Redirect to appropriate dashboard based on role
-      if (role === 'superAdmin') {
-        return NextResponse.redirect(new URL('/superadmin-dashboard', request.url));
-      }
-      if (role === 'admin') {
-        return NextResponse.redirect(new URL('/admin-dashboard', request.url));
-      }
-      if (role === 'creator') {
-        return NextResponse.redirect(new URL('/creator-dashboard', request.url));
+      // Only redirect logged-in admins away from auth pages
+      if (roleRedirects[role]) {
+        const redirectUrl = new URL(roleRedirects[role], request.url);
+        return NextResponse.redirect(redirectUrl);
       }
     }
     return NextResponse.next();
   }
 
   // ===== PROTECTED ROUTES =====
-  if (allProtectedRoutes.some((route) => pathname.startsWith(route))) {
+  // Check if current path starts with any protected route
+  const isProtectedRoute = allProtectedRoutes.some(route => 
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  if (isProtectedRoute) {
     if (!token) {
       // Redirect to login if no token
-      return NextResponse.redirect(new URL('/', request.url));
+      const loginUrl = new URL('/', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
     }
 
-    const role = token.role as 'user' | 'agent' | 'admin' | 'creator' | 'superAdmin';
+    const role = token.role as keyof typeof roleRedirects;
 
-    // Redirect non-admin roles to home
+    // Deny access to non-admin roles
     if (role === 'user' || role === 'agent') {
-      return NextResponse.redirect(new URL('/', request.url));
+      const loginUrl = new URL('/', request.url);
+      loginUrl.searchParams.set('error', 'Access denied');
+      return NextResponse.redirect(loginUrl);
     }
-    
+
     // Role-specific route protection
-    if (pathname.startsWith('/superadmin-dashboard') && role !== 'superAdmin') {
-      return NextResponse.redirect(new URL('/admin-dashboard', request.url));
-    }
+    const currentDashboard = allProtectedRoutes.find(route => 
+      pathname === route || pathname.startsWith(`${route}/`)
+    );
 
-    if (pathname.startsWith('/admin-dashboard') && role !== 'admin') {
-      return NextResponse.redirect(new URL('/creator-dashboard', request.url));
-    }
+    if (currentDashboard) {
+      const allowedRole = Object.entries(roleRedirects).find(
+        ([, route]) => route === currentDashboard
+      )?.[0];
 
-    if (pathname.startsWith('/creator-dashboard') && role !== 'creator') {
-      return NextResponse.redirect(new URL('/admin-dashboard', request.url));
+      // If user doesn't have the correct role for this dashboard
+      if (allowedRole && role !== allowedRole) {
+        // Redirect to their appropriate dashboard
+        const correctDashboard = roleRedirects[role];
+        if (correctDashboard) {
+          return NextResponse.redirect(new URL(correctDashboard, request.url));
+        }
+      }
     }
 
     return NextResponse.next();

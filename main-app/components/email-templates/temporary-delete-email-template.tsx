@@ -95,7 +95,7 @@ export function TemporaryDeleteEmailTemplate(props: EmailTemplateProps) {
               The Nomeo Realtors Team
             </Text>
             <Text style={footerNoteStyle}>
-              We're here when you're ready to return
+              We&apos;re here when you&apos;re ready to return
             </Text>
           </Section>
         </Container>

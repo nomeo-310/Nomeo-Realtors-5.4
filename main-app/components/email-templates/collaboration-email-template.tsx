@@ -21,7 +21,7 @@ export function CollaborationEmailTemplate(props: EmailTemplateProps) {
               Collaboration Invitation
             </Text>
             <Text style={headerSubtitleStyle}>
-              You've been invited to collaborate on a new blog post!
+              You&apos;ve been invited to collaborate on a new blog post!
             </Text>
           </Section>
 
@@ -31,7 +31,7 @@ export function CollaborationEmailTemplate(props: EmailTemplateProps) {
               Hi {recipient},
             </Text>
             <Text style={textStyle}>
-              You've been invited by <strong>{author}</strong> to collaborate on a new blog post titled:
+              You&apos;ve been invited by <strong>{author}</strong> to collaborate on a new blog post titled:
             </Text>
           </Section>
 
@@ -39,13 +39,13 @@ export function CollaborationEmailTemplate(props: EmailTemplateProps) {
           <Section style={highlightSectionStyle}>
             <Text style={highlightLabelStyle}>Blog Post Title:</Text>
             <Text style={highlightTitleStyle}>
-              "{blog_title}"
+              &quot;{blog_title}&quot;
             </Text>
           </Section>
 
           {/* Collaboration Details */}
           <Section style={detailsSectionStyle}>
-            <Text style={labelStyle}>What's Next:</Text>
+            <Text style={labelStyle}>What&apos;s Next:</Text>
             <Text style={textStyle}>
               To view the project details and accept the invitation:
               <br /><br />

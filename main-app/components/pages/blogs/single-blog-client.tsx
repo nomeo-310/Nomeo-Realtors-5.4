@@ -11,13 +11,13 @@ const SingleBlogClient = ({blog, user}:{blog:SingleBlog, user?:userProps}) => {
 
   const path = usePathname();
 
-  const generateUUID = () => {
+  const generateUUID = React.useCallback(() => {
     if (user) {
       return 'ssn-' + Date.now().toString(36) + Math.random().toString(36).substring(2);
     } else {
       return 'guest-' + Date.now().toString(36) + Math.random().toString(36).substring(2);
     }
-  };
+  }, [user]);
 
   const SESSION_KEY_NAME = 'blogSessionKey';
 
@@ -33,7 +33,7 @@ const SingleBlogClient = ({blog, user}:{blog:SingleBlog, user?:userProps}) => {
       sessionStorage.setItem(SESSION_KEY_NAME, key);
     }
 
-  }, []);
+  }, [generateUUID]);
 
 
   React.useEffect(() => {
@@ -60,7 +60,7 @@ const SingleBlogClient = ({blog, user}:{blog:SingleBlog, user?:userProps}) => {
     };
 
     trackRead();
-  }, [blog._id]);
+  }, [blog._id, path]);
 
   
   return (

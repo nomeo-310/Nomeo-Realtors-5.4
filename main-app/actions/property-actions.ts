@@ -192,7 +192,8 @@ export const getSingleProperty = async (id: string) => {
       return { success: false, message: 'Property not found', status: 404 };
     }
 
-    return { success: true, data: property, status: 200 };
+
+    return JSON.parse(JSON.stringify(property));
   } catch (error) {
     console.error('Get single property error:', error);
     return { success: false, message: 'Server error', status: 500 };

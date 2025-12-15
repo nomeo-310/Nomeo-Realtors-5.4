@@ -11,6 +11,7 @@ export const SUSPENSION_CATEGORIES = {
 } as const;
 
 export type SuspensionCategory = typeof SUSPENSION_CATEGORIES[keyof typeof SUSPENSION_CATEGORIES];
+
 export const SUSPENSION_DURATIONS = {
   HOURS_24: '24_hours',
   DAYS_3: '3_days',

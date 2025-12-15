@@ -40,10 +40,11 @@ const AllCollaborationClient = ({user}:{user:userProps}) => {
   const [searchText, setSearchText] = React.useState<string>('');
 
   React.useEffect(() => {
-    if (!searchText) {
-      router.push(`/${user.role === 'superAdmin' ? 'admin' : user.role === 'creator' ? 'admin' : user.role}-dashboard/created-blogs/collaboration`);
+    if (!searchText && user?.role) { // ✅ Added optional chaining for safety
+      const rolePath = user.role === 'superAdmin' ? 'admin' : user.role === 'creator' ? 'admin' : `${user.role}-dashboard`;
+      router.push(`/${rolePath}/created-blogs/collaboration`);
     }
-  }, [searchText, router]);
+  }, [searchText, router, user]);
 
   const createSearchParam = (searchText:string) => {
     if (searchText) {

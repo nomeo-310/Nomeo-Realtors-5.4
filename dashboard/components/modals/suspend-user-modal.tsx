@@ -7,11 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useSuspendUserModal } from "@/hooks/general-store";
 import { usePathname } from "next/navigation";
-import { suspendUser } from "@/actions/suspension-actions";
+import { suspendAdmin, suspendUser } from "@/actions/suspension-actions";
 import { SuspensionCategory, SuspensionDuration } from "@/models/suspension";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { suspendAdmin } from "@/actions/admin-actions";
 import { formatDateWithFullMonth } from "@/utils/formatDate";
 
 // Define a type for the user object that could come from different sources
@@ -86,7 +85,7 @@ const SuspendUserModal = () => {
 
   // Helper to get identifier for suspension (ID or email)
   const getUserIdentifier = (user: SuspendedUser): string => {
-    if (isAdminUser && user.adminId) return user.adminId;
+    if (isAdminUser && user.adminId) return user.adminId.toString();
     if (user.id) return user.id.toString();
     return user.email;
   };

@@ -526,7 +526,7 @@ export const suspendAdmin = async (values: AdminActionParams) => {
 
     // Create notification in transaction
     const [notification] = await Notification.create([{
-      type: 'admin_suspension',
+      type: 'notification',
       title: 'Admin Account Suspended',
       content: reason ? `Your admin account has been suspended. Reason: ${reason}` : 'Your admin account has been suspended due to policy violations.',
       recipient: targetAdmin.userId,
@@ -1010,7 +1010,6 @@ export const reactivateAdmin = async (values: AdminActionParams) => {
       reactivatedAt: new Date(), 
       reactivatedBy: current_user.userId._id, 
       reactivationReason: reason,
-      deactivationReason: null
     };
 
     // Reactivate admin in transaction
@@ -1719,8 +1718,8 @@ export const activateAdmin = async (values: {email: string, accessId: string}) =
     await Admin.findOneAndUpdate(
       { _id: adminDetails._id },
       { 
-        accessId: undefined, 
-        accessIdExpires: undefined,
+        accessId: null, 
+        accessIdExpires: null,
         isActivated: true, 
         activatedAt: new Date(), 
         activatedBy: adminDetails.userId,

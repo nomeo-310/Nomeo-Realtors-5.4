@@ -3,10 +3,10 @@
 import React from "react";
 import AllApartmentLayout from "../apartment/all-apartment-layout";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontalIcon } from "@/components/ui/icons";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn, nairaSign } from "@/lib/utils";
 import Pagination from "@/components/ui/pagination";
+import { MoreHorizontalIcon } from "lucide-react";
 
 type mobileItemProps = {
   open: boolean;

@@ -16,6 +16,7 @@ import CreateAdminModal from '@/components/modals/create-admin-modal'
 import OnboardingModal from '@/components/modals/onboarding-modal'
 import { getCurrentUser } from '@/actions/auth-actions'
 import DeactivateUserModal from '@/components/modals/deactivate-user-modal'
+import AdminSuspendedModal from '@/components/modals/admin-suspended-modal'
 
 const ModalProvider = async () => {
   const currentUser = await getCurrentUser();
@@ -38,6 +39,7 @@ const ModalProvider = async () => {
       <CreateAdminModal/>
       { currentUser && <OnboardingModal user={currentUser}/> }
       <DeactivateUserModal/>
+      <AdminSuspendedModal/>
     </React.Fragment>
   )
 }

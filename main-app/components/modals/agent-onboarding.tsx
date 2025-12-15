@@ -14,7 +14,7 @@ const AgentOnBoarding = ({user}:{user:userDetails}) => {
     if (user && !user.userOnboarded) {
       onboardingControl.onOpen();
     }
-  }, [user]);
+  }, [user, onboardingControl]);
 
   return (
     <Modal

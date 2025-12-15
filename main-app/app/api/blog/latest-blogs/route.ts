@@ -6,12 +6,12 @@ export const GET = async (req: Request) => {
   await connectToMongoDB();
 
   try {
-    const latestBlogs = await Blog.find({is_published: true, is_deleted: false, blog_approval: 'pending'
+    const latestBlogs = await Blog.find({
+      is_published: true, 
+      is_deleted: false, 
+      blog_approval: 'pending'
     })
     .limit(4)
-    .select(
-      "_id description banner created_at read_time title total_likes total_comments total_saves total_reads"
-    )
     .populate({
       path: "author",
       model: User,
@@ -24,12 +24,22 @@ export const GET = async (req: Request) => {
       select:
         "firstName lastName profilePicture email username placeholderColor role _id",
     })
-    .sort({ created_at: -1 })
+    .sort({ createdAt: -1 })
+    .lean()
     .exec();
 
-    return Response.json(latestBlogs)
-  } catch (error) {
+    // Add virtual fields manually
+    const blogsWithVirtuals = latestBlogs.map(blog => ({
+      ...blog,
+      total_likes: blog.likes?.length || 0,
+      total_saves: blog.saves?.length || 0,
+      total_comments: blog.comments?.length || 0,
+      total_reads: (blog.reads?.length || 0) + (blog.guest_readers?.length || 0)
+    }));
 
+    return Response.json(blogsWithVirtuals)
+  } catch (error) {
+    console.error("Error fetching latest blogs:", error);
     return Response.json({ error: "Internal server error, try again later" },{ status: 500 });
   }
 };

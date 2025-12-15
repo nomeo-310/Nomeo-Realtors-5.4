@@ -123,13 +123,7 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
     onClose();
   };
 
-  React.useEffect(() => {
-    if (imageCropped) {
-      handleUploadImage();
-    }
-  }, [imageCropped]);
-
-  const handleUploadImage = async () => {
+  const handleUploadImage = React.useCallback(async () => {
     if (!imageCropped) {
       return;
     }
@@ -153,7 +147,21 @@ const AgentMultiStepForm = ({ user }: { user: userDetails }) => {
       setImageFile(undefined);
       toast.error("Error while uploading profile image, try again later.");
     }
-  };
+  }, [
+    imageCropped,
+    setUploadingImage,
+    setImageUrls,
+    setImageUploaded,
+    setHasExistingImage,
+    setImageCropped,
+    setImageFile,
+  ]);
+
+  React.useEffect(() => {
+    if (imageCropped) {
+      handleUploadImage();
+    }
+  }, [imageCropped, handleUploadImage]);
 
   const removeImage = () => {
     setImageUrls({ public_id: "", secure_url: "" });

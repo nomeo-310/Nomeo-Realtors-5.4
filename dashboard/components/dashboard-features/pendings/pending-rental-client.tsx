@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn, nairaSign } from '@/lib/utils'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Pagination from '@/components/ui/pagination'
-import { CheckCircle, Eye, Loader2, MoreHorizontalIcon, XCircle } from 'lucide-react'
+import { CheckCircle, Eye, MoreHorizontalIcon, XCircle } from 'lucide-react'
 import { AdminDetailsProps, VerificationRentalProps } from '@/lib/types'
 import axios from 'axios'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -15,7 +15,7 @@ import ErrorState from '@/components/ui/error-state'
 import EmptyState from '@/components/ui/empty-state'
 import Link from 'next/link'
 import PendingsWrapper from './pendings-wrapper'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { verifyRentout } from '@/actions/pending-action'
 import TableLoading from '../table-loading'
@@ -52,7 +52,8 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
   const { data, status } = useQuery({
     queryKey: ['unverified-rentals', currentPage],
     queryFn: () => apiRequestHandler(requestUnverifiedRentals),
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    refetchInterval: 15000
   });
   
   const unverifiedApartmentsData = data?.data as dataProps
@@ -62,6 +63,8 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
   const handlePageChange = (page:number) => {
     setCurrentPage(page)
   };
+
+  const router = useRouter();
 
   const getDates = () => {
     const today = new Date();
@@ -152,32 +155,194 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const MobilePendingRentalItem = ({open, toggleTable, data }:mobileItemProps) => {
+  const MobilePendingRentalItem = ({ open, toggleTable, data }: mobileItemProps) => {
+    
+    const handleCompleteRental = () => {
+      // Add complete rental function
+      console.log('Complete rental:', data._id);
+    };
+
+    const handleCancelRental = () => {
+      // Add cancel rental function
+      console.log('Cancel rental:', data._id);
+    };
+
+    const handleViewApartment = () => {
+      router.push(`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/${data?.apartment.propertyIdTag}`);
+    };
+
     return (
-      <div className={cn("shadow-sm border-b last:border-b-0 w-full odd:bg-gray-200 even:bg-inherit h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
+      <div 
+        className={cn(
+          "shadow-sm border-b last:border-b-0 w-full p-4 cursor-pointer transition-all duration-300 bg-white dark:bg-[#424242]",
+          open ? 'h-auto' : 'h-[72px]'
+        )}
+        onClick={toggleTable}
+      >
+        {/* Compact View (when not open) */}
         <div className="flex items-center justify-between">
-          <p className="text-sm">{capitalizeName(data?.agent.userId.surName)} {capitalizeName(data?.agent.userId.lastName)}</p>
-          <p className="text-sm">{data?.agent.agencyName}</p>
+          {/* Left side: Rental info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              {/* Rental avatar/initials with pending indicator */}
+              <div className="flex-shrink-0 relative">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 flex items-center justify-center">
+                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-300">
+                    R
+                  </span>
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white dark:border-[#424242]"></div>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate dark:text-white">
+                  {capitalizeName(data?.user.surName)} {capitalizeName(data?.user.lastName)}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    Pending
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {data?.apartment.propertyTag || 'Apartment'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side: Status and amount */}
+          <div className="flex flex-col items-end ml-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+              {nairaSign}{data?.apartment.annualRent?.toLocaleString()}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formatDate(data?.createdAt)}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center justify-between mt-1">
-          <p className={cn("text-center font-medium text-sm")}>{capitalizeName(data?.user.surName)} {capitalizeName(data?.user.lastName)}</p>
-          <p className="text-sm text-black/40">{data?.status}</p>
-        </div>
-        <div className="border-b border-black my-3"/>
-        <div className="flex items-center justify-between">
-          <p className="text-sm">Annual Rent</p>
-          <p className="text-sm">{nairaSign} {data?.apartment.annualRent.toLocaleString()}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm">Total Amount Paid</p>
-          <p className="text-sm">{nairaSign} {data?.totalAmount?.toLocaleString() ?? 0}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm">Date</p>
-          <p className="text-sm capitalize">{data?.createdAt}</p>
-        </div>
+
+        {/* Expanded View (when open) */}
+        {open && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 space-y-4">
+            {/* Rental Status Banner */}
+            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium dark:text-white">Rental Pending Verification</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    This rental agreement requires verification
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Rental Status</p>
+                  <p className="text-sm font-medium dark:text-white">
+                    {data?.status || 'Pending'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Information Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agent</p>
+                <p className="text-sm font-medium dark:text-white">
+                  {capitalizeName(data?.agent.userId.surName)} {capitalizeName(data?.agent.userId.lastName)}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</p>
+                <p className="text-sm font-medium dark:text-white">
+                  {data?.agent.agencyName}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Occupant</p>
+                <p className="text-sm font-medium dark:text-white">
+                  {capitalizeName(data?.user.surName)} {capitalizeName(data?.user.lastName)}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Property</p>
+                <p className="text-sm font-medium dark:text-white truncate">
+                  {data?.apartment.propertyIdTag}
+                </p>
+              </div>
+            </div>
+
+            {/* Financial Information */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between py-2 px-1 bg-gray-50 dark:bg-gray-800/30 rounded-lg">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Annual Rent</p>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-white">
+                    {nairaSign}{data?.apartment.annualRent?.toLocaleString()}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Paid</p>
+                  <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                    {nairaSign}{data?.totalAmount?.toLocaleString() || '0'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between py-2 px-1">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Date Created</p>
+                <p className="text-sm dark:text-white">
+                  {formatDate(data?.createdAt)}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewApartment();
+                  }}
+                  className="px-3 py-2.5 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <Eye className="w-4 h-4" />
+                  View Apartment
+                </button>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCompleteRental();
+                  }}
+                  className="px-3 py-2.5 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Complete
+                </button>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelRental();
+                  }}
+                  className="px-3 py-2.5 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium col-span-2"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Cancel Rental
+                </button>
+              </div>
+              
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 text-center">
+                Verify rental details before completing
+              </p>
+            </div>
+          </div>
+        )}
       </div>
-    )
+    );
   };
 
   const Menu = ({data}:{data:VerificationRentalProps}) => {
@@ -190,11 +355,12 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
           {/* View Actions */}
           <div className="p-2">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Apartment</p>
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50">
+            <DropdownMenuItem 
+              onClick={() => router.push(`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/${data?.apartment.propertyIdTag}`)}
+              className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer rounded-md transition-colors text-blue-600 focus:text-blue-600 focus:bg-blue-50"
+            >
               <Eye className="w-4 h-4" />
-              <Link href={`/${user.role === 'superAdmin' ? 'superadmin' : user.role}-dashboard/pendings/${data?.apartment.propertyIdTag}`} prefetch className="w-full">
-                View Apartment
-              </Link>
+              View Apartment
             </DropdownMenuItem>
           </div>
 
@@ -245,19 +411,19 @@ const PendingRentalClient = ({user}:{user:AdminDetailsProps}) => {
                 <Table className='w-full border'>
                   <PendingRentalHeader/>
                   <TableBody>
-                    {apartments && apartments.length > 0 && apartments.map((apartment:VerificationRentalProps) => (
-                      <PendingRentalItem data={apartment}/>
+                    {apartments && apartments.length > 0 && apartments.map((apartment: VerificationRentalProps) => (
+                      <PendingRentalItem key={apartment._id} data={apartment}/>
                     ))}
                   </TableBody>
                 </Table>
                 <Pagination currentPage={currentPage} totalPages={pagination.totalPages} onPageChange={handlePageChange} />
               </div>
               <div className='flex flex-col md:hidden'>
-                {apartments && apartments.length > 0 && apartments.map((apartment:VerificationRentalProps) => (
+                {apartments && apartments.length > 0 && apartments.map((apartment: VerificationRentalProps, index: number) => (
                   <MobilePendingRentalItem
                     key={apartment._id}
-                    open={currentIndex === apartments.indexOf(apartment)}
-                    toggleTable={() => toggleItem(apartments.indexOf(apartment))}
+                    open={currentIndex === index}
+                    toggleTable={() => toggleItem(index)}
                     data={apartment}
                   />
                 ))}

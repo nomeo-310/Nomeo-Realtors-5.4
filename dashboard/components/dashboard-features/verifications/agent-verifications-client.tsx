@@ -11,7 +11,7 @@ import { BadgeCheck, FileText, Loader2, MoreHorizontalIcon, XCircle } from 'luci
 import ErrorState from '@/components/ui/error-state';
 import EmptyState from '@/components/ui/empty-state';
 import { useRejectAgentModal } from '@/hooks/general-store';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { formatDate } from '@/utils/formatDate';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -58,6 +58,7 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
   const { data, status } = useQuery({
     queryKey: ['unverified-agents', currentPage],
     queryFn: requestUnverifiedAgents,
+    refetchInterval: 15000,
     select: (response) => response.data
   })
 
@@ -106,32 +107,211 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const AgentVerificationMobileItem = ({open, toggleTable, agent }:mobileItemProps) => {
+  const AgentVerificationMobileItem = ({ open, toggleTable, agent }: mobileItemProps) => {
+    const agentRejectionModal = useRejectAgentModal();
+    const queryClient = useQueryClient();
+    const pathname = usePathname();
+    const router = useRouter();
+
+    const handleVerification = async () => {
+      try {
+        await toast.promise(verifyAgent({ agentId: agent._id, path: pathname }), {
+          loading: 'Approving Agent...',
+          success: (response) => {
+            if (response.success) {
+              queryClient.invalidateQueries({ queryKey: ['unverified-agents'] })
+              return response.message;
+            } else {
+              throw new Error(response.message);
+            }
+          },
+          error: (error) => {
+            if (error instanceof Error) {
+              return error.message;
+            }
+            return 'Something went wrong. Try again later';
+          }
+        });
+      } catch (error) {
+        toast.error('Something went wrong. Try again later')
+        console.error('Error approving agent:', error);
+      }
+    };
+
+    const handleRejection = () => {
+      localStorage.setItem('rejection-agentId', agent._id);
+      agentRejectionModal.onOpen();
+    };
+
+    const handleViewDetails = () => {
+      // Add view agent details function
+      console.log('View agent details:', agent._id);
+    };
+
     return (
-      <div className={cn("shadow-sm border-b last:border-b-0 w-full h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
+      <div 
+        className={cn(
+          "shadow-sm border-b last:border-b-0 w-full p-4 cursor-pointer transition-all duration-300 bg-white dark:bg-[#424242]",
+          open ? 'h-auto' : 'h-[72px]'
+        )}
+        onClick={toggleTable}
+      >
+        {/* Compact View (when not open) */}
         <div className="flex items-center justify-between">
-          <p className="text-sm">{agent.userId.surName} {agent.userId.lastName}</p>
-          <p className="text-sm">{agent._id}</p>
+          {/* Left side: Agent info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              {/* Agent avatar/initials with verification indicator */}
+              <div className="flex-shrink-0 relative">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center">
+                  <span className="text-sm font-semibold text-amber-600 dark:text-amber-300">
+                    {agent.userId.surName?.[0]?.toUpperCase() || 'A'}
+                  </span>
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-[#424242]"></div>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate capitalize dark:text-white">
+                  {agent.userId.surName} {agent.userId.lastName}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                    Pending Verification
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {agent.userId.email}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side: Agency and date */}
+          <div className="flex flex-col items-end ml-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+              {agent.agencyName}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formatDate(agent.createdAt)}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center justify-between mt-1">
-          <p className={cn("text-center font-semibold text-sm")}>{agent.userId.email}</p>
-          <p className="text-sm font-semibold">{agent.agencyName}</p>
-        </div>
-        <div className="border-b border-black my-3"/>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">License Number</p>
-          <p className="text-sm uppercase">{agent.licenseNumber}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Verification Status</p>
-          <p className="text-sm capitalize">{agent.verificationStatus}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Date Joined</p>
-          <p className="text-sm capitalize">{formatDate(agent.createdAt)}</p>
-        </div>
+
+        {/* Expanded View (when open) */}
+        {open && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 space-y-4">
+            {/* Verification Status Banner */}
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium dark:text-white">Agent Verification Pending</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    Review agent documents before verification
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Status</p>
+                  <p className="text-sm font-medium dark:text-white capitalize">
+                    {agent.verificationStatus}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Basic Information Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agent Name</p>
+                <p className="text-sm font-medium dark:text-white capitalize">
+                  {agent.userId.surName} {agent.userId.lastName}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email</p>
+                <p className="text-sm font-medium dark:text-white truncate">
+                  {agent.userId.email}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</p>
+                <p className="text-sm font-medium dark:text-white capitalize">
+                  {agent.agencyName}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">License Number</p>
+                <p className="text-sm font-medium dark:text-white font-mono">
+                  {agent.licenseNumber}
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between py-2 px-1">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Registration Date</p>
+                <p className="text-sm dark:text-white">
+                  {formatDate(agent.createdAt)}
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-between py-2 px-1">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Agent ID</p>
+                <p className="text-sm dark:text-white font-mono">
+                  {agent._id.slice(-8)}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+              <div className="grid grid-cols-2 gap-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewDetails();
+                  }}
+                  className="px-3 py-2.5 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <FileText className="w-4 h-4" />
+                  View Details
+                </button>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleVerification();
+                  }}
+                  className="px-3 py-2.5 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                >
+                  <BadgeCheck className="w-4 h-4" />
+                  Verify Agent
+                </button>
+                
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRejection();
+                  }}
+                  className="px-3 py-2.5 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium col-span-2"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Reject Agent
+                </button>
+              </div>
+              
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 text-center">
+                Review all documents before verification
+              </p>
+            </div>
+          </div>
+        )}
       </div>
-    )
+    );
   };
 
   const Menu = ({agentId}:{agentId:string}) => {
@@ -235,16 +415,16 @@ const AgentVerificationsClient = ({user}:{user:AdminDetailsProps}) => {
                 <Table className='w-full border'>
                   <AgentVerificationHeader/>
                   <TableBody>
-                    {agents.map((agent:agentDataProps) => (
-                      <AgentVerificationItem agent={agent}/>
+                    {agents.map((agent: agentDataProps, index: number) => (
+                      <AgentVerificationItem key={agent._id} agent={agent} />
                     ))}
                   </TableBody>
                 </Table>
                 <Pagination currentPage={currentPage} totalPages={totalPage} onPageChange={handlePageChange} />
               </div>
               <div className="flex flex-col md:hidden">
-                {agents.map((agent:agentDataProps, index:number) => (
-                  <React.Fragment key={index}>
+                {agents.map((agent: agentDataProps, index: number) => (
+                  <React.Fragment key={agent._id}>
                     <AgentVerificationMobileItem
                       open={currentIndex === index}
                       toggleTable={() => toggleItem(index)}

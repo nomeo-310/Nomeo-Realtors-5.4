@@ -194,7 +194,7 @@ ${details?.property.agent.userId.surName} ${details?.property.agent.userId.lastN
 ${details?.property.agent.officeNumber ? `Phone: ${details?.property.agent.officeNumber}` : ''}
 ${details?.property.agent.agencyName ? details?.property.agent.agencyName : ''}`);
     }
-  }, [messageType, details]);
+  }, [messageType, details, customSubject]);
 
   // Reset dynamic inputs when message type changes
   React.useEffect(() => {

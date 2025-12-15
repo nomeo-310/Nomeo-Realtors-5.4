@@ -61,7 +61,7 @@ export function PostedCollaborationEmailTemplate(props: EmailTemplateProps) {
           <Section style={impactSectionStyle}>
             <Text style={labelStyle}>Your Impact:</Text>
             <Text style={textStyle}>
-              By contributing to this collaborative piece, you're helping to:
+              By contributing to this collaborative piece, you&apos;re helping to:
               <br /><br />
               • Share valuable knowledge with the real estate community<br />
               • Establish yourself as a thought leader in the industry<br />

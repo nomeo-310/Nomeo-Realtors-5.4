@@ -23,3 +23,10 @@ export const loginSchema = z.object({
 });
 
 export type LoginValues = z.infer<typeof loginSchema>;
+
+export const appealSchema = z.object({
+  email: z.string().email({message: 'Invalid email address'}),
+  message: z.string().min(50, {message: 'Message must be at least 50 characters'}) 
+});
+
+export type AppealValues = z.infer<typeof appealSchema>

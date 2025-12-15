@@ -46,8 +46,16 @@ export const GET = async (req: Request) => {
 
     const totalBlogs = await Blog.countDocuments(searchQuery);
 
+    const blogsWithVirtuals = blogs.map(blog => ({
+      ...blog,
+      total_likes: blog.likes?.length || 0,
+      total_saves: blog.saves?.length || 0,
+      total_comments: blog.comments?.length || 0,
+      total_reads: (blog.reads?.length || 0) + (blog.guest_readers?.length || 0)
+    }));
+
     const data = {
-      blogs,
+      blogs: blogsWithVirtuals,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalBlogs / limit),

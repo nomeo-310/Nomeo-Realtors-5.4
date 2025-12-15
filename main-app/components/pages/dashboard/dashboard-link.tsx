@@ -17,7 +17,7 @@ type dashboardLinkProps = {
 const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkProps) => {
   const pathname = usePathname();
 
-    const getIsActive = (text: string, path: string, pathname: string) => {
+  const useIsActive = (text: string, path: string, pathname: string) => {
     return React.useMemo(() => {
       if (pathname === path) return true;
 
@@ -43,7 +43,7 @@ const DashboardLink = ({ icon: Icon, text, path, notification }: dashboardLinkPr
     }, [text, path, pathname]);
   };
 
-  const isActive = getIsActive(text, path, pathname);
+  const isActive = useIsActive(text, path, pathname);
 
   return (
     <React.Fragment>

@@ -35,6 +35,61 @@ interface ActiveUserClientProps {
 }
 
 const ActiveUserClient: React.FC<ActiveUserClientProps> = ({ userDetails }) => {
+  const [imageError, setImageError] = React.useState(false);
+
+  // Get profile image URL from userDetails
+  const getProfileImageUrl = () => {
+    if (userDetails.profilePicture && 
+        userDetails.profilePicture !== '' && 
+        userDetails.profilePicture !== 'null') {
+      return userDetails.profilePicture;
+    }
+    
+    // Return null for placeholder
+    return null;
+  };
+
+  // Get initials for placeholder
+  const getInitials = () => {
+    const { surName, lastName, email } = userDetails;
+    
+    if (surName && lastName) {
+      return `${surName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    }
+    
+    if (surName) {
+      return surName.charAt(0).toUpperCase();
+    }
+    
+    if (lastName) {
+      return lastName.charAt(0).toUpperCase();
+    }
+    
+    // Use first two letters of email
+    const emailPrefix = email.split('@')[0];
+    if (emailPrefix.length >= 2) {
+      return emailPrefix.substring(0, 2).toUpperCase();
+    }
+    
+    return email.charAt(0).toUpperCase();
+  };
+
+  // Get placeholder background color
+  const getPlaceholderBgColor = () => {
+    const emailHash = userDetails.email.split('').reduce((acc, char) => {
+      return acc + char.charCodeAt(0);
+    }, 0);
+    
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500',
+      'bg-indigo-500', 'bg-teal-500', 'bg-orange-500', 'bg-red-500',
+      'bg-cyan-500', 'bg-violet-500'
+    ];
+    
+    return colors[emailHash % colors.length];
+  };
+
+  const hasProfileImage = getProfileImageUrl() !== null;
 
   // Enhanced bio parsing with fallbacks
   const parseBio = (bio: string) => {
@@ -146,15 +201,32 @@ const ActiveUserClient: React.FC<ActiveUserClientProps> = ({ userDetails }) => {
           {/* Profile Card */}
           <div className="bg-white dark:bg-[#424242] dark:border-[#424242]/40 rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex flex-col items-center text-center">
-              <img
-                src={userDetails.profilePicture}
-                alt={`${userDetails.surName} ${userDetails.lastName}`}
-                className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 mb-4"
-              />
+              {hasProfileImage && !imageError ? (
+                <img
+                  src={getProfileImageUrl()!}
+                  alt={`${userDetails.surName} ${userDetails.lastName}`}
+                  className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 mb-4"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className={`${getPlaceholderBgColor()} w-24 h-24 rounded-full flex items-center justify-center border-4 border-blue-100 mb-4`}>
+                  <span className="text-2xl lg:text-3xl font-bold text-white font-quicksand">
+                    {getInitials()}
+                  </span>
+                </div>
+              )}
+              
               <h3 className="text-lg font-semibold font-quicksand">
                 {userDetails.surName} {userDetails.lastName}
               </h3>
               <p className="text-gray-600 text-sm mb-2 dark:text-white">@{userDetails.username}</p>
+              
+              {/* Placeholder indicator */}
+              {(!hasProfileImage || imageError) && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Using placeholder avatar
+                </p>
+              )}
               
               {/* Role Badge */}
               <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mb-4">

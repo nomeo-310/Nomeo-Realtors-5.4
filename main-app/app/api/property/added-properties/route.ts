@@ -36,6 +36,7 @@ export const GET = async (req:Request) => {
     }).skip(skip)
     .limit(limit)
     .sort({created_at: -1})
+    .lean()
     .exec();
 
     const totalProperties = await Apartment.countDocuments({agent: current_user.agentId});

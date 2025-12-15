@@ -54,7 +54,7 @@ export function VerificationEmailTemplate(props: EmailTemplateProps) {
               • This code is valid for a limited time only<br />
               • Do not share this code with anyone<br />
               • Nomeo Realtors will never ask for your password<br />
-              • If you didn't request this code, please ignore this email
+              • If you didn&apos;t request this code, please ignore this email
             </Text>
           </Section>
 
@@ -62,7 +62,7 @@ export function VerificationEmailTemplate(props: EmailTemplateProps) {
           <Section style={helpSectionStyle}>
             <Text style={labelStyle}>Need Help?</Text>
             <Text style={textStyle}>
-              If you're having trouble with the verification process or didn't request this code, 
+              If you&apos;re having trouble with the verification process or didn&apos;t request this code, 
               please contact our support team immediately at{' '}
               <a href="mailto:support@nomeorealtors.com" style={linkStyle}>
                 support@nomeorealtors.com
@@ -74,7 +74,7 @@ export function VerificationEmailTemplate(props: EmailTemplateProps) {
           <Section style={welcomeSectionStyle}>
             <Text style={welcomeTitleStyle}>Welcome to Our Community</Text>
             <Text style={textStyle}>
-              We're excited to have you join thousands of real estate professionals 
+              We&apos;re excited to have you join thousands of real estate professionals 
               who trust Nomeo Realtors for their property needs and business growth.
             </Text>
           </Section>

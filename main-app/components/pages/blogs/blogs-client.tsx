@@ -91,7 +91,7 @@ const BlogsClient = ({user}:Props) => {
 
     const latestBlogs = data?.data as latestBlogProps[];
     const firstBlog = latestBlogs && latestBlogs[0];
-    const restBlogs = latestBlogs && latestBlogs.slice(1, 4);
+    const restBlogs = latestBlogs && latestBlogs.slice(1, 4) || [];
 
     const DesktopLatestBlog = () => {
       const itIsACollaboration = isCollaboration(firstBlog);
@@ -126,7 +126,7 @@ const BlogsClient = ({user}:Props) => {
             <div className="mt-2 text-black/60 dark:text-white/70 text-sm lg:text-base text-justify">{firstBlog?.description} <Link href={`blogs/${firstBlog?._id}`} className="cursor-pointer inline-block pl-3 font-semibold text-black dark:text-white">...Read more</Link></div>
           </div>
           <div className="h-full lg:w-[40%] w-[37%] flex flex-col gap-3">
-            {restBlogs.map((blog:latestBlogProps, index:number) => (
+            {restBlogs.length > 0 && restBlogs.map((blog:latestBlogProps, index:number) => (
               <Link href={`blogs/${blog?._id}`}  className="w-full h-full flex lg:gap-4 gap-2 lg:items-center items-stretch cursor-pointer" key={blog?._id}>
                 <div className="xl:h-[130px] xl:w-[180px] lg:h-[100px] lg:w-[150px] h-[90px] w-[120px] rounded-md relative flex items-center justify-center">
                   <div className="w-full h-full absolute bg-black/30 rounded-lg z-[100] left-0 top-0"/>
@@ -215,7 +215,7 @@ const BlogsClient = ({user}:Props) => {
         )
       }
 
-      if (status === 'success' && latestBlogs.length < 1) {
+      if (status === 'success' && latestBlogs && latestBlogs.length < 1) {
         return (
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">

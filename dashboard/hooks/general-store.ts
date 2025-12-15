@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from 'zustand/middleware';
 
 type ModalControlProps = {
   isOpen:boolean
@@ -160,6 +161,22 @@ interface DeactivateUserModalStore {
   onClose: () => void;
 }
 
+export type AppealType = 'suspension' | 'deactivation';
+export type RoleType = 'creator' | 'admin' | 'superAdmin';
+
+interface AppealStore {
+  appealType: AppealType;
+  roleType: RoleType;
+  setAppealType: (type: AppealType) => void;
+  setRoleType: (type: RoleType) => void;
+  resetAppealType: () => void;
+  resetRoleType: () => void;
+  getAppealTypeLabel: () => string;
+  getRoleTypeLabel: () => string;
+  isSuspension: () => boolean;
+  isDeactivation: () => boolean;
+}
+
 export const useCookiesModal = create<ModalControlProps>((set) => ({
   isOpen: false,
   onOpen: () => set({ isOpen: true }),
@@ -286,3 +303,35 @@ export const useDeactivateUserModal = create<DeactivateUserModalStore>((set) => 
   onOpen: (user) => set({ isOpen: true, user }),
   onClose: () => set({ isOpen: false, user: null }),
 }));
+
+export const useAdminAppealModal = create<ModalControlProps>((set) => ({
+  isOpen: false,
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+}));
+
+export const useAppealForm = create<AppealStore>()(
+  persist(
+    (set, get) => ({
+      appealType: 'suspension',
+      roleType: 'admin',
+      setAppealType: (type: AppealType) => set({ appealType: type }),
+      setRoleType: (type: RoleType) => set({ roleType: type }),
+      resetAppealType: () => set({ appealType: 'suspension' }),
+      resetRoleType: () => set({ roleType: 'admin' }),
+      getAppealTypeLabel: () => {
+        const type = get().appealType;
+        return type === 'suspension' ? 'Suspension' : 'Deactivation';
+      },
+      getRoleTypeLabel: () => {
+        const type = get().roleType;
+        return type === 'admin' ? 'Admin' : type === 'creator' ? 'Creator' : 'Super Admin';
+      },
+      isSuspension: () => get().appealType === 'suspension',
+      isDeactivation: () => get().appealType === 'deactivation',
+    }),
+    {
+      name: 'appeal-storage',
+    }
+  )
+);

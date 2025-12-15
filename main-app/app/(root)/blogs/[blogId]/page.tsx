@@ -20,7 +20,7 @@ const SingleBlog = async ({params}:{params:{blogId:string}}) => {
     return notFound();
   };
 
-  return <SingleBlogClient blog={blog} user={user} />
+  return <SingleBlogClient blog={blog} user={user || undefined}/>
 }
 
 export default SingleBlog

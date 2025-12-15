@@ -74,7 +74,9 @@ const NotificationClient = ({ user }: { user: userProps }) => {
     getNextPageParam: (lastPage) => lastPage.nextPage
   });
 
-  const notifications: notificationProps[] = data?.pages.flatMap(page => page.notifications) || [];
+  const notifications: notificationProps[] = React.useMemo(() => {
+    return data?.pages.flatMap(page => page.notifications) || [];
+  }, [data?.pages]);
 
   //This makes all notification to be seen 5 seconds after page loads
   React.useEffect(() => {
@@ -83,7 +85,7 @@ const NotificationClient = ({ user }: { user: userProps }) => {
       readAllNotifications();
     }, 15000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [readAllNotifications]);
 
   //This makes delete all button to show 
   React.useEffect(() => {

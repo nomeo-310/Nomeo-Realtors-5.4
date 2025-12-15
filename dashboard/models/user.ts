@@ -7,6 +7,16 @@ type Image = {
   secure_url: string;
 };
 
+export const SUSPENSION_DURATIONS = {
+  HOURS_24: '24_hours',
+  DAYS_3: '3_days',
+  DAYS_7: '7_days',
+  DAYS_30: '30_days',
+  INDEFINITE: 'indefinite',
+} as const;
+
+export type SuspensionDuration = typeof SUSPENSION_DURATIONS[keyof typeof SUSPENSION_DURATIONS];
+
 export interface IUser extends Document {
   _id: Types.ObjectId;
   username: string;
@@ -37,6 +47,7 @@ export interface IUser extends Document {
   suspensionReason: string;
   suspendedAt: Date;
   suspendedBy: Types.ObjectId;
+  suspensionDuration: SuspensionDuration;
   showLikedApartments: boolean;
   showBookmarkedApartments: boolean;
   showLikedBlogs: boolean;
@@ -112,6 +123,7 @@ const userSchema: Schema<IUser> = new Schema(
     suspensionReason: { type: String, default: '' },
     suspendedAt: { type: Date, default: undefined },
     suspendedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    suspensionDuration: { type: String, enum: Object.values(SUSPENSION_DURATIONS)},
     showLikedApartments: booleanField,
     showBookmarkedApartments: booleanField,
     showLikedBlogs: booleanField,

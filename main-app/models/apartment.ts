@@ -198,16 +198,16 @@ apartmentSchema.index({ city: 1, bedrooms: 1, monthlyRent: 1 });
 apartmentSchema.index({ city: 1, bedrooms: 1, propertyPrice: 1 });
 
 // Engagement sorting
-apartmentSchema.index({ 'likes.0': 1 }); // Has likes (avoid full array index)
+apartmentSchema.index({ 'likes': 1 }); // Has likes (avoid full array index)
 apartmentSchema.index({ createdAt: -1 });
 
 
 apartmentSchema.virtual('totalLikes').get(function () {
-  return this.likes.length;
+  return Array.isArray(this.likes) ? this.likes.length : 0;
 });
 
 apartmentSchema.virtual('totalBookmarks').get(function () {
-  return this.bookmarks.length;
+  return Array.isArray(this.bookmarks) ? this.bookmarks.length : 0;
 });
 
 

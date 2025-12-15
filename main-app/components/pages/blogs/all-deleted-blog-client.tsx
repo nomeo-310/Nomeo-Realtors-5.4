@@ -47,7 +47,7 @@ const AllDeletedBlogClient = ({user}:{user:userProps}) => {
     if (!searchText) {
       router.push(`/${user.role === 'superAdmin' ? 'admin' : user.role === 'creator' ? 'admin' : user.role}-dashboard/created-blogs/deleted`);
     }
-  }, [searchText, router]);
+  }, [searchText, router, user]);
 
   const createSearchParam = (searchText:string) => {
     if (searchText) {

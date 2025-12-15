@@ -15,6 +15,7 @@ import { BadgeCheck, Ban, Bell, Eye, MessageCircle, MoreHorizontalIcon, Trash2 }
 import { cn } from '@/lib/utils';
 import TableLoading from '../table-loading';
 import Pagination from '@/components/ui/pagination';
+import { useRouter } from 'next/navigation';
 
 interface ApiResponse {
   users: BasicAgentProps[];
@@ -167,33 +168,234 @@ const UnverifiedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
     )
   };
 
-  const MobileItem = ({open, toggleTable, user }:mobileItemProps) => {
-    return (
-      <div className={cn("shadow-sm border-b last:border-b-0 w-full h-[68px] md:h-[72px] overflow-hidden p-3 md:p-4 cursor-pointer transition-all duration-300", open ? 'h-auto md:h-auto': '')} onClick={toggleTable}>
-        <div className="flex items-center justify-between">
-          <p className="text-sm capitalize font-semibold">{user.surName} {user.lastName}</p>
-          <p className="text-sm capitalize font-semibold">{user.agentId.agencyName}</p>
+const MobileItem = ({ open, toggleTable, user }: mobileItemProps) => {
+  const router = useRouter();
+
+  const handleViewProfile = () => {
+    // Add view profile function
+    console.log('View profile:', user._id);
+  };
+
+  const handleSendMessage = () => {
+    // Add send message function
+    console.log('Send message to:', user._id);
+  };
+
+  const handleVerifyAgent = () => {
+    // Add verify agent function
+    console.log('Verify agent:', user._id);
+  };
+
+  const handleSendVerificationReminder = () => {
+    // Add send verification reminder function
+    console.log('Send verification reminder to:', user._id);
+  };
+
+  const handleBlockUser = () => {
+    // Add block user function
+    console.log('Block user:', user._id);
+  };
+
+  const handleDeleteUser = () => {
+    // Add delete user function
+    console.log('Delete user:', user._id);
+  };
+
+  return (
+    <div 
+      className={cn(
+        "shadow-sm border-b last:border-b-0 w-full p-4 cursor-pointer transition-all duration-300 bg-white dark:bg-[#424242]",
+        open ? 'h-auto' : 'h-[72px]'
+      )}
+      onClick={toggleTable}
+    >
+      {/* Compact View (when not open) */}
+      <div className="flex items-center justify-between">
+        {/* Left side: User info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+            {/* User avatar/initials with unverified indicator */}
+            <div className="flex-shrink-0 relative">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 flex items-center justify-center">
+                <span className="text-sm font-semibold text-amber-600 dark:text-amber-300">
+                  {user.surName?.[0]?.toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-[#424242]"></div>
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate capitalize dark:text-white">
+                {user.surName} {user.lastName}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                  Unverified
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {user.email}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-between mt-1">
-          <p className={cn("text-center text-sm")}>{user.email}</p>
-          <p className="text-sm">{user.city}, {user.state}</p>
-        </div>
-        <div className="border-b border-black my-3"/>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Verification Status</p>
-          <p className="text-sm capitalize text-green-600 font-semibold">{user.userVerified ? 'verified' : 'unverified'}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Location</p>
-          <p className="text-sm capitalize">{user.city}, {user.state}</p>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">Date Joined</p>
-          <p className="text-sm capitalize">{formatDate(user.createdAt)}</p>
+
+        {/* Right side: Status and date */}
+        <div className="flex flex-col items-end ml-2">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+            {user.city}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {formatDate(user.createdAt)}
+          </span>
         </div>
       </div>
-    )
-  };
+
+      {/* Expanded View (when open) */}
+      {open && (
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 space-y-4">
+          {/* Verification Status Banner */}
+          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium dark:text-white">Account Pending Verification</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  This agent account requires verification before activation
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Waiting Since</p>
+                <p className="text-sm font-medium dark:text-white">
+                  {formatDate(user.createdAt)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Basic Information Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</p>
+              <p className="text-sm font-medium dark:text-white truncate">
+                {user.agentId?.agencyName || 'N/A'}
+              </p>
+            </div>
+            
+            <div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">License No.</p>
+              <p className="text-sm font-medium dark:text-white font-mono">
+                {user.agentId?.licenseNumber || 'N/A'}
+              </p>
+            </div>
+            
+            <div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Location</p>
+              <p className="text-sm font-medium dark:text-white capitalize">
+                {user.city}, {user.state}
+              </p>
+            </div>
+          </div>
+
+          {/* Additional Information */}
+          <div className="space-y-2">
+            {user.phoneNumber && (
+              <div className="flex items-center justify-between py-2 px-1">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Phone</p>
+                <p className="text-sm dark:text-white font-medium">{user.phoneNumber}</p>
+              </div>
+            )}
+            
+            <div className="flex items-center justify-between py-2 px-1">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Account Status</p>
+              <p className={`text-sm font-medium ${
+                user.userVerified 
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-amber-600 dark:text-amber-400'
+              }`}>
+                {user.userVerified ? 'Active' : 'Inactive'}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-600">
+            <div className="grid grid-cols-2 gap-2">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleViewProfile();
+                }}
+                className="px-3 py-2.5 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Eye className="w-4 h-4" />
+                View Profile
+              </button>
+              
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendMessage();
+                }}
+                className="px-3 py-2.5 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Send Message
+              </button>
+              
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleVerifyAgent();
+                }}
+                className="px-3 py-2.5 bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <BadgeCheck className="w-4 h-4" />
+                Verify Agent
+              </button>
+              
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendVerificationReminder();
+                }}
+                className="px-3 py-2.5 bg-cyan-50 text-cyan-600 dark:bg-cyan-900/20 dark:text-cyan-400 rounded-lg hover:bg-cyan-100 dark:hover:bg-cyan-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Bell className="w-4 h-4" />
+                Send Reminder
+              </button>
+              
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleBlockUser();
+                }}
+                className="px-3 py-2.5 bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Ban className="w-4 h-4" />
+                Block User
+              </button>
+              
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteUser();
+                }}
+                className="px-3 py-2.5 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete User
+              </button>
+            </div>
+            
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 text-center">
+              This account requires verification to access platform features
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
   const TableList = () => {
 
@@ -230,9 +432,8 @@ const UnverifiedAgentsClient = ({user}:{user:AdminDetailsProps}) => {
               </div>
               <div className="flex flex-col md:hidden">
                 {users.map((user:BasicAgentProps, index:number) => (
-                  <React.Fragment>
+                  <React.Fragment key={user._id}>
                     <MobileItem
-                      key={index}
                       open={currentIndex === index}
                       toggleTable={() => toggleItem(index)}
                       user={user}

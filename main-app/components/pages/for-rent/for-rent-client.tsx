@@ -137,29 +137,36 @@ const ForRentClient = () => {
     const [minimumRent, setMinimumRent] = React.useState(initialMinRent);
     const [maximumRent, setMaximumRent] = React.useState(initialMaxRent);
 
-    React.useEffect(() => {
-      setState(params.get('state') || '');
-    }, [params.get('state')]);
+    const stateParam = params.get('state') || '';
+    const cityParam = params.get('city') || '';
+    const numberOfRoomParam = params.get('numberOfRooms') || '';
+    const numberOfToiletParam = params.get('numberOfToilets') || '';
+    const minimumAmountParam = params.get('minimumAmount');
+    const maximumAmountParam = params.get('maximumAmount')
 
     React.useEffect(() => {
-      setCity(params.get('city') || '');
-    }, [params.get('city')]);
+      setState(stateParam);
+    }, [stateParam]);
 
     React.useEffect(() => {
-      setNumberOfRooms(params.get('numberOfRooms') || '');
-    }, [params.get('numberOfRooms')]);
+      setCity(cityParam);
+    }, [cityParam]);
 
     React.useEffect(() => {
-      setNumberOfToilets(params.get('numberOfToilets') || '');
-    }, [params.get('numberOfToilets')]);
+      setNumberOfRooms(numberOfRoomParam);
+    }, [numberOfRoomParam]);
 
     React.useEffect(() => {
-      setMinimumRent(params.get('minimumAmount') ? Number(params.get('minimumAmount')) : 0);
-    }, [params.get('minimumAmount')]);
+      setNumberOfToilets(numberOfToiletParam);
+    }, [numberOfToiletParam]);
 
     React.useEffect(() => {
-      setMaximumRent(params.get('maximumAmount') ? Number(params.get('maximumAmount')) : 0);
-    }, [params.get('maximumAmount')]);
+      setMinimumRent( minimumAmountParam? Number(minimumAmountParam) : 0);
+    }, [minimumAmountParam]);
+
+    React.useEffect(() => {
+      setMaximumRent(maximumAmountParam ? Number(maximumAmountParam) : 0);
+    }, [maximumAmountParam]);
 
     const lgas = location.find((item) => item.state === state);
     const lga = lgas ? lgas.lgas : [];

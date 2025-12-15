@@ -183,7 +183,7 @@ ${details?.user.surName} ${details?.user.lastName}
 ${details?.user.phoneNumber ? `Phone: ${details?.user.phoneNumber}` : ''}
 ${details?.user.email}`);
     }
-  }, [messageType, details]);
+  }, [messageType, details, customSubject]);
 
   // Reset dynamic inputs when message type changes
   React.useEffect(() => {

@@ -846,18 +846,22 @@ export const getSingleBlog = async (blogId: string) => {
         path: 'collaborators',
         select: '_id surName lastName profilePicture username role placeholderColor email',
       })
-      .lean({ virtuals: true })
+      .lean()
       .exec();
 
     if (!blog) {
       return { success: false, message: 'Blog not found', status: 404 };
     }
 
-    return {
-      success: true,
-      data: blog,
-      status: 200,
-    };
+    const blogsWithVirtuals = {
+      ...blog,
+      total_likes: blog.likes?.length || 0,
+      total_saves: blog.saves?.length || 0,
+      total_comments: blog.comments?.length || 0,
+      total_reads: (blog.reads?.length || 0) + (blog.guest_readers?.length || 0)
+    }
+
+    return JSON.parse(JSON.stringify(blogsWithVirtuals));
   } catch (error) {
     console.error('Get single blog error:', error);
     return { success: false, message: 'Internal server error', status: 500 };
